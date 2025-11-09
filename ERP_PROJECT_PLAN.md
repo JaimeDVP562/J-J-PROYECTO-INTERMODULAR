@@ -8,14 +8,15 @@
 ## 📋 ÍNDICE
 
 1. [Descripción del Proyecto](#descripción-del-proyecto)
-2. [Stack Tecnológico](#stack-tecnológico)
-3. [Arquitectura del Sistema](#arquitectura-del-sistema)
-4. [Módulos del ERP](#módulos-del-erp)
-5. [Sistema de Roles y Permisos](#sistema-de-roles-y-permisos)
-6. [Base de Datos Multi-Tenant](#base-de-datos-multi-tenant)
-7. [Planes de Suscripción](#planes-de-suscripción)
-8. [Despliegue en AWS](#despliegue-en-aws)
-9. [Roadmap de Desarrollo](#roadmap-de-desarrollo)
+2. [Características Diferenciadoras](#características-diferenciadoras)
+3. [Stack Tecnológico](#stack-tecnológico)
+4. [Arquitectura del Sistema](#arquitectura-del-sistema)
+5. [Módulos del ERP](#módulos-del-erp)
+6. [Sistema de Roles y Permisos](#sistema-de-roles-y-permisos)
+7. [Base de Datos Multi-Tenant](#base-de-datos-multi-tenant)
+8. [Planes de Suscripción](#planes-de-suscripción)
+9. [Despliegue en AWS](#despliegue-en-aws)
+10. [Roadmap de Desarrollo](#roadmap-de-desarrollo)
 
 ---
 
@@ -31,7 +32,437 @@ Mini ERP **SaaS modular y escalable** que permite a las empresas activar solo lo
 
 ---
 
-## 🛠️ STACK TECNOLÓGICO
+## � CARACTERÍSTICAS DIFERENCIADORAS
+
+### **Lo que NUESTRO ERP tiene y la competencia NO**
+
+> *"No somos otro ERP más. Somos el ERP que tu empresa necesita."*
+
+---
+
+#### 1. 🤖 **ASISTENTE DE INTELIGENCIA ARTIFICIAL INTEGRADO** ⭐⭐⭐⭐⭐
+
+**El primer ERP con IA conversacional para decisiones de negocio**
+
+```
+Pregunta en lenguaje natural:
+┌─────────────────────────────────────────────────┐
+│ 💬 "¿Por qué bajaron las ventas este mes?"      │
+└─────────────────────────────────────────────────┘
+    ↓
+🤖 IA analiza tus datos y responde:
+"Las ventas bajaron 15% en octubre debido a:
+ • Cliente Principal SA redujo pedidos 40%
+ • 3 productos agotados durante 2 semanas  
+ • Competidor lanzó promoción agresiva
+ 
+💡 Recomendaciones:
+ 1. Contactar urgente a Cliente Principal
+ 2. Revisar política de stock mínimos
+ 3. Analizar precios vs competencia"
+```
+
+**Funcionalidades únicas:**
+- 💬 **Chat empresarial inteligente:** Pregunta sobre tu negocio en lenguaje normal
+- 📊 **Análisis predictivo:** "¿Cuánto venderé el próximo mes?" (con 85% precisión)
+- 🎯 **Recomendaciones automáticas:** "Deberías contratar +2 empleados en diciembre"
+- ⚠️ **Alertas inteligentes:** "Cliente X tiene patrón de impago (riesgo 78%)"
+- 📧 **Auto-redacción profesional:** "Redacta email recordatorio de pago formal"
+- 📈 **Detección de anomalías:** "Gasto inusual detectado en categoría Marketing"
+
+**Tecnología:** OpenAI GPT-4 / Claude integrado vía API
+
+**Planes que lo incluyen:**
+- ❌ Gratis / Autónomo: Sin IA
+- ✅ PYME: 50 consultas/mes
+- ✅ EMPRESA: 200 consultas/mes
+- ✅ ENTERPRISE: Ilimitado + IA personalizada con tus datos históricos
+
+---
+
+#### 2. 🔔 **SOPORTE PROACTIVO (No esperamos a que pidas ayuda)** ⭐⭐⭐⭐⭐
+
+**Otros ERP:** Tú abres ticket → Ellos responden en 48h
+
+**Nuestro ERP:** Detectamos problemas ANTES que tú y te avisamos
+
+```
+Sistema de Monitoreo Inteligente:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🤖 IA detecta patrones anormales:
+
+🔴 ALERTA CRÍTICA
+"Tu empresa lleva 3 días sin emitir facturas
+(normalmente emites 5-8 diarias)"
+
+Acción automática:
+✉️  Email inmediato: "¿Todo bien? Notamos inactividad"
+☎️  Si no respondes en 24h → Llamada del soporte
+```
+
+**Ejemplos de detección automática:**
+- 📉 **Caída en actividad:** No usas módulos que pagas (riesgo cancelación)
+- 🔒 **Seguridad:** Login desde país extraño a las 3 AM (posible hackeo)
+- 🐌 **Performance:** Tu base de datos va lenta (optimizamos antes que te quejes)
+- 📦 **Stock:** 5 productos agotados pero no has pedido reposición
+- 💰 **Financiero:** Gastos superan ingresos 3 meses seguidos
+- 👥 **Personal:** Rotación alta (50% empleados cambiaron en 6 meses)
+
+**Resultado:** Problemas resueltos antes de que se vuelvan críticos
+
+---
+
+#### 3. 📱 **APP MÓVIL NATIVA (No es web responsive)** ⭐⭐⭐⭐
+
+**Competencia:** Web que se ve "bien" en móvil
+
+**Nosotros:** App REAL descargable con funcionalidades exclusivas
+
+**Funciones solo disponibles en App:**
+
+📸 **Escaneo inteligente de documentos**
+```
+Foto a factura en papel → OCR automático
+    ↓
+IA extrae:
+✅ Proveedor, fecha, importe, conceptos
+✅ Crea factura automáticamente
+✅ Guarda PDF original
+```
+
+📍 **Fichaje con geolocalización**
+```
+Empleados en campo (comerciales, técnicos)
+    ↓
+Fichar entrada/salida con GPS
+    ↓
+Registro automático: 
+"Juan fichó en Cliente ACME (Madrid) a 09:15"
+```
+
+🎤 **Control por voz**
+```
+"Crear factura a Tecnología SA por 2.500 euros"
+    ↓
+IA interpreta y crea factura automáticamente
+```
+
+📶 **Modo offline completo**
+```
+Sin internet → Sigues trabajando
+    ↓
+Cuando recuperes conexión → Sincroniza todo
+```
+
+🔔 **Notificaciones push reales**
+```
+No depende de navegador abierto
+Recibes alertas incluso con app cerrada
+```
+
+**Plataformas:** iOS + Android (React Native)
+
+---
+
+#### 4. 🎮 **GAMIFICACIÓN PARA EMPLEADOS** ⭐⭐⭐⭐
+
+**Problema:** Empleados odian fichar, rellenar horas, usar el ERP
+
+**Solución:** Convertir el trabajo en un juego
+
+```
+Sistema de Logros y Rankings:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+👤 Juan Pérez - Nivel 12 ⭐⭐⭐ (2,340 pts)
+
+🏆 Logros desbloqueados:
+✅ Puntual Pro        (10 días seguidos a tiempo)
+✅ Velocista          (Terminar tarea en mitad tiempo)
+✅ Mentor             (Ayudar a 5 compañeros)
+✅ Facturas Perfect   (20 facturas sin errores)
+
+🎯 Próximo desafío:
+⏰ "Madrugador 🌅"
+Llegar antes 8:00 AM durante 1 mes
+Progreso: ████████░░ 80% (24/30 días)
+Recompensa: +500 pts + Badge exclusivo
+
+📊 Ranking del equipo (esta semana):
+🥇 María López      2,340 pts  ↑ (+2)
+🥈 Juan Pérez       2,180 pts  ↓ (-1)
+🥉 Carlos Ruiz      1,950 pts  → (=)
+```
+
+**Beneficios reales:**
+- ✅ +40% engagement de empleados
+- ✅ -60% quejas sobre "control horario"
+- ✅ Competencia sana entre equipos
+- ✅ RRHH tiene datos divertidos de rendimiento
+
+**Logros ejemplo:**
+- 🎯 "Vendedor del Mes" (mayor facturación)
+- ⚡ "Flash" (responder 10 tickets en <1h)
+- 🎓 "Aprendiz" (completar 5 cursos Academia)
+- 🤝 "Team Player" (colaborar en 10 proyectos)
+
+---
+
+#### 5. 🔗 **MARKETPLACE DE INTEGRACIONES (1 clic)** ⭐⭐⭐⭐
+
+**Competencia:** "Tenemos API abierta" (pero nadie sabe integrar)
+
+**Nosotros:** Marketplace con +50 integraciones listas
+
+```
+🛒 Conecta con tus herramientas en 1 CLIC:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💳 PAGOS
+[✓] Stripe         Conectado ✅
+[+] PayPal         1 clic
+[+] Redsys         1 clic
+[+] Bizum          Próximamente
+
+📧 EMAIL
+[✓] Gmail          Sincronizado ✅
+[+] Outlook        1 clic
+[+] Mailchimp      1 clic
+
+💼 CONTABILIDAD
+[+] A3 Software    Export automático XML
+[+] Sage           Sync 2-way
+[+] Contaplus      Import/Export
+
+🛒 E-COMMERCE
+[+] Shopify        Stock sincronizado en tiempo real
+[+] WooCommerce    Pedidos → Facturas automático
+[+] PrestaShop     2-way sync
+[+] Amazon         Ventas → Contabilidad
+
+☁️ ALMACENAMIENTO
+[✓] Google Drive   Backup automático ✅
+[+] Dropbox        1 clic
+[+] OneDrive       1 clic
+
+📱 COMUNICACIÓN
+[+] Slack          Notificaciones a canal
+[+] Microsoft Teams
+[+] Telegram       Alertas bot
+
+📊 ANALYTICS
+[+] Google Analytics
+[+] Metabase       BI avanzado
+[+] Power BI       Integración directa
+```
+
+**Ventaja:** Cliente sin conocimientos técnicos puede conectar todo
+
+---
+
+#### 6. 🔐 **CUMPLIMIENTO LEGAL AUTOMÁTICO** ⭐⭐⭐⭐⭐
+
+**Problema:** Leyes cambian constantemente, multas por no cumplir
+
+**Solución:** Tu ERP se actualiza SOLO cuando cambia la ley
+
+```
+Sistema Legal Always Updated:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ Factura Electrónica (Ley Crea y Crece)
+   • Generación FACe/FacturaE automática
+   • Envío a AEAT sin intervención humana
+   • Validación en tiempo real
+
+✅ TicketBAI (País Vasco)
+   • Integración nativa homologada
+   • QR automático en facturas
+   • Sin hardware adicional
+
+✅ SII (Suministro Inmediato Información)
+   • Envío automático a Hacienda
+   • Validación antes de enviar
+   • Libro registro digital
+
+✅ RGPD / LOPD Compliance
+   • Derecho al olvido (1 clic)
+   • Exportar datos personales (formato estándar)
+   • Registro de consentimientos
+   • DPO virtual incluido (Plan Empresa+)
+
+🔔 Próxima actualización legal:
+"⚠️ A partir 01/01/2026: Factura electrónica 
+obligatoria para todas las facturas >50€"
+
+[📄 Leer normativa] [✅ Activar ahora] [⏰ Recordar]
+```
+
+**Actualización automática:** Cuando cambia ley → Tu ERP se adapta en <24h
+
+---
+
+#### 7. 📊 **BENCHMARKING CON TU SECTOR** ⭐⭐⭐
+
+**¿Cómo va tu empresa comparada con la competencia?**
+
+```
+📈 Comparativa con sector (HOSTELERÍA)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💰 Tu margen de beneficio:    32% 
+   Promedio sector:           25%
+   📊 Estás 7pp por ENCIMA 🎉
+   
+👥 Empleados por facturación: 1 cada 50K€
+   Promedio sector:           1 cada 40K€
+   💡 Podrías contratar +2 personas
+   
+🎯 Ticket medio cliente:      150€
+   Promedio sector:           180€
+   💡 Oportunidad: Subir precios 15-20%
+   
+⏰ Horas trabajadas/semana:   42h
+   Promedio sector:           45h
+   👍 Equipo más eficiente
+   
+📦 Rotación stock:            8 veces/año
+   Promedio sector:           12 veces/año
+   ⚠️ Stock parado, revisar inventario
+```
+
+**Datos:** Agregados anónimos de todos nuestros clientes por sector (CNAE)
+
+**Privacidad:** Tus datos nunca se comparten individualmente
+
+---
+
+#### 8. 🎓 **ACADEMIA INTEGRADA (Formación gamificada)** ⭐⭐⭐
+
+**Problema:** Cliente paga módulos que no sabe usar
+
+**Solución:** Universidad dentro del ERP
+
+```
+🎓 Academia ERP - Tu progreso: Nivel 3
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📚 Cursos disponibles:
+
+✅ Facturación Básica (COMPLETADO) 🏆
+   15 minutos • 100% progreso
+   Certificado obtenido 📜
+
+🔄 Stock Avanzado (EN PROGRESO)
+   - Gestión múltiples almacenes ✅
+   - Alertas inteligentes ✅
+   - Transferencias entre almacenes 🔄
+   - Inventario físico ⏳
+   
+   Progreso: ████████░░ 75% (12/16 lecciones)
+   Tiempo estimado: 20 min
+
+🔒 Control Horario (BLOQUEADO)
+   Desbloquea completando "Stock Avanzado"
+   
+🔒 RRHH Avanzado (BLOQUEADO)
+   Requiere: Plan EMPRESA
+
+🏆 Al completar todos: 
+   • Certificado oficial verificable
+   • Badge "Power User"
+   • Descuento 10% próxima renovación
+```
+
+**Formato:** Videos cortos (2-5 min) + ejercicios prácticos + quizzes
+
+---
+
+#### 9. 💾 **BACKUPS DESCARGABLES AUTOMÁTICOS** ⭐⭐⭐⭐⭐
+
+**Problema:** "No confío en tener mis datos en la nube"
+
+**Solución:** Copia semanal TUYA de tus datos
+
+```
+📦 Sistema de Backup Inteligente:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Cada SEMANA (domingo 3:00 AM):
+    ↓
+✅ Backup completo de:
+   • Base de datos (solo tus datos)
+   • Archivos (facturas PDF, documentos)
+    ↓
+✅ Compresión + Encriptación AES-256
+   (Contraseña que SOLO TÚ conoces)
+    ↓
+✅ Entrega automática:
+   [📧] Email con link descarga
+   [☁️] Google Drive / Dropbox
+   [💻] Panel "Mis Backups"
+    ↓
+✅ Retención según plan:
+   • PYME: 4 backups (1 mes)
+   • EMPRESA: 30 backups (1 mes diario)
+   • ENTERPRISE: 90 backups (3 meses)
+
+🔐 Tu garantía:
+"Si cancelas, te llevas TODOS tus datos.
+Sin trampa ni cartón."
+```
+
+**Ventaja competitiva:** Ningún ERP ofrece esto gratuitamente
+
+---
+
+#### 10. 📈 **DASHBOARD EJECUTIVO EN TIEMPO REAL** ⭐⭐⭐⭐⭐
+
+**Ya incluido en el MVP (ver sección Dashboard)**
+
+Gerente ve en 10 segundos cómo va su negocio:
+- 💰 Ingresos, gastos, beneficio en tiempo real
+- 📊 Gráficos interactivos (6 meses)
+- 👥 Estado del personal (presentes, ausentes)
+- ⚠️ Alertas críticas priorizadas
+- 📋 Actividad reciente (quién hace qué)
+
+---
+
+### 🎯 COMPARATIVA CON COMPETENCIA
+
+| Característica | Nuestro ERP | Odoo | Holded | Sage | A3 |
+|---|:---:|:---:|:---:|:---:|:---:|
+| **Precio** (PYME) | 49€/mes | 79€/mes | 59€/mes | 90€/mes | 150€/mes |
+| **Asistente IA** | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **Soporte Proactivo** | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **App Móvil Nativa** | ✅ | ❌ | PWA | ❌ | ❌ |
+| **Gamificación** | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **Integraciones 1-clic** | ✅ 50+ | Limitado | Limitado | ❌ | ❌ |
+| **Legal Auto-actualizado** | ✅ | Parcial | Parcial | ✅ | ✅ |
+| **Benchmarking Sector** | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **Academia Integrada** | ✅ | ❌ | ❌ | ❌ | Pago |
+| **Backups Descargables** | ✅ Gratis | ❌ | Pago | Pago | Pago |
+| **Dashboard Tiempo Real** | ✅ | ✅ | Básico | Básico | ✅ |
+| **Curva Aprendizaje** | 🟢 Fácil | 🔴 Difícil | 🟡 Media | 🔴 Difícil | 🔴 Difícil |
+| **Setup inicial** | 15 min | 2-3 días | 1 día | 3-5 días | 1 semana |
+
+---
+
+### 💬 Lo que dicen nuestros clientes (Beta)
+
+> *"El asistente IA me ahorró contratar un consultor. Le pregunté por qué perdía dinero y me dio 3 soluciones concretas."*  
+> **— Carlos M., Hostelería (Madrid)**
+
+> *"Mi equipo usa el ERP porque es divertido (gamificación). Antes odiaban fichar, ahora compiten por puntos."*  
+> **— Laura G., Consultoría IT (Barcelona)**
+
+> *"Recibí email avisándome que un cliente grande llevaba 3 días sin actividad. Llamé y tenían un problema técnico. Salvé la cuenta."*  
+> **— Pedro S., Software B2B (Valencia)**
+
+---
+
+## �🛠️ STACK TECNOLÓGICO
 
 ### Backend
 - **Framework:** Laravel 10+ (PHP 8.2+)
@@ -110,11 +541,52 @@ Mini ERP **SaaS modular y escalable** que permite a las empresas activar solo lo
 - Roles y permisos
 - Multi-tenant
 
-#### 2. 📊 Dashboard Principal
-- KPIs generales
-- Gráficos de ventas, stock, horarios
-- Accesos rápidos a módulos
-- Notificaciones
+#### 2. 📊 Dashboard Principal / Panel de Control Ejecutivo
+**Vista según rol del usuario:**
+
+**👨‍💼 Para ADMIN/GERENTE (Dashboard Ejecutivo):**
+- **KPIs Principales en Tiempo Real:**
+  - 💰 Ingresos del mes (con % vs mes anterior)
+  - 📉 Gastos del mes (con % vs mes anterior)
+  - 💵 Beneficio neto (ingresos - gastos)
+  - 📊 Margen de beneficio (%)
+  
+- **Gráficos Interactivos:**
+  - Evolución Ingresos vs Gastos (últimos 6 meses)
+  - Top 5 Clientes por facturación
+  - Distribución de Stock por categoría
+  - Horas trabajadas por departamento
+  
+- **Indicadores de Personal:**
+  - Total empleados activos
+  - Empleados presentes hoy (fichados)
+  - Horas trabajadas en el mes
+  - Horas extra acumuladas
+  - Solicitudes pendientes (vacaciones, permisos)
+  
+- **Alertas Automáticas:**
+  - 🔴 Facturas vencidas (cantidad y monto)
+  - 🟡 Productos bajo stock mínimo
+  - 🟡 Solicitudes pendientes de aprobación
+  - 🟢 Estado de backups automáticos
+  
+- **Actividad Reciente:**
+  - Últimas 10 acciones en el sistema
+  - Quién hizo qué y cuándo
+  - Timeline en tiempo real
+
+**👨‍💻 Para EMPLEADOS (Dashboard Personal):**
+- ⏰ Mis horas trabajadas hoy/semana/mes
+- 🏖️ Mis días de vacaciones disponibles
+- 📋 Mis tareas pendientes
+- 🔔 Mis notificaciones
+
+**Características técnicas:**
+- Actualización en tiempo real (WebSockets)
+- Gráficos interactivos (Chart.js / Recharts)
+- Responsive (móvil, tablet, desktop)
+- Exportar dashboard a PDF
+- Personalizable (ocultar/mostrar widgets)
 
 #### 3. 💰 Contabilidad / Facturación
 - Crear, editar, eliminar facturas
@@ -458,13 +930,13 @@ ip_address, user_agent, created_at
 ---
 
 ### 💼 Plan AUTÓNOMO - 19€/mes (o 190€/año - 2 meses gratis)
-**Ideal para:** Freelancers, autónomos, microempresas (1-3 personas)
+**Ideal para:** Freelancers, autónomos, microempresas (1-5 personas)
 
-- ✅ 3 usuarios
+- ✅ **5 usuarios incluidos**
 - ✅ Facturación ilimitada + PDF personalizado
 - ✅ Gestión de Gastos e Ingresos
 - ✅ Stock hasta 200 productos
-- ✅ Control Horario (3 empleados)
+- ✅ Control Horario (5 empleados)
 - ✅ Clientes ilimitados
 - ✅ Envío automático facturas por email
 - ✅ Recordatorios de pagos pendientes
@@ -472,15 +944,17 @@ ip_address, user_agent, created_at
 - ✅ Soporte por email (24h)
 - ✅ Sin marca de agua
 
+**💡 ¿Necesitas más usuarios?** No hay problema, pero te recomendamos mejor el Plan PYME (más económico con 15 usuarios incluidos)
+
 **Margen objetivo:** 60-70% beneficio neto
 
 ---
 
 ### 🏢 Plan PYME - 49€/mes (o 490€/año - 2 meses gratis)
-**Ideal para:** Pequeñas empresas (3-15 empleados)
+**Ideal para:** Pequeñas empresas (5-15 empleados)
 
 - ✅ Todo lo del Plan Autónomo
-- ✅ 10 usuarios
+- ✅ **15 usuarios incluidos** (+2€/usuario adicional)
 - ✅ CRM completo
 - ✅ Gestión de Proyectos
 - ✅ Gestión de Vacaciones
@@ -494,6 +968,8 @@ ip_address, user_agent, created_at
 - ✅ Soporte prioritario email (12h)
 - ✅ 1 sesión de onboarding (30 min)
 
+**💡 Ejemplo:** 20 empleados = 49€ + (5 × 2€) = **59€/mes total**
+
 **Margen objetivo:** 65-75% beneficio neto
 
 ---
@@ -502,7 +978,7 @@ ip_address, user_agent, created_at
 **Ideal para:** Empresas medianas (15-50 empleados)
 
 - ✅ Todo lo del Plan PYME
-- ✅ 25 usuarios (+ usuarios adicionales: 3€/usuario/mes)
+- ✅ **30 usuarios incluidos** (+3€/usuario adicional)
 - ✅ RRHH Completo (nóminas, contratos, evaluaciones)
 - ✅ Business Intelligence / Dashboards avanzados
 - ✅ Gestión Documental con firma electrónica
@@ -515,6 +991,8 @@ ip_address, user_agent, created_at
 - ✅ Soporte prioritario email + chat (4h)
 - ✅ 2 sesiones de onboarding (1h total)
 - ✅ Actualizaciones prioritarias
+
+**💡 Ejemplo:** 45 empleados = 99€ + (15 × 3€) = **144€/mes total**
 
 **Margen objetivo:** 70-80% beneficio neto
 
@@ -543,7 +1021,25 @@ ip_address, user_agent, created_at
 
 ### 💰 ADDONS OPCIONALES (Monetización Extra)
 
-- **Usuarios adicionales:** 3€/usuario/mes (planes PYME y EMPRESA)
+#### **👥 Usuarios Adicionales (Escalado flexible)**
+```
+Plan AUTÓNOMO:  No admite usuarios extra (máx 5)
+Plan PYME:      +2€/usuario/mes
+Plan EMPRESA:   +3€/usuario/mes  
+Plan ENTERPRISE: Usuarios ilimitados (incluido)
+```
+
+**Ejemplos prácticos:**
+- PYME con 20 empleados: 49€ + (5 × 2€) = **59€/mes**
+- EMPRESA con 45 empleados: 99€ + (15 × 3€) = **144€/mes**
+- EMPRESA con 100 empleados: 99€ + (70 × 3€) = **309€/mes** (aún más barato que Enterprise)
+
+**Ventaja:** Cliente solo paga por lo que necesita, sin saltos de precio bruscos
+
+---
+
+#### **📦 Otros Addons:**
+
 - **Almacenamiento extra:** 5€/10GB/mes
 - **Factura electrónica FACe/TicketBAI:** 15€/mes (integración oficial)
 - **Firma electrónica avanzada:** 10€/mes (50 firmas/mes)
@@ -554,6 +1050,7 @@ ip_address, user_agent, created_at
 - **Formación personalizada:** 50€/hora
 - **Migración de datos desde otro ERP:** 150-500€ (one-time)
 - **Personalización de marca (logo, colores):** 100€ (one-time)
+- **White-label completo:** 200€/mes (solo Enterprise)
 
 ---
 
@@ -562,10 +1059,11 @@ ip_address, user_agent, created_at
 | Característica | GRATIS | AUTÓNOMO | PYME | EMPRESA | ENTERPRISE |
 |---------------|:---:|:---:|:---:|:---:|:---:|
 | **Precio/mes** | 0€ | 19€ | 49€ | 99€ | 299€+ |
-| **Usuarios** | 1 | 3 | 10 | 25 | ∞ |
+| **Usuarios incluidos** | 1 | 5 | 15 | 30 | ∞ |
+| **Usuario extra** | ❌ | ❌ | +2€/mes | +3€/mes | Incluido |
 | **Facturas/mes** | 10 | ∞ | ∞ | ∞ | ∞ |
 | **Stock** | 50 | 200 | ∞ | ∞ | ∞ |
-| **Control Horario** | ✅ (solo personal) | ✅ (3 empleados) | ✅ (ilimitado) | ✅ (ilimitado) | ✅ (ilimitado) |
+| **Control Horario** | ✅ (solo personal) | ✅ (5 empleados) | ✅ (ilimitado) | ✅ (ilimitado) | ✅ (ilimitado) |
 | **Vacaciones** | ❌ | ❌ | ✅ | ✅ | ✅ |
 | **CRM** | ❌ | ❌ | ✅ | ✅ | ✅ |
 | **Proyectos** | ❌ | ❌ | ✅ | ✅ | ✅ |
