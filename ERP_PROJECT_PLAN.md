@@ -549,7 +549,6 @@ Gerente ve en 10 segundos cómo va su negocio:
   - 💰 Ingresos del mes (con % vs mes anterior)
   - 📉 Gastos del mes (con % vs mes anterior)
   - 💵 Beneficio neto (ingresos - gastos)
-  - 📊 Margen de beneficio (%)
   
 - **Gráficos Interactivos:**
   - Evolución Ingresos vs Gastos (últimos 6 meses)
@@ -589,22 +588,22 @@ Gerente ve en 10 segundos cómo va su negocio:
 - Personalizable (ocultar/mostrar widgets)
 
 #### 3. 💰 Contabilidad / Facturación
+- Añadir Clientes y Proveedores
+- Definicion de campos para tabla facturacion: idFactura(PKfactura), idCliente, fechaEmision, fechaVencimiento, nombreArticulo, importeProducto, importeTotalConIVA, descuentos
 - Crear, editar, eliminar facturas
 - Listado y buscador de facturas
 - Estados: Borrador, Enviada, Pagada, Vencida
 - Exportar a PDF
 - Enviar por email
-- Clientes y productos asociados
-- Estadísticas de facturación
+
+
 
 #### 4. 📦 Gestión de Stock / Inventario
+- Definicion de campos para tabla productos: idProducto(PKproducto), nombreProducto,  cantidadEnStock, precioUnitario, proveedor, ubicacionAlmacen
 - Alta, baja, modificación de productos
 - Control de existencias
 - Alertas de stock mínimo
-- Movimientos de entrada/salida
-- Categorías de productos
-- Códigos de barras
-- Historial de movimientos
+
 
 #### 5. ⏰ Control Horario
 - Fichar entrada/salida
