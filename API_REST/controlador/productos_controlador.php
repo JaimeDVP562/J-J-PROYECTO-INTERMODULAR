@@ -8,10 +8,10 @@
         }
 
         public function listarProductos(): array {
-            return $this->modelo->getProducts();
+            return $this->modelo->obtenerProductos();
         }
 
         public function verProducto(int $id): ?array {
-            return $this->modelo->getProductByID($id);
+            return $this->modelo->obtenerProductoPorId($id);
         }
     }

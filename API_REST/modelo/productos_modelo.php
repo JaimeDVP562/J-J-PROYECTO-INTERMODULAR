@@ -7,7 +7,7 @@ class ProductosModelo {
         $this->db = $db;
     }
 
-    public function getProducts(): array {
+    public function obtenerProductos(): array {
         $sql ="SELECT * FROM productos";
         $stmt = $this->db->prepare($sql);
         $stmt ->setFetchMode(PDO::FETCH_ASSOC);
@@ -16,7 +16,7 @@ class ProductosModelo {
         return $stmt->fetchAll();
     }
 
-    public function getProductByID(int $id): ?array {
+    public function obtenerProductoPorId(int $id): ?array {
         $sql = "SELECT * FROM productos WHERE id = :id";
         $stmt = $this->db->prepare($sql);
         $stmt->bindParam(':id', $id, PDO::PARAM_INT);
