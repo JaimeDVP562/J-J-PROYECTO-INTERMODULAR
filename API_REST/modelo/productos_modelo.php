@@ -17,7 +17,7 @@ class ProductosModelo {
     }
 
     public function obtenerProductoPorId(int $id): ?array {
-        $sql = "SELECT * FROM productos WHERE id = :id";
+        $sql = "SELECT * FROM productos WHERE idProducto = :id";
         $stmt = $this->db->prepare($sql);
         $stmt->bindParam(':id', $id, PDO::PARAM_INT);
         $stmt ->setFetchMode(PDO::FETCH_ASSOC);
@@ -25,5 +25,18 @@ class ProductosModelo {
 
         $producto = $stmt->fetch();
         return $producto ?: null;
+    }
+
+    public function proveedorPorProducto(int $id): ?string {
+        $sql = "SELECT pr.nombreProveedor
+                FROM proveedor pr
+                JOIN productos p ON pr.idProveedor = p.proveedor
+                WHERE p.idProducto = :id";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+        $stmt->execute();
+
+        $nombre = $stmt->fetchColumn();
+        return $nombre !== false ? $nombre : null;
     }
 }
