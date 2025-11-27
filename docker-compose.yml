@@ -1,19 +1,21 @@
 services:
   web:
     image: php:8.2-apache
-    container_name: web
+    container_name: web-J-J-Proyect
+    restart: unless-stopped
     ports:
-      - "8080:80"          # evita chocar con el puerto 80 local
+      - "8080:80"
     volumes:
       - ./www:/var/www/html
     depends_on:
       - db
-    # Habilitar módulos típicos de XAMPP (rewrite) en el arranque
+    # Nota: es preferible instalar extensiones en una imagen personalizada (Dockerfile).
     command: /bin/sh -c "docker-php-ext-install mysqli && a2enmod rewrite && apache2-foreground"
 
   db:
     image: mariadb:11
-    container_name: db
+    container_name: db-J-J-Proyect
+    restart: unless-stopped
     environment:
       - MARIADB_ROOT_PASSWORD=root
       - MARIADB_DATABASE=app
@@ -22,11 +24,12 @@ services:
     volumes:
       - db_data:/var/lib/mysql
     ports:
-      - "3307:3306"        # 3307 en tu máquina → 3306 en el contenedor
+      - "3307:3306"
 
   phpmyadmin:
     image: phpmyadmin:5
-    container_name: pma
+    container_name: pma-J-J-Proyect
+    restart: unless-stopped
     environment:
       - PMA_HOST=db
     depends_on:
@@ -35,4 +38,4 @@ services:
       - "8081:80"
 
 volumes:
-  db_data:
+  db_data: {}
