@@ -14,4 +14,8 @@
         public function verProducto(int $id): ?array {
             return $this->modelo->obtenerProductoPorId($id);
         }
+
+        public function verProveedorPorProducto(int $id): ?string {
+            return $this->modelo->proveedorPorProducto($id);
+        }
     }
