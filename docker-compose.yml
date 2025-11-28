@@ -1,25 +1,25 @@
+version: '3.8'
+
 services:
   web:
-    image: php:8.2-apache
-    container_name: web-J-J-Proyect
+    build:
+      context: .
+      dockerfile: docker/web/Dockerfile
+    image: jjproyect/web:latest
     restart: unless-stopped
     ports:
       - "8080:80"
-    volumes:
-      - ./:/var/www/html
     depends_on:
       - db
-    command: /bin/sh -c "docker-php-ext-install mysqli pdo pdo_mysql && a2enmod rewrite && apache2-foreground"
 
   db:
     image: mariadb:11
-    container_name: db-J-J-Proyect
     restart: unless-stopped
     environment:
-      - MARIADB_ROOT_PASSWORD=root
-      - MARIADB_DATABASE=JJPROYECT
-      - MARIADB_USER=app
-      - MARIADB_PASSWORD=app
+      MARIADB_ROOT_PASSWORD: root
+      MARIADB_DATABASE: JJPROYECT
+      MARIADB_USER: app
+      MARIADB_PASSWORD: app
     volumes:
       - db_data:/var/lib/mysql
     ports:
@@ -27,10 +27,9 @@ services:
 
   phpmyadmin:
     image: phpmyadmin:5
-    container_name: pma-J-J-Proyect
     restart: unless-stopped
     environment:
-      - PMA_HOST=db
+      PMA_HOST: db
     depends_on:
       - db
     ports:
