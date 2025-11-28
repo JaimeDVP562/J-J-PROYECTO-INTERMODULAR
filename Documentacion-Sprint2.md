@@ -1,4 +1,4 @@
-# Sprint 1 J-J-PROYECT
+# Sprint 2 J-J-PROYECT
 
 ## 📋 Información del Proyecto
 
@@ -6,7 +6,7 @@
 - Jesús Ríos López
 - Jaime Gavilán Torrero
 
-**Fecha:** Sprint 1 - 28 Noviembre 2025  
+**Fecha:** Sprint 2 - 28 Noviembre 2025  
 **Proyecto:** Mini ERP Modular SaaS
 
 ---
@@ -498,7 +498,7 @@ Para el siguiente sprint están planificadas las siguientes mejoras:
 
 ---
 
-## 🎓 Conclusiones del Sprint 1
+## 🎓 Conclusiones del Sprint 2
 
 ### Logros Alcanzados
 ✅ **Arquitectura sólida**: Base MVC bien estructurada  
@@ -551,4 +551,4 @@ Esta migración permitirá acelerar el desarrollo y garantizar un código más m
 
 ---
 
-*Documento generado en el Sprint 1 - Noviembre 2025*
+*Documento generado en el Sprint 2 - Noviembre 2025*
