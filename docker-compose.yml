@@ -6,11 +6,10 @@ services:
     ports:
       - "8080:80"
     volumes:
-      - ./www:/var/www/html
+      - ./:/var/www/html
     depends_on:
       - db
-    # Nota: es preferible instalar extensiones en una imagen personalizada (Dockerfile).
-    command: /bin/sh -c "docker-php-ext-install mysqli && a2enmod rewrite && apache2-foreground"
+    command: /bin/sh -c "docker-php-ext-install mysqli pdo pdo_mysql && a2enmod rewrite && apache2-foreground"
 
   db:
     image: mariadb:11
@@ -18,7 +17,7 @@ services:
     restart: unless-stopped
     environment:
       - MARIADB_ROOT_PASSWORD=root
-      - MARIADB_DATABASE=app
+      - MARIADB_DATABASE=JJPROYECT
       - MARIADB_USER=app
       - MARIADB_PASSWORD=app
     volumes:
