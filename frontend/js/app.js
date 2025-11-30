@@ -224,15 +224,155 @@ const views = {
   `
 };
 
+// Login page: standalone view used when no token is present
+views.login = () => `
+  <section style="max-width:420px;margin:56px auto;padding:24px;background:#fff;border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,0.06);">
+    <header>
+      <h1 style="margin-top:0;">Acceder</h1>
+      <p>Introduce tus credenciales para acceder al Mini ERP.</p>
+    </header>
+    <div style="display:flex;flex-direction:column;gap:12px;margin-top:12px;">
+      <label>Usuario<br/><input id="login-user-page" type="text" style="width:100%;padding:8px;"/></label>
+      <label>Contraseña<br/><input id="login-pass-page" type="password" style="width:100%;padding:8px;"/></label>
+      <div style="display:flex;justify-content:flex-end;gap:8px;">
+        <button class="btn-secondary" id="login-cancel-page">Cancelar</button>
+        <button class="btn-primary" id="login-submit-page">Entrar</button>
+      </div>
+      <div id="login-err-page" style="color:#c0392b;"></div>
+    </div>
+  </section>
+`;
+
 // Estado de paginación simple en memoria
 let productosState = { page: 1, limit: 10 };
 let proveedoresState = { page: 1, limit: 10 };
+
+/* --- Auth helpers (JWT) --- */
+const AUTH_TOKEN_KEY = 'erp_token';
+
+function getAuthToken() {
+  return localStorage.getItem(AUTH_TOKEN_KEY) || null;
+}
+
+function setAuthToken(token) {
+  if (token) localStorage.setItem(AUTH_TOKEN_KEY, token);
+  else localStorage.removeItem(AUTH_TOKEN_KEY);
+  renderAuthControls();
+  // Ensure sidebar is visible after login
+  try {
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar) sidebar.style.display = 'block';
+    // If currently on login view, navigate to pending route (or dashboard)
+    if (typeof router !== 'undefined' && router && router.currentRoute === 'login') {
+      const pending = window.__pendingRoute || 'dashboard';
+      window.__pendingRoute = null;
+      router.navigate(pending || 'dashboard');
+    }
+  } catch (e) {
+    // ignore
+  }
+}
+
+function clearAuthToken() {
+  localStorage.removeItem(AUTH_TOKEN_KEY);
+  renderAuthControls();
+  // Ensure we return to the login page and hide protected UI
+  try {
+    window.__pendingRoute = null;
+    if (typeof router !== 'undefined' && router) router.navigate('login');
+    // also hide sidebar immediately
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar) sidebar.style.display = 'none';
+  } catch (e) {
+    // ignore
+  }
+}
+
+function authHeaders(extra = {}) {
+  const headers = Object.assign({}, extra);
+  const token = getAuthToken();
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  return headers;
+}
+
+function renderAuthControls() {
+  const container = document.getElementById('auth-controls');
+  if (!container) return;
+  const token = getAuthToken();
+  if (token) {
+    container.innerHTML = `
+      <div style="background:#fff;border:1px solid #ddd;padding:8px 12px;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,0.05);display:flex;gap:8px;align-items:center;">
+        <span style="font-size:13px;color:#333;">Autenticado</span>
+        <button class="btn-sm" id="btn-logout">Cerrar sesión</button>
+      </div>
+    `;
+    const btn = document.getElementById('btn-logout');
+    if (btn) btn.addEventListener('click', () => { clearAuthToken(); });
+  } else {
+    container.innerHTML = `
+      <div style="background:#fff;border:1px solid #ddd;padding:8px 12px;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,0.05);display:flex;gap:8px;align-items:center;">
+        <button class="btn-sm" id="btn-login">Acceder</button>
+      </div>
+    `;
+    const btn = document.getElementById('btn-login');
+    if (btn) btn.addEventListener('click', () => showLoginForm());
+  }
+}
+
+function showLoginForm() {
+  const html = `
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <label>Usuario<br/><input id="login-user" type="text" /></label>
+      <label>Contraseña<br/><input id="login-pass" type="password" /></label>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px;">
+        <button class="btn-secondary" onclick="hideModal()">Cancelar</button>
+        <button class="btn-primary" id="login-submit">Entrar</button>
+      </div>
+      <div id="login-err" style="color:#c0392b;margin-top:6px;"></div>
+    </div>
+  `;
+  showModal(createModalHtml('Acceder', html, 'Entrar'));
+  document.getElementById('login-submit').addEventListener('click', async () => {
+    const u = document.getElementById('login-user').value.trim();
+    const p = document.getElementById('login-pass').value;
+    const err = document.getElementById('login-err');
+    err.textContent = '';
+    if (!u || !p) { err.textContent = 'Introduce usuario y contraseña'; return; }
+    try {
+      const res = await fetch('http://localhost:8080/backend/api/login.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: u, password: p })
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        err.textContent = body.error || 'Error al autenticar';
+        return;
+      }
+      if (body.token) {
+        setAuthToken(body.token);
+        hideModal();
+      } else {
+        err.textContent = 'Respuesta inválida del servidor';
+      }
+    } catch (e) {
+      err.textContent = e.message;
+    }
+  });
+}
+
+// Initialize auth controls on load
+document.addEventListener('DOMContentLoaded', () => renderAuthControls());
+
 
 // Función para renderizar una vista
 function render(viewName) {
   const app = document.getElementById('app');
   if (views[viewName]) {
     app.innerHTML = views[viewName]();
+    // Hide auth-controls on the login page
+    const ac = document.getElementById('auth-controls');
+    if (ac) ac.style.display = (viewName === 'login') ? 'none' : 'block';
     
     // Si es la vista de stock, cargar productos
     if (viewName === 'stock') {
@@ -245,6 +385,41 @@ function render(viewName) {
       proveedoresState = { page: 1, limit: 10 };
       // carga automática y muestra botón "Nuevo proveedor" en la cabecera
       loadProveedores(proveedoresState.page, proveedoresState.limit);
+    }
+    // If we're rendering the login page, attach handlers
+    if (viewName === 'login') {
+      const submit = document.getElementById('login-submit-page');
+      const cancel = document.getElementById('login-cancel-page');
+      const err = document.getElementById('login-err-page');
+      if (cancel) cancel.addEventListener('click', () => {
+        // If user cancels on the login page, navigate to dashboard only if already authenticated
+        const token = getAuthToken();
+        if (token) router.navigate('dashboard');
+      });
+      if (submit) submit.addEventListener('click', async () => {
+        err.textContent = '';
+        const u = document.getElementById('login-user-page').value.trim();
+        const p = document.getElementById('login-pass-page').value;
+        if (!u || !p) { err.textContent = 'Introduce usuario y contraseña'; return; }
+        try {
+          const res = await fetch('http://localhost:8080/backend/api/login.php', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: u, password: p })
+          });
+          const body = await res.json().catch(() => ({}));
+          if (!res.ok) { err.textContent = body.error || 'Error al autenticar'; return; }
+          if (body.token) {
+            setAuthToken(body.token);
+            // Redirect to pending route if any
+            const pending = window.__pendingRoute || 'dashboard';
+            window.__pendingRoute = null;
+            router.navigate(pending || 'dashboard');
+          } else {
+            err.textContent = 'Respuesta inválida del servidor';
+          }
+        } catch (e) {
+          err.textContent = e.message;
+        }
+      });
     }
   } else {
     app.innerHTML = '<p>Vista no encontrada</p>';
@@ -564,7 +739,7 @@ async function submitProductForm(id = null) {
     const method = id ? 'PUT' : 'POST';
     const res = await fetch(url, {
       method,
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload)
     });
     if (!res.ok) {
@@ -601,7 +776,7 @@ async function editProduct(id) {
 async function deleteProduct(id) {
   if (!confirm('¿Eliminar producto #' + id + '?')) return;
   try {
-    const res = await fetch(`http://localhost:8080/backend/api/productos.php?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`http://localhost:8080/backend/api/productos.php?id=${id}`, { method: 'DELETE', headers: authHeaders() });
     if (res.status === 204) {
       loadProductos(productosState.page, productosState.limit);
     } else {
@@ -670,7 +845,7 @@ function enableInlineEditProduct(row) {
     try {
       const res = await fetch(`http://localhost:8080/backend/api/productos.php?id=${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(payload)
       });
       if (!res.ok) {
@@ -719,7 +894,7 @@ async function submitProveedorForm(id = null) {
     const method = id ? 'PUT' : 'POST';
     const res = await fetch(url, {
       method,
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload)
     });
     if (!res.ok) {
@@ -756,7 +931,7 @@ async function editProveedor(id) {
 async function deleteProveedor(id) {
   if (!confirm('¿Eliminar proveedor #' + id + '?')) return;
   try {
-    const res = await fetch(`http://localhost:8080/backend/api/proveedores.php?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`http://localhost:8080/backend/api/proveedores.php?id=${id}`, { method: 'DELETE', headers: authHeaders() });
     if (res.status === 204) {
       loadProveedores(proveedoresState.page, proveedoresState.limit);
     } else {
@@ -825,7 +1000,7 @@ function enableInlineEditProveedor(row) {
     try {
       const res = await fetch(`http://localhost:8080/backend/api/proveedores.php?id=${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(payload)
       });
       if (!res.ok) {

@@ -10,6 +10,7 @@
     require_once '../controlador/productos_controlador.php';
     require_once '../modelo/proveedores_modelo.php';
     require_once '../controlador/proveedores_controlador.php';
+    require_once '../auth/jwt.php';
 
     $db = Database::getConnection();
     $modelo = new ProductosModelo($db);
@@ -49,6 +50,8 @@
         }
 
     } elseif ($method === 'POST') {
+        // Require JWT for write operations
+        require_jwt_or_401();
         // Crear producto
         $input = json_decode(file_get_contents('php://input'), true);
         if (!is_array($input)) {
@@ -94,6 +97,7 @@
         echo json_encode($producto);
 
     } elseif ($method === 'PUT') {
+        require_jwt_or_401();
         // Actualizar producto (id por query ?id=)
         if (!isset($_GET['id'])) {
             http_response_code(400);
@@ -147,6 +151,7 @@
         }
 
     } elseif ($method === 'DELETE') {
+        require_jwt_or_401();
         if (!isset($_GET['id'])) {
             http_response_code(400);
             echo json_encode(['error' => 'Falta parámetro id en la query string.']);

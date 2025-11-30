@@ -8,6 +8,7 @@
     require_once '../database.php';
     require_once '../modelo/proveedores_modelo.php';
     require_once '../controlador/proveedores_controlador.php';
+    require_once '../auth/jwt.php';
 
     $db = Database::getConnection();
     $modelo = new ProveedoresModelo($db);
@@ -30,6 +31,8 @@
             echo json_encode($result);
         }
     } elseif ($method === 'POST') {
+        // Require JWT for write operations
+        require_jwt_or_401();
         $input = json_decode(file_get_contents('php://input'), true);
         if (!is_array($input)) {
             http_response_code(400);
@@ -54,6 +57,7 @@
         echo json_encode($controlador->verProveedor($id));
 
     } elseif ($method === 'PUT') {
+        require_jwt_or_401();
         if (!isset($_GET['id'])) {
             http_response_code(400);
             echo json_encode(['error' => 'Falta parámetro id en la query string.']);
@@ -82,6 +86,7 @@
         }
 
     } elseif ($method === 'DELETE') {
+        require_jwt_or_401();
         if (!isset($_GET['id'])) {
             http_response_code(400);
             echo json_encode(['error' => 'Falta parámetro id en la query string.']);
