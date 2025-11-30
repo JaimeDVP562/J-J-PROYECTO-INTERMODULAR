@@ -52,9 +52,10 @@ const views = {
           <li>Integración con pasarelas de pago</li>
         </ul>
       </div>
-      <div style="margin: 24px 0;">
-        <button class="btn-primary" onclick="loadProveedores()">Cargar Proveedores</button>
+      <div style="margin: 24px 0; display:flex; gap:12px; justify-content:flex-end; align-items:center;">
+        <button id="btn-nuevo-proveedor" class="btn-primary" onclick="showProveedorForm()">Nuevo proveedor</button>
       </div>
+      <div id="inline-modal-root"></div>
       <div id="proveedores-container">
         <div class="module-placeholder">
           <p><em>Haz clic en el botón para cargar los proveedores.</em></p>
@@ -82,6 +83,7 @@ const views = {
       <div style="margin: 24px 0; display:flex; justify-content:flex-end; gap:12px;">
         <button class="btn-primary" onclick="showProductForm()">Nuevo producto</button>
       </div>
+        <div id="inline-modal-root"></div>
       <div id="productos-container">
         <div class="module-placeholder">
           <p><em>Cargando productos...</em></p>
@@ -296,24 +298,43 @@ function authHeaders(extra = {}) {
 }
 
 function renderAuthControls() {
-  const container = document.getElementById('auth-controls');
+  // Prefer rendering into the sidebar footer if available, otherwise fall back
+  // to the floating auth-controls (legacy).
+  const container = document.getElementById('sidebar-auth') || document.getElementById('auth-controls');
   if (!container) return;
   const token = getAuthToken();
   if (token) {
-    container.innerHTML = `
-      <div style="background:#fff;border:1px solid #ddd;padding:8px 12px;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,0.05);display:flex;gap:8px;align-items:center;">
-        <span style="font-size:13px;color:#333;">Autenticado</span>
-        <button class="btn-sm" id="btn-logout">Cerrar sesión</button>
-      </div>
-    `;
+    // If rendering inside the sidebar, style to sit at the bottom.
+    if (container.id === 'sidebar-auth') {
+      container.innerHTML = `
+        <div style="display:flex;flex-direction:column;gap:8px;align-items:stretch;">
+          <button class="btn-sm" id="btn-logout" style="width:100%;">Cerrar sesión</button>
+        </div>
+      `;
+    } else {
+      container.innerHTML = `
+        <div style="background:#fff;border:1px solid #ddd;padding:8px 12px;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,0.05);display:flex;gap:8px;align-items:center;">
+          <span style="font-size:13px;color:#333;">Autenticado</span>
+          <button class="btn-sm" id="btn-logout">Cerrar sesión</button>
+        </div>
+      `;
+    }
     const btn = document.getElementById('btn-logout');
     if (btn) btn.addEventListener('click', () => { clearAuthToken(); });
   } else {
-    container.innerHTML = `
-      <div style="background:#fff;border:1px solid #ddd;padding:8px 12px;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,0.05);display:flex;gap:8px;align-items:center;">
-        <button class="btn-sm" id="btn-login">Acceder</button>
-      </div>
-    `;
+    if (container.id === 'sidebar-auth') {
+      container.innerHTML = `
+        <div style="display:flex;flex-direction:column;gap:8px;align-items:stretch;">
+          <button class="btn-sm" id="btn-login" style="width:100%;">Acceder</button>
+        </div>
+      `;
+    } else {
+      container.innerHTML = `
+        <div style="background:#fff;border:1px solid #ddd;padding:8px 12px;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,0.05);display:flex;gap:8px;align-items:center;">
+          <button class="btn-sm" id="btn-login">Acceder</button>
+        </div>
+      `;
+    }
     const btn = document.getElementById('btn-login');
     if (btn) btn.addEventListener('click', () => showLoginForm());
   }
@@ -690,7 +711,17 @@ function showModal(html) {
   const wrapper = document.createElement('div');
   wrapper.id = 'global-modal-wrapper';
   wrapper.innerHTML = html;
-  document.body.appendChild(wrapper);
+  // If the page contains an inline placeholder (e.g. in the stock view)
+  // mount the modal there so it appears between the action cards and
+  // the products list. Otherwise fall back to full-screen body overlay.
+  const inlineHost = document.getElementById('inline-modal-root');
+  if (inlineHost) {
+    wrapper.classList.add('inline-root');
+    // insert the wrapper right where the placeholder is
+    inlineHost.parentNode.insertBefore(wrapper, inlineHost.nextSibling);
+  } else {
+    document.body.appendChild(wrapper);
+  }
 }
 
 function hideModal() {
@@ -702,18 +733,113 @@ function hideModal() {
 async function showProductForm(data = null) {
   const isEdit = data !== null;
   const title = isEdit ? `Editar producto #${data.id}` : 'Nuevo producto';
-  const fields = `
-    <label>Nombre<br/><input id="pf-nombre" type="text" value="${isEdit ? escapeHtml(data.nombre) : ''}"/></label>
-    <label>Stock<br/><input id="pf-stock" type="number" min="0" value="${isEdit ? (data.stock ?? 0) : 0}"/></label>
-    <label>Precio<br/><input id="pf-precio" type="number" step="0.01" min="0" value="${isEdit ? data.precio : '0.00'}"/></label>
-    <label>Proveedor (id)<br/><input id="pf-proveedor" type="number" value="${isEdit && data.proveedor ? data.proveedor : ''}"/></label>
-    <label>Ubicación<br/><input id="pf-ubicacion" type="text" value="${isEdit ? (data.ubicacionAlmacen || '') : ''}"/></label>
+  // Stacked variant (modal) — labels above inputs
+  const fieldsStacked = `
+    <div class="form-grid">
+      <div class="form-row">
+        <label for="pf-nombre">Nombre</label>
+        <input id="pf-nombre" type="text" placeholder="Nombre del producto" value="${isEdit ? escapeHtml(data.nombre) : ''}" />
+      </div>
+      <div class="form-row">
+        <label for="pf-stock">Stock</label>
+        <input id="pf-stock" type="number" min="0" placeholder="0" value="${isEdit ? (data.stock ?? 0) : 0}" />
+      </div>
+      <div class="form-row">
+        <label for="pf-precio">Precio</label>
+        <input id="pf-precio" type="number" step="0.01" min="0" placeholder="0.00" value="${isEdit ? data.precio : '0.00'}" />
+      </div>
+      <div class="form-row">
+        <label for="pf-proveedor">Proveedor (id)</label>
+        <input id="pf-proveedor" type="number" placeholder="Id del proveedor (opcional)" value="${isEdit && data.proveedor ? data.proveedor : ''}" />
+      </div>
+      <div class="form-row">
+        <label for="pf-ubicacion">Ubicación</label>
+        <input id="pf-ubicacion" type="text" placeholder="Ubicación en almacén" value="${isEdit ? (data.ubicacionAlmacen || '') : ''}" />
+      </div>
+    </div>
   `;
+
+  // Inline table-like variant (renders fields in a single row for compact entry)
+  const fieldsInline = `
+    <div class="edit-table-wrapper">
+      <table class="edit-table">
+        <thead>
+          <tr></tr>
+            <th>Nombre</th>
+            <th style="width:90px;">Stock</th>
+            <th style="width:110px;">Precio</th>
+            <th style="width:160px;">Ubicación</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>${isEdit ? escapeHtml(data.id) : ''}</td>
+            <td><input id="pf-nombre" type="text" placeholder="Nombre del producto" value="${isEdit ? escapeHtml(data.nombre) : ''}" /></td>
+            <td><input id="pf-stock" type="number" min="0" placeholder="0" value="${isEdit ? (data.stock ?? 0) : 0}" /></td>
+            <td><input id="pf-precio" type="number" step="0.01" min="0" placeholder="0.00" value="${isEdit ? data.precio : '0.00'}" /></td>
+            <td><input id="pf-ubicacion" type="text" placeholder="Ubicación en almacén" value="${isEdit ? (data.ubicacionAlmacen || '') : ''}" /></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="edit-extra">
+        <label style="font-weight:600;margin-right:8px;">Proveedor (id):</label>
+        <input id="pf-proveedor" type="number" placeholder="Id del proveedor (opcional)" value="${isEdit && data.proveedor ? data.proveedor : ''}" style="width:120px;padding:6px;border:1px solid #e6eefc;border-radius:6px;" />
+      </div>
+    </div>
+  `;
+  // If an inline host exists, render the form as an integrated card instead
+  // of a modal overlay. This provides a nicer in-page UX for adding products.
+  const inlineHost = document.getElementById('inline-modal-root');
+  if (inlineHost) {
+    // remove any existing inline form
+    hideInlineForm();
+    const wrapper = document.createElement('div');
+    wrapper.id = 'inline-form-wrapper';
+    wrapper.className = 'inline-form-card';
+    wrapper.innerHTML = `
+      <header style="padding:12px 16px;border-bottom:1px solid #f0f2f6;"><h3 style="margin:0;">${title}</h3></header>
+      <div class="modal-body">
+        ${fieldsInline}
+        <div id="form-errors" style="color:#c0392b; margin-top:8px;"></div>
+      </div>
+      <footer style="display:flex;gap:8px;justify-content:flex-end;padding:12px 16px;">
+        <button class="btn-secondary" id="inline-cancel">Cancelar</button>
+        <button class="btn-primary" id="inline-submit">${isEdit ? 'Actualizar' : 'Crear'}</button>
+      </footer>
+    `;
+    inlineHost.parentNode.insertBefore(wrapper, inlineHost.nextSibling);
+
+    document.getElementById('inline-cancel').addEventListener('click', () => hideInlineForm());
+    document.getElementById('inline-submit').addEventListener('click', async () => {
+      await submitProductForm(isEdit ? data.id : null);
+    });
+    // scroll into view for better UX
+    wrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+
+  // Fallback: show as modal overlay
   showModal(createModalHtml(title, fields, isEdit ? 'Actualizar' : 'Crear'));
 
   document.getElementById('modal-submit').addEventListener('click', async () => {
     await submitProductForm(isEdit ? data.id : null);
   });
+}
+
+function hideInlineForm() {
+  const existing = document.getElementById('inline-form-wrapper');
+  if (existing) existing.remove();
+  // restore the 'Nuevo proveedor' button if present
+  const newBtn = document.getElementById('btn-nuevo-proveedor');
+  if (newBtn) newBtn.style.display = '';
+}
+
+function hideFormWrapper() {
+  // prefer hiding inline form if present
+  const inline = document.getElementById('inline-form-wrapper');
+  if (inline) return hideInlineForm();
+  // otherwise fallback to modal
+  hideModal();
 }
 
 async function submitProductForm(id = null) {
@@ -754,7 +880,7 @@ async function submitProductForm(id = null) {
       return;
     }
 
-    hideModal();
+    hideFormWrapper();
     // refresh list
     loadProductos(productosState.page, productosState.limit);
   } catch (err) {
@@ -872,8 +998,60 @@ async function showProveedorForm(data = null) {
     <label>Email<br/><input id="pfv-email" type="email" value="${isEdit ? (data.email || '') : ''}"/></label>
     <label>Dirección<br/><input id="pfv-direccion" type="text" value="${isEdit ? (data.direccion || '') : ''}"/></label>
   `;
-  showModal(createModalHtml(title, fields, isEdit ? 'Actualizar' : 'Crear'));
 
+  // If inline host exists (e.g. facturacion view), render inline table-row like products
+  const inlineHost = document.getElementById('inline-modal-root');
+  if (inlineHost) {
+    hideInlineForm();
+    // hide the 'Nuevo proveedor' button while editing/creating
+    const newBtn = document.getElementById('btn-nuevo-proveedor');
+    if (newBtn) newBtn.style.display = 'none';
+    const wrapper = document.createElement('div');
+    wrapper.id = 'inline-form-wrapper';
+    wrapper.className = 'inline-form-card';
+    wrapper.innerHTML = `
+      <header style="padding:12px 16px;border-bottom:1px solid #f0f2f6;"><h3 style="margin:0;">${title}</h3></header>
+      <div class="modal-body">
+        <div class="edit-table-wrapper">
+          <table class="edit-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th style="width:140px;">Teléfono</th>
+                <th style="width:220px;">Email</th>
+                <th>Dirección</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>${isEdit ? escapeHtml(data.id) : ''}</td>
+                <td><input id="pfv-nombre" type="text" value="${isEdit ? escapeHtml(data.nombre) : ''}" /></td>
+                <td><input id="pfv-telefono" type="text" value="${isEdit ? escapeHtml(data.telefono || '') : ''}" /></td>
+                <td><input id="pfv-email" type="email" value="${isEdit ? escapeHtml(data.email || '') : ''}" /></td>
+                <td><input id="pfv-direccion" type="text" value="${isEdit ? escapeHtml(data.direccion || '') : ''}" /></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div id="form-errors" style="color:#c0392b; margin-top:8px;"></div>
+      </div>
+      <footer style="display:flex;gap:8px;justify-content:flex-end;padding:12px 16px;">
+        <button class="btn-secondary" id="inline-cancel">Cancelar</button>
+        <button class="btn-primary" id="inline-submit">${isEdit ? 'Actualizar' : 'Crear'}</button>
+      </footer>
+    `;
+    inlineHost.parentNode.insertBefore(wrapper, inlineHost.nextSibling);
+    document.getElementById('inline-cancel').addEventListener('click', () => hideInlineForm());
+    document.getElementById('inline-submit').addEventListener('click', async () => {
+      await submitProveedorForm(isEdit ? data.id : null);
+    });
+    wrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+
+  // fallback to modal
+  showModal(createModalHtml(title, fields, isEdit ? 'Actualizar' : 'Crear'));
   document.getElementById('modal-submit').addEventListener('click', async () => {
     await submitProveedorForm(isEdit ? data.id : null);
   });
@@ -909,7 +1087,7 @@ async function submitProveedorForm(id = null) {
       return;
     }
 
-    hideModal();
+    hideFormWrapper();
     // refresh providers list
     loadProveedores(proveedoresState.page, proveedoresState.limit);
   } catch (err) {
