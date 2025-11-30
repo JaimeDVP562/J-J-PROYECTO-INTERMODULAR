@@ -34,4 +34,19 @@ class ProductosControlador
     {
         return $this->modelo->proveedorPorProducto($id);
     }
+
+    public function crearProducto(array $data): int
+    {
+        return $this->modelo->crearProducto($data);
+    }
+
+    public function actualizarProducto(int $id, array $data): bool
+    {
+        return $this->modelo->actualizarProducto($id, $data);
+    }
+
+    public function eliminarProducto(int $id): bool
+    {
+        return $this->modelo->eliminarProducto($id);
+    }
 }

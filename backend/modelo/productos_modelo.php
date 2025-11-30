@@ -50,4 +50,43 @@ class ProductosModelo {
         $nombre = $stmt->fetchColumn();
         return $nombre !== false ? $nombre : null;
     }
+
+    public function crearProducto(array $data): int {
+        $sql = "INSERT INTO productos (nombre, stock, precio, proveedor, ubicacionAlmacen)
+                VALUES (:nombre, :stock, :precio, :proveedor, :ubicacionAlmacen)";
+        $stmt = $this->db->prepare($sql);
+
+        $stmt->bindValue(':nombre', $data['nombre'], PDO::PARAM_STR);
+        $stmt->bindValue(':stock', isset($data['stock']) ? (int)$data['stock'] : 0, PDO::PARAM_INT);
+        $stmt->bindValue(':precio', isset($data['precio']) ? $data['precio'] : 0.00);
+        $stmt->bindValue(':proveedor', isset($data['proveedor']) ? $data['proveedor'] : null, is_null($data['proveedor']) ? PDO::PARAM_NULL : PDO::PARAM_INT);
+        $stmt->bindValue(':ubicacionAlmacen', isset($data['ubicacionAlmacen']) ? $data['ubicacionAlmacen'] : null, PDO::PARAM_STR);
+
+        $stmt->execute();
+        return (int)$this->db->lastInsertId();
+    }
+
+    public function actualizarProducto(int $id, array $data): bool {
+        $sql = "UPDATE productos SET nombre = :nombre, stock = :stock, precio = :precio, proveedor = :proveedor, ubicacionAlmacen = :ubicacionAlmacen WHERE id = :id";
+        $stmt = $this->db->prepare($sql);
+
+        $stmt->bindValue(':nombre', $data['nombre'], PDO::PARAM_STR);
+        $stmt->bindValue(':stock', isset($data['stock']) ? (int)$data['stock'] : 0, PDO::PARAM_INT);
+        $stmt->bindValue(':precio', isset($data['precio']) ? $data['precio'] : 0.00);
+        $stmt->bindValue(':proveedor', array_key_exists('proveedor', $data) ? $data['proveedor'] : null, is_null($data['proveedor'] ?? null) ? PDO::PARAM_NULL : PDO::PARAM_INT);
+        $stmt->bindValue(':ubicacionAlmacen', isset($data['ubicacionAlmacen']) ? $data['ubicacionAlmacen'] : null, PDO::PARAM_STR);
+        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+
+        $stmt->execute();
+        return $stmt->rowCount() > 0;
+    }
+
+    public function eliminarProducto(int $id): bool {
+        $sql = "DELETE FROM productos WHERE id = :id";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+        $stmt->execute();
+
+        return $stmt->rowCount() > 0;
+    }
 }

@@ -1,4 +1,5 @@
 // Componentes de las vistas
+  
 const views = {
   dashboard: () => `
     <header>
@@ -78,6 +79,9 @@ const views = {
           <li>Historial de movimientos</li>
         </ul>
       </div>
+      <div style="margin: 24px 0; display:flex; justify-content:flex-end; gap:12px;">
+        <button class="btn-primary" onclick="showProductForm()">Nuevo producto</button>
+      </div>
       <div id="productos-container">
         <div class="module-placeholder">
           <p><em>Cargando productos...</em></p>
@@ -100,9 +104,10 @@ const views = {
           <li>Informes de asistencia</li>
           <li>Cálculo de horas extras</li>
           <li>Integración con nóminas</li>
-        </ul>
+      <div style="margin: 24px 0; display:flex; gap:12px; align-items:center;">
+        <button class="btn-primary" onclick="loadProveedores()">Cargar Proveedores</button>
+        <button id="btn-nuevo-proveedor" class="btn-secondary" onclick="showProveedorForm()" style="background:#fff;color:#0b63d6;border:1px solid #0b63d6;padding:10px 14px;border-radius:8px;box-shadow:none;">Nuevo proveedor</button>
       </div>
-      <div class="module-placeholder">
         <p><em>Próximamente: Panel de fichajes y calendario de turnos.</em></p>
       </div>
     </section>
@@ -234,6 +239,13 @@ function render(viewName) {
       productosState = { page: 1, limit: 10 };
       loadProductos(productosState.page, productosState.limit);
     }
+
+    // Si es la vista de facturación, cargar proveedores automáticamente
+    if (viewName === 'facturacion') {
+      proveedoresState = { page: 1, limit: 10 };
+      // carga automática y muestra botón "Nuevo proveedor" en la cabecera
+      loadProveedores(proveedoresState.page, proveedoresState.limit);
+    }
   } else {
     app.innerHTML = '<p>Vista no encontrada</p>';
   }
@@ -290,12 +302,16 @@ async function loadProductos(page = 1, limit = 10) {
 
     productos.forEach(producto => {
       html += `
-        <tr>
+        <tr id="prod-row-${producto.id}" data-id="${producto.id}" data-nombre="${escapeHtml(producto.nombre)}" data-stock="${producto.stock ?? 0}" data-precio="${producto.precio ?? 0}" data-ubicacion="${escapeHtml(producto.ubicacionAlmacen || '')}">
           <td>${producto.id}</td>
-          <td>${producto.nombre}</td>
+          <td>${escapeHtml(producto.nombre)}</td>
           <td>${producto.stock}</td>
           <td>€${parseFloat(producto.precio).toFixed(2)}</td>
-          <td>${producto.ubicacionAlmacen || 'N/A'}</td>
+          <td>${escapeHtml(producto.ubicacionAlmacen || 'N/A')}</td>
+          <td style="white-space:nowrap;">
+            <button class="btn-sm" data-action="edit" data-id="${producto.id}">Editar</button>
+            <button class="btn-sm btn-danger" data-action="delete" data-id="${producto.id}">Borrar</button>
+          </td>
         </tr>
       `;
     });
@@ -326,6 +342,19 @@ async function loadProductos(page = 1, limit = 10) {
     const nextBtn = container.querySelector('button[data-action="next"]');
     if (prevBtn) prevBtn.addEventListener('click', () => loadProductos(pagination.page - 1, pagination.limit));
     if (nextBtn) nextBtn.addEventListener('click', () => loadProductos(pagination.page + 1, pagination.limit));
+    // Attach edit/delete handlers (inline edit for products)
+    container.querySelectorAll('button[data-action="edit"]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const row = btn.closest('tr');
+        enableInlineEditProduct(row);
+      });
+    });
+    container.querySelectorAll('button[data-action="delete"]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const id = parseInt(e.currentTarget.getAttribute('data-id'), 10);
+        deleteProduct(id);
+      });
+    });
   } catch (error) {
     container.innerHTML = `
       <div class="module-placeholder">
@@ -387,12 +416,16 @@ async function loadProveedores(page = 1, limit = 10) {
 
     proveedores.forEach(proveedor => {
       html += `
-        <tr>
+        <tr id="prov-row-${proveedor.id}" data-id="${proveedor.id}" data-nombre="${escapeHtml(proveedor.nombre)}" data-telefono="${escapeHtml(proveedor.telefono || '')}" data-email="${escapeHtml(proveedor.email || '')}" data-direccion="${escapeHtml(proveedor.direccion || '')}">
           <td>${proveedor.id}</td>
-          <td>${proveedor.nombre}</td>
-          <td>${proveedor.telefono || 'N/A'}</td>
-          <td>${proveedor.email || 'N/A'}</td>
-          <td>${proveedor.direccion || 'N/A'}</td>
+          <td>${escapeHtml(proveedor.nombre)}</td>
+          <td>${escapeHtml(proveedor.telefono || 'N/A')}</td>
+          <td>${escapeHtml(proveedor.email || 'N/A')}</td>
+          <td>${escapeHtml(proveedor.direccion || 'N/A')}</td>
+          <td style="white-space:nowrap;">
+            <button class="btn-sm" data-action="edit-prov" data-id="${proveedor.id}">Editar</button>
+            <button class="btn-sm btn-danger" data-action="delete-prov" data-id="${proveedor.id}">Borrar</button>
+          </td>
         </tr>
       `;
     });
@@ -423,6 +456,20 @@ async function loadProveedores(page = 1, limit = 10) {
     const nextBtn = container.querySelector('button[data-action="next"]');
     if (prevBtn) prevBtn.addEventListener('click', () => loadProveedores(pagination.page - 1, pagination.limit));
     if (nextBtn) nextBtn.addEventListener('click', () => loadProveedores(pagination.page + 1, pagination.limit));
+    // Attach edit/delete handlers for providers (inline edit)
+    const editBtns = container.querySelectorAll('button[data-action="edit-prov"]');
+    editBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const row = btn.closest('tr');
+        enableInlineEditProveedor(row);
+      });
+    });
+    container.querySelectorAll('button[data-action="delete-prov"]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const id = parseInt(e.currentTarget.getAttribute('data-id'), 10);
+        deleteProveedor(id);
+      });
+    });
   } catch (error) {
     container.innerHTML = `
       <div class="module-placeholder">
@@ -441,3 +488,366 @@ Object.keys(views).forEach(viewName => {
 document.addEventListener('DOMContentLoaded', () => {
   router.init();
 });
+
+/*** Form modal utilities for products and providers ***/
+function createModalHtml(title, fieldsHtml, submitText = 'Guardar') {
+  return `
+    <div class="modal-overlay">
+      <div class="modal">
+        <header>
+          <h3>${title}</h3>
+        </header>
+        <div class="modal-body">
+          ${fieldsHtml}
+          <div id="form-errors" style="color:#c0392b; margin-top:8px;"></div>
+        </div>
+        <footer style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">
+          <button class="btn-secondary" onclick="hideModal()">Cancelar</button>
+          <button class="btn-primary" id="modal-submit">${submitText}</button>
+        </footer>
+      </div>
+    </div>
+  `;
+}
+
+function showModal(html) {
+  hideModal();
+  const wrapper = document.createElement('div');
+  wrapper.id = 'global-modal-wrapper';
+  wrapper.innerHTML = html;
+  document.body.appendChild(wrapper);
+}
+
+function hideModal() {
+  const existing = document.getElementById('global-modal-wrapper');
+  if (existing) existing.remove();
+}
+
+/* --- Product form --- */
+async function showProductForm(data = null) {
+  const isEdit = data !== null;
+  const title = isEdit ? `Editar producto #${data.id}` : 'Nuevo producto';
+  const fields = `
+    <label>Nombre<br/><input id="pf-nombre" type="text" value="${isEdit ? escapeHtml(data.nombre) : ''}"/></label>
+    <label>Stock<br/><input id="pf-stock" type="number" min="0" value="${isEdit ? (data.stock ?? 0) : 0}"/></label>
+    <label>Precio<br/><input id="pf-precio" type="number" step="0.01" min="0" value="${isEdit ? data.precio : '0.00'}"/></label>
+    <label>Proveedor (id)<br/><input id="pf-proveedor" type="number" value="${isEdit && data.proveedor ? data.proveedor : ''}"/></label>
+    <label>Ubicación<br/><input id="pf-ubicacion" type="text" value="${isEdit ? (data.ubicacionAlmacen || '') : ''}"/></label>
+  `;
+  showModal(createModalHtml(title, fields, isEdit ? 'Actualizar' : 'Crear'));
+
+  document.getElementById('modal-submit').addEventListener('click', async () => {
+    await submitProductForm(isEdit ? data.id : null);
+  });
+}
+
+async function submitProductForm(id = null) {
+  const nombre = document.getElementById('pf-nombre').value.trim();
+  const stock = parseInt(document.getElementById('pf-stock').value || '0', 10);
+  const precio = parseFloat(document.getElementById('pf-precio').value || '0');
+  const proveedor = document.getElementById('pf-proveedor').value;
+  const ubicacion = document.getElementById('pf-ubicacion').value.trim();
+
+  const payload = {
+    nombre,
+    stock,
+    precio,
+    proveedor: proveedor === '' ? null : parseInt(proveedor, 10),
+    ubicacionAlmacen: ubicacion === '' ? null : ubicacion
+  };
+
+  const errorsEl = document.getElementById('form-errors');
+  errorsEl.innerHTML = '';
+
+  try {
+    const url = 'http://localhost:8080/backend/api/productos.php' + (id ? `?id=${id}` : '');
+    const method = id ? 'PUT' : 'POST';
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      if (body && body.errors) {
+        errorsEl.innerHTML = body.errors.map(e => `<div>${escapeHtml(e)}</div>`).join('');
+      } else if (body && body.error) {
+        errorsEl.textContent = body.error;
+      } else {
+        errorsEl.textContent = 'Error desconocido al guardar producto.';
+      }
+      return;
+    }
+
+    hideModal();
+    // refresh list
+    loadProductos(productosState.page, productosState.limit);
+  } catch (err) {
+    errorsEl.textContent = err.message;
+  }
+}
+
+async function editProduct(id) {
+  try {
+    const res = await fetch(`http://localhost:8080/backend/api/productos.php?id=${id}`);
+    if (!res.ok) throw new Error('No se pudo obtener producto');
+    const data = await res.json();
+    showProductForm(data);
+  } catch (err) {
+    alert('Error al cargar producto: ' + err.message);
+  }
+}
+
+async function deleteProduct(id) {
+  if (!confirm('¿Eliminar producto #' + id + '?')) return;
+  try {
+    const res = await fetch(`http://localhost:8080/backend/api/productos.php?id=${id}`, { method: 'DELETE' });
+    if (res.status === 204) {
+      loadProductos(productosState.page, productosState.limit);
+    } else {
+      const body = await res.json().catch(() => ({}));
+      alert(body.error || 'No se pudo eliminar');
+    }
+  } catch (err) {
+    alert('Error de red: ' + err.message);
+  }
+}
+
+// Enable inline editing of a product row (Save / Cancel) and submit via PUT
+function enableInlineEditProduct(row) {
+  if (!row) return;
+  const id = row.dataset.id;
+  const orig = {
+    nombre: row.dataset.nombre || '',
+    stock: row.dataset.stock || 0,
+    precio: row.dataset.precio || 0,
+    ubicacion: row.dataset.ubicacion || ''
+  };
+
+  row.innerHTML = `
+    <td>${id}</td>
+    <td><input class="input-small" id="prod-name-${id}" value="${escapeHtml(orig.nombre)}" /></td>
+    <td><input class="input-small" id="prod-stock-${id}" type="number" min="0" value="${escapeHtml(orig.stock)}" /></td>
+    <td><input class="input-small" id="prod-precio-${id}" type="number" step="0.01" min="0" value="${escapeHtml(orig.precio)}" /></td>
+    <td><input class="input-small" id="prod-ubic-${id}" value="${escapeHtml(orig.ubicacion)}" /></td>
+    <td style="white-space:nowrap;">
+      <button class="btn-sm" id="prod-save-${id}">Guardar</button>
+      <button class="btn-sm btn-secondary" id="prod-cancel-${id}">Cancelar</button>
+    </td>
+  `;
+
+  const restoreRow = (data) => {
+    row.dataset.nombre = data.nombre;
+    row.dataset.stock = data.stock;
+    row.dataset.precio = data.precio;
+    row.dataset.ubicacion = data.ubicacion;
+    row.innerHTML = `
+      <td>${id}</td>
+      <td>${escapeHtml(data.nombre)}</td>
+      <td>${data.stock}</td>
+      <td>€${parseFloat(data.precio).toFixed(2)}</td>
+      <td>${escapeHtml(data.ubicacion || 'N/A')}</td>
+      <td style="white-space:nowrap;">
+        <button class="btn-sm" data-action="edit" data-id="${id}">Editar</button>
+        <button class="btn-sm btn-danger" data-action="delete" data-id="${id}">Borrar</button>
+      </td>
+    `;
+    const editBtn = row.querySelector('button[data-action="edit"]');
+    const delBtn = row.querySelector('button[data-action="delete"]');
+    if (editBtn) editBtn.addEventListener('click', () => enableInlineEditProduct(row));
+    if (delBtn) delBtn.addEventListener('click', () => deleteProduct(parseInt(id, 10)));
+  };
+
+  document.getElementById(`prod-cancel-${id}`).addEventListener('click', () => restoreRow(orig));
+
+  document.getElementById(`prod-save-${id}`).addEventListener('click', async () => {
+    const payload = {
+      nombre: document.getElementById(`prod-name-${id}`).value.trim(),
+      stock: parseInt(document.getElementById(`prod-stock-${id}`).value || '0', 10),
+      precio: parseFloat(document.getElementById(`prod-precio-${id}`).value || '0'),
+      ubicacionAlmacen: document.getElementById(`prod-ubic-${id}`).value.trim()
+    };
+    try {
+      const res = await fetch(`http://localhost:8080/backend/api/productos.php?id=${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        alert(body.error || 'Error al guardar producto');
+        return;
+      }
+      // Normalize data for restore
+      const restored = { nombre: payload.nombre, stock: payload.stock, precio: payload.precio, ubicacion: payload.ubicacionAlmacen };
+      restoreRow(restored);
+    } catch (err) {
+      alert('Error de red: ' + err.message);
+    }
+  });
+}
+
+/* --- Provider form --- */
+async function showProveedorForm(data = null) {
+  const isEdit = data !== null;
+  const title = isEdit ? `Editar proveedor #${data.id}` : 'Nuevo proveedor';
+  const fields = `
+    <label>Nombre<br/><input id="pfv-nombre" type="text" value="${isEdit ? escapeHtml(data.nombre) : ''}"/></label>
+    <label>Teléfono<br/><input id="pfv-telefono" type="text" value="${isEdit ? (data.telefono || '') : ''}"/></label>
+    <label>Email<br/><input id="pfv-email" type="email" value="${isEdit ? (data.email || '') : ''}"/></label>
+    <label>Dirección<br/><input id="pfv-direccion" type="text" value="${isEdit ? (data.direccion || '') : ''}"/></label>
+  `;
+  showModal(createModalHtml(title, fields, isEdit ? 'Actualizar' : 'Crear'));
+
+  document.getElementById('modal-submit').addEventListener('click', async () => {
+    await submitProveedorForm(isEdit ? data.id : null);
+  });
+}
+
+async function submitProveedorForm(id = null) {
+  const nombre = document.getElementById('pfv-nombre').value.trim();
+  const telefono = document.getElementById('pfv-telefono').value.trim();
+  const email = document.getElementById('pfv-email').value.trim();
+  const direccion = document.getElementById('pfv-direccion').value.trim();
+
+  const payload = { nombre, telefono, email, direccion };
+  const errorsEl = document.getElementById('form-errors');
+  errorsEl.innerHTML = '';
+
+  try {
+    const url = 'http://localhost:8080/backend/api/proveedores.php' + (id ? `?id=${id}` : '');
+    const method = id ? 'PUT' : 'POST';
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      if (body && body.errors) {
+        errorsEl.innerHTML = body.errors.map(e => `<div>${escapeHtml(e)}</div>`).join('');
+      } else if (body && body.error) {
+        errorsEl.textContent = body.error;
+      } else {
+        errorsEl.textContent = 'Error desconocido al guardar proveedor.';
+      }
+      return;
+    }
+
+    hideModal();
+    // refresh providers list
+    loadProveedores(proveedoresState.page, proveedoresState.limit);
+  } catch (err) {
+    errorsEl.textContent = err.message;
+  }
+}
+
+async function editProveedor(id) {
+  try {
+    const res = await fetch(`http://localhost:8080/backend/api/proveedores.php?id=${id}`);
+    if (!res.ok) throw new Error('No se pudo obtener proveedor');
+    const data = await res.json();
+    showProveedorForm(data);
+  } catch (err) {
+    alert('Error al cargar proveedor: ' + err.message);
+  }
+}
+
+async function deleteProveedor(id) {
+  if (!confirm('¿Eliminar proveedor #' + id + '?')) return;
+  try {
+    const res = await fetch(`http://localhost:8080/backend/api/proveedores.php?id=${id}`, { method: 'DELETE' });
+    if (res.status === 204) {
+      loadProveedores(proveedoresState.page, proveedoresState.limit);
+    } else {
+      const body = await res.json().catch(() => ({}));
+      alert(body.error || 'No se pudo eliminar');
+    }
+  } catch (err) {
+    alert('Error de red: ' + err.message);
+  }
+}
+
+// Enable inline editing of a provider row (Save / Cancel) and submit via PUT
+function enableInlineEditProveedor(row) {
+  if (!row) return;
+  const id = row.dataset.id;
+  const orig = {
+    nombre: row.dataset.nombre || '',
+    telefono: row.dataset.telefono || '',
+    email: row.dataset.email || '',
+    direccion: row.dataset.direccion || ''
+  };
+
+  row.innerHTML = `
+    <td>${id}</td>
+    <td><input class="input-small" id="prov-name-${id}" value="${escapeHtml(orig.nombre)}" /></td>
+    <td><input class="input-small" id="prov-tel-${id}" value="${escapeHtml(orig.telefono)}" /></td>
+    <td><input class="input-small" id="prov-email-${id}" value="${escapeHtml(orig.email)}" /></td>
+    <td><input class="input-small" id="prov-dir-${id}" value="${escapeHtml(orig.direccion)}" /></td>
+    <td style="white-space:nowrap;">
+      <button class="btn-sm" id="prov-save-${id}">Guardar</button>
+      <button class="btn-sm btn-secondary" id="prov-cancel-${id}">Cancelar</button>
+    </td>
+  `;
+
+  const restoreRow = (data) => {
+    row.dataset.nombre = data.nombre;
+    row.dataset.telefono = data.telefono;
+    row.dataset.email = data.email;
+    row.dataset.direccion = data.direccion;
+    row.innerHTML = `
+      <td>${id}</td>
+      <td>${escapeHtml(data.nombre)}</td>
+      <td>${escapeHtml(data.telefono || 'N/A')}</td>
+      <td>${escapeHtml(data.email || 'N/A')}</td>
+      <td>${escapeHtml(data.direccion || 'N/A')}</td>
+      <td style="white-space:nowrap;">
+        <button class="btn-sm" data-action="edit-prov" data-id="${id}">Editar</button>
+        <button class="btn-sm btn-danger" data-action="delete-prov" data-id="${id}">Borrar</button>
+      </td>
+    `;
+    const editBtn = row.querySelector('button[data-action="edit-prov"]');
+    const delBtn = row.querySelector('button[data-action="delete-prov"]');
+    if (editBtn) editBtn.addEventListener('click', () => enableInlineEditProveedor(row));
+    if (delBtn) delBtn.addEventListener('click', () => deleteProveedor(parseInt(id, 10)));
+  };
+
+  document.getElementById(`prov-cancel-${id}`).addEventListener('click', () => restoreRow(orig));
+
+  document.getElementById(`prov-save-${id}`).addEventListener('click', async () => {
+    const payload = {
+      nombre: document.getElementById(`prov-name-${id}`).value.trim(),
+      telefono: document.getElementById(`prov-tel-${id}`).value.trim(),
+      email: document.getElementById(`prov-email-${id}`).value.trim(),
+      direccion: document.getElementById(`prov-dir-${id}`).value.trim()
+    };
+    try {
+      const res = await fetch(`http://localhost:8080/backend/api/proveedores.php?id=${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        alert(body.error || 'Error al guardar proveedor');
+        return;
+      }
+      restoreRow(payload);
+    } catch (err) {
+      alert('Error de red: ' + err.message);
+    }
+  });
+}
+
+
+
+// small helper to avoid XSS when inserting values
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/[&<>"']/g, function (s) {
+    return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[s];
+  });
+}
+
+
