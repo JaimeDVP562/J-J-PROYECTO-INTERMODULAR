@@ -1,8 +1,6 @@
 <?php
 header('Content-Type: application/json; charset=UTF-8');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: POST');
-header('Access-Control-Allow-Headers: Content-Type');
+require_once __DIR__ . '/_cors.php';
 
 require_once '../config.php';
 require_once '../auth/jwt.php';
@@ -37,8 +35,14 @@ try {
         }
 
         if ($isValid) {
-            $payload = ['sub' => $user['username'], 'role' => $user['role']];
-            $token = jwt_encode($payload, 60*60*4);
+            // Token payload: include id, email (we use username field here), and role
+            $payload = [
+                'sub' => (int)$user['id'],
+                'email' => $user['username'],
+                'role' => $user['role']
+            ];
+            // 1 hour expiration (60 * 60)
+            $token = jwt_encode($payload, 60*60);
             echo json_encode(['token' => $token]);
             exit;
         } else {
@@ -52,8 +56,9 @@ try {
 }
 
 // Fallback demo credentials (kept for backward compatibility)
-if ($username === 'admin' && $password === 'admin') {
-    $token = jwt_encode(['sub' => 'admin', 'role' => 'admin'], 60*60*4);
+    if ($username === 'admin' && $password === 'admin') {
+    // Mirror the DB-backed token shape: sub (id), email (username) and role
+    $token = jwt_encode(['sub' => 0, 'email' => 'admin', 'role' => 'admin'], 60*60);
     echo json_encode(['token' => $token]);
 } else {
     http_response_code(401);

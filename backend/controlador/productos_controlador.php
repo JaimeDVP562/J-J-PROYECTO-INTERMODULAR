@@ -9,10 +9,10 @@ class ProductosControlador
         $this->modelo = $modelo;
     }
 
-    public function listarProductos(int $limit = 10, int $offset = 0): array
+    public function listarProductos(int $limit = 10, int $offset = 0, ?string $search = null, ?string $sort = null, ?string $order = null, ?int $proveedor = null): array
     {
-        $productos = $this->modelo->obtenerProductos($limit, $offset);
-        $total = $this->modelo->contarProductos();
+        $productos = $this->modelo->obtenerProductos($limit, $offset, $search, $sort, $order, $proveedor);
+        $total = $this->modelo->contarProductosFiltrados($search, $proveedor);
 
         return [
             'data' => $productos,
@@ -24,6 +24,12 @@ class ProductosControlador
                 'totalPages' => (int) ceil($total / $limit)
             ]
         ];
+    }
+
+    // Return raw array of products (no pagination wrapper) for exports or nested endpoints
+    public function buscarProductosRaw(int $limit = 10, int $offset = 0, ?string $search = null, ?string $sort = null, ?string $order = null, ?int $proveedor = null): array
+    {
+        return $this->modelo->obtenerProductos($limit, $offset, $search, $sort, $order, $proveedor);
     }
     public function verProducto(int $id): ?array
     {

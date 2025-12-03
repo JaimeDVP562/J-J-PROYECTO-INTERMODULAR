@@ -1,8 +1,6 @@
 <?php
     header('Content-Type: application/json; charset=UTF-8');
-    header('Access-Control-Allow-Origin: *');
-    header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE');
-    header('Access-Control-Allow-Headers: Content-Type');
+    require_once __DIR__ . '/_cors.php';
 
     require_once '../config.php';
     require_once '../database.php';
@@ -31,8 +29,8 @@
             echo json_encode($result);
         }
     } elseif ($method === 'POST') {
-        // Require JWT for write operations
-        require_jwt_or_401();
+        // Require admin role for write operations
+        require_role_or_403(['admin']);
         $input = json_decode(file_get_contents('php://input'), true);
         if (!is_array($input)) {
             http_response_code(400);
@@ -57,7 +55,7 @@
         echo json_encode($controlador->verProveedor($id));
 
     } elseif ($method === 'PUT') {
-        require_jwt_or_401();
+        require_role_or_403(['admin']);
         if (!isset($_GET['id'])) {
             http_response_code(400);
             echo json_encode(['error' => 'Falta parámetro id en la query string.']);
@@ -86,7 +84,7 @@
         }
 
     } elseif ($method === 'DELETE') {
-        require_jwt_or_401();
+        require_role_or_403(['admin']);
         if (!isset($_GET['id'])) {
             http_response_code(400);
             echo json_encode(['error' => 'Falta parámetro id en la query string.']);

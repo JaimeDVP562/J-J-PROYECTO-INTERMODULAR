@@ -74,4 +74,15 @@ function require_jwt_or_401() {
     return $payload;
 }
 
+// Require that the caller has one of the allowed roles, otherwise 403
+function require_role_or_403(array $allowedRoles) {
+    $payload = require_jwt_or_401();
+    if (!isset($payload['role']) || !in_array($payload['role'], $allowedRoles, true)) {
+        http_response_code(403);
+        echo json_encode(['error' => 'Forbidden: role required (' . implode(',', $allowedRoles) . ')']);
+        exit;
+    }
+    return $payload;
+}
+
 ?>

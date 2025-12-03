@@ -1,8 +1,6 @@
 <?php
     header('Content-Type: application/json; charset=UTF-8');
-    header('Access-Control-Allow-Origin: *');
-    header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE');
-    header('Access-Control-Allow-Headers: Content-Type');
+    require_once __DIR__ . '/_cors.php';
 
     require_once '../config.php';
     require_once '../database.php';
@@ -21,8 +19,10 @@
     $method = $_SERVER['REQUEST_METHOD'];
 
     if ($method === 'GET') {
-        // Soporta includes=proveedor para obtener el nombre del proveedor del producto con el id indicado
-        if (isset($_GET['id']) && isset($_GET['includes']) && $_GET['includes'] === 'proveedor') {
+        // Soporta include=proveedor o includes=proveedor para obtener el nombre del proveedor del producto con el id indicado
+        $includeParam = isset($_GET['include']) ? $_GET['include'] : (isset($_GET['includes']) ? $_GET['includes'] : null);
+
+        if (isset($_GET['id']) && $includeParam === 'proveedor') {
             $nombre = $controlador->verProveedorPorProducto((int) $_GET['id']);
             if ($nombre === null) {
                 http_response_code(404);
@@ -40,18 +40,45 @@
                 echo json_encode($producto);
             }
         } else {
-            // All products con paginación
-            $page = isset($_GET['page']) ? max(1, (int) $_GET['page']) : 1;
-            $limit = isset($_GET['limit']) ? max(1, min(100, (int) $_GET['limit'])) : 10;
-            $offset = ($page - 1) * $limit;
-            
-            $result = $controlador->listarProductos($limit, $offset);
-            echo json_encode($result);
+            // All products con paginación, búsqueda y ordenación
+                $page = isset($_GET['page']) ? max(1, (int) $_GET['page']) : 1;
+                $limit = isset($_GET['limit']) ? max(1, min(100, (int) $_GET['limit'])) : 10;
+                $offset = ($page - 1) * $limit;
+                $search = isset($_GET['q']) ? trim($_GET['q']) : null;
+                $sort = isset($_GET['sort']) ? $_GET['sort'] : null;
+                $order = isset($_GET['order']) ? $_GET['order'] : null;
+                $proveedorFilter = isset($_GET['proveedor']) ? (int)$_GET['proveedor'] : null;
+
+                // Export if requested
+                if (isset($_GET['export'])) {
+                    $format = strtolower($_GET['export']);
+                    // fetch all matching (no pagination)
+                    $rows = $controlador->buscarProductosRaw(1000000, 0, $search, $sort, $order, $proveedorFilter);
+                    if ($format === 'csv') {
+                        header('Content-Type: text/csv');
+                        header('Content-Disposition: attachment; filename="productos_export.csv"');
+                        $out = fopen('php://output', 'w');
+                        if (!empty($rows)) {
+                            // header row
+                            fputcsv($out, array_keys($rows[0]));
+                            foreach ($rows as $r) fputcsv($out, $r);
+                        }
+                        fclose($out);
+                        exit;
+                    } else {
+                        header('Content-Type: application/json; charset=UTF-8');
+                        echo json_encode(['data' => $rows]);
+                        exit;
+                    }
+                }
+
+                $result = $controlador->listarProductos($limit, $offset, $search, $sort, $order, $proveedorFilter);
+                echo json_encode($result);
         }
 
     } elseif ($method === 'POST') {
-        // Require JWT for write operations
-        require_jwt_or_401();
+        // Require admin role for write operations
+        $payload = require_role_or_403(['admin']);
         // Crear producto
         $input = json_decode(file_get_contents('php://input'), true);
         if (!is_array($input)) {
@@ -97,7 +124,8 @@
         echo json_encode($producto);
 
     } elseif ($method === 'PUT') {
-        require_jwt_or_401();
+        // Require admin role for write operations
+        $payload = require_role_or_403(['admin']);
         // Actualizar producto (id por query ?id=)
         if (!isset($_GET['id'])) {
             http_response_code(400);
@@ -151,7 +179,8 @@
         }
 
     } elseif ($method === 'DELETE') {
-        require_jwt_or_401();
+        // Require admin role for write operations
+        $payload = require_role_or_403(['admin']);
         if (!isset($_GET['id'])) {
             http_response_code(400);
             echo json_encode(['error' => 'Falta parámetro id en la query string.']);

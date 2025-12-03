@@ -1,0 +1,16 @@
+RewriteEngine On
+RewriteBase /
+
+
+# Map friendly API routes to backend/api PHP files
+# Nested: /api/parent/{id}/child -> backend/api/child.php?parent={id}
+RewriteRule ^api/([^/]+)/([0-9]+)/([^/]+)/?$ backend/api/$3.php?$1=$2 [L,QSA]
+
+# /api/entidad/123  -> backend/api/entidad.php?id=123
+RewriteRule ^api/([^/]+)/([0-9]+)/?$ backend/api/$1.php?id=$2 [L,QSA]
+
+# /api/entidad -> backend/api/entidad.php
+RewriteRule ^api/([^/]+)/?$ backend/api/$1.php [L,QSA]
+
+# Fallback: /api/lo-que-sea -> backend/api/lo-que-sea.php
+RewriteRule ^api/(.*)$ backend/api/$1.php [L,QSA]

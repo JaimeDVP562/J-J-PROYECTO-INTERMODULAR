@@ -7,11 +7,34 @@ class ProductosModelo {
         $this->db = $db;
     }
 
-    public function obtenerProductos(int $limit = 10, int $offset = 0): array {
-        $sql = "SELECT * FROM productos LIMIT :limit OFFSET :offset";
+    public function obtenerProductos(int $limit = 10, int $offset = 0, ?string $search = null, ?string $sort = null, ?string $order = null, ?int $proveedor = null): array {
+        $allowedSort = ['id','nombre','precio','stock'];
+        $order = $order && strtoupper($order) === 'DESC' ? 'DESC' : 'ASC';
+        $sort = in_array($sort, $allowedSort, true) ? $sort : 'id';
+
+        $sql = "SELECT * FROM productos";
+        $params = [];
+        $conds = [];
+        if ($proveedor !== null) {
+            $conds[] = 'proveedor = :proveedor';
+            $params[':proveedor'] = $proveedor;
+        }
+        if ($search !== null && $search !== '') {
+            $conds[] = 'nombre LIKE :search';
+            $params[':search'] = '%' . $search . '%';
+        }
+        if (!empty($conds)) {
+            $sql .= ' WHERE ' . implode(' AND ', $conds);
+        }
+
+        $sql .= " ORDER BY {$sort} {$order} LIMIT :limit OFFSET :offset";
         $stmt = $this->db->prepare($sql);
-        $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
-        $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
+        foreach ($params as $k => $v) {
+            if ($k === ':proveedor') $stmt->bindValue($k, (int)$v, PDO::PARAM_INT);
+            else $stmt->bindValue($k, $v, PDO::PARAM_STR);
+        }
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
         $stmt->setFetchMode(PDO::FETCH_ASSOC);
         $stmt->execute();
 
@@ -23,8 +46,33 @@ class ProductosModelo {
         $stmt = $this->db->prepare($sql);
         $stmt->execute();
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        
+
         return (int) $result['total'];
+    }
+
+    public function contarProductosFiltrados(?string $search = null, ?int $proveedor = null): int {
+        $sql = "SELECT COUNT(*) as total FROM productos";
+        $conds = [];
+        $params = [];
+        if ($proveedor !== null) {
+            $conds[] = 'proveedor = :proveedor';
+            $params[':proveedor'] = $proveedor;
+        }
+        if ($search !== null && $search !== '') {
+            $conds[] = 'nombre LIKE :search';
+            $params[':search'] = '%' . $search . '%';
+        }
+        if (!empty($conds)) {
+            $sql .= ' WHERE ' . implode(' AND ', $conds);
+        }
+        $stmt = $this->db->prepare($sql);
+        foreach ($params as $k => $v) {
+            if ($k === ':proveedor') $stmt->bindValue($k, (int)$v, PDO::PARAM_INT);
+            else $stmt->bindValue($k, $v, PDO::PARAM_STR);
+        }
+        $stmt->execute();
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return (int)$result['total'];
     }
 
     public function obtenerProductoPorId(int $id): ?array {

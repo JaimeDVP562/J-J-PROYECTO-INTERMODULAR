@@ -5,6 +5,7 @@ USE JJPROYECT;
 -- Eliminar tablas existentes si existen
 DROP TABLE IF EXISTS productos;
 DROP TABLE IF EXISTS proveedor;
+DROP TABLE IF EXISTS categorias;
 
 -- Tabla de proveedores
 CREATE TABLE IF NOT EXISTS proveedor (
@@ -69,6 +70,20 @@ INSERT INTO productos (nombre, stock, precio, proveedor, ubicacionAlmacen) VALUE
 ('Sifón botella extensible cromado', 100, 11.25, 5, 'E-04'),
 ('Cinta teflón fontanería (rollo 12m)', 280, 1.50, 5, 'E-05');
 
+-- Tabla de categorias (recurso adicional simple)
+CREATE TABLE IF NOT EXISTS categorias (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(255) NOT NULL,
+    descripcion TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Datos de ejemplo para categorias
+INSERT INTO categorias (nombre, descripcion) VALUES
+('Herramientas', 'Categoría de herramientas manuales y eléctricas'),
+('Tornillería', 'Tornillos, tuercas y pernos'),
+('Eléctricos', 'Material eléctrico y luminaria');
+
 -- Tabla de usuarios para autenticación (opcional para entorno de desarrollo)
 DROP TABLE IF EXISTS users;
 CREATE TABLE IF NOT EXISTS users (
@@ -79,13 +94,22 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- INSERT de ejemplo: usuario de prueba para desarrollo
--- Usuario: `admin`  |  Contraseña: `admin`
--- Para facilitar copiar/pegar en phpMyAdmin en entornos de clase, aquí se inserta
--- la contraseña como MD5 (NO recomendado en producción). El sistema de login
--- aceptará este formato como fallback para entornos locales/educativos.
-INSERT INTO users (username, password_hash, role, created_at) VALUES
-('admin', '21232f297a57a5a743894a0e4a801fc3', 'admin', NOW());
+-- INSERTs de ejemplo: usuarios para desarrollo
+-- NOTA: Estos usan MD5 para facilitar pruebas rápidas en entornos locales/educativos.
+-- El sistema acepta MD5 como fallback (NO usar en producción). Para producción
+-- genera hashes con PHP `password_hash()` y almacénalos en `password_hash`.
 
--- Si prefieres crear usuarios seguros, borra este INSERT y usa
--- `backend/scripts/create_user.php` o genera contraseñas con `password_hash()`.
+-- Usuarios de prueba:
+-- admin / admin  (rol: admin)
+-- usuario / usuario  (rol: user)
+INSERT INTO users (username, password_hash, role, created_at) VALUES
+('admin', MD5('admin'), 'admin', NOW()),
+('usuario', MD5('usuario'), 'user', NOW());
+
+-- Ejemplo seguro (descomentar y usar si ya tienes hashes generados):
+-- INSERT INTO users (username, password_hash, role, created_at) VALUES
+-- ('admin', '$2y$10$...replace_with_password_hash...', 'admin', NOW());
+
+-- Para generar un hash seguro desde el contenedor web (PHP) ejecutar:
+-- docker compose exec web php -r "echo password_hash('tu_password', PASSWORD_DEFAULT) . PHP_EOL;"
+-- Copia el valor resultante y pega en el INSERT seguro de arriba.
