@@ -258,3 +258,254 @@ header p {
     min-width: 600px;
   }
 }
+
+/* Sidebar auth area (footer) */
+.sidebar #sidebar-auth {
+  padding: 16px 20px;
+}
+
+/* Make sidebar auth buttons match the primary button style but adapted
+   to sit full-width in the sidebar footer. Also target small buttons
+   that are rendered there (e.g. buttons with class btn-sm). */
+.sidebar #sidebar-auth button,
+.sidebar #sidebar-auth .btn-sm,
+.sidebar #sidebar-auth .btn-primary {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: none;
+  background: #2e8bff; /* primary color */
+  color: #fff;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-align: center;
+  box-shadow: 0 2px 6px rgba(46, 139, 255, 0.18);
+  transition: background 0.25s, transform 0.08s, box-shadow 0.25s;
+}
+
+.sidebar #sidebar-auth button:hover,
+.sidebar #sidebar-auth .btn-sm:hover,
+.sidebar #sidebar-auth .btn-primary:hover {
+  background: #1a74e0;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(46, 139, 255, 0.28);
+}
+
+.sidebar #sidebar-auth button:active,
+.sidebar #sidebar-auth .btn-sm:active,
+.sidebar #sidebar-auth .btn-primary:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(46, 139, 255, 0.18);
+}
+
+/* Floating fallback auth control (small) */
+#auth-controls { position: fixed; right: 16px; top: 12px; z-index:1000; }
+#auth-controls .auth-float { background:#fff;border:1px solid #ddd;padding:8px 12px;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,0.05);} 
+#auth-controls .auth-float button { cursor:pointer; }
+
+/* Modal styles for form dialogs (products / providers) */
+#global-modal-wrapper .modal-overlay {
+  position: fixed;
+  inset: 0; /* top:0; right:0; bottom:0; left:0 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.45);
+  z-index: 2000;
+  padding: 20px;
+}
+
+#global-modal-wrapper .modal {
+  background: #fff;
+  border-radius: 10px;
+  max-width: 720px;
+  width: 100%;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.25);
+  overflow: hidden;
+  transform-origin: center center;
+  animation: modal-pop 160ms ease-out;
+}
+
+.modal header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #f0f2f6;
+  background: linear-gradient(90deg, rgba(46,139,255,0.03), transparent);
+}
+
+.modal header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: #222;
+}
+
+.modal .modal-body {
+  padding: 18px 20px;
+  max-height: calc(100vh - 240px);
+  overflow: auto;
+}
+
+.modal footer {
+  padding: 12px 20px;
+  border-top: 1px solid #f0f2f6;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  background: #fff;
+}
+
+@keyframes modal-pop {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@media (max-width: 600px) {
+  #global-modal-wrapper .modal { max-width: 100%; border-radius: 8px; }
+  .modal .modal-body { padding: 12px; }
+  .modal header { padding: 12px; }
+  .modal footer { padding: 10px; }
+}
+
+/* Inline modal variant: when mounted inside the page flow (e.g. stock view)
+   we render as an integrated card between sections instead of a full-screen overlay */
+#global-modal-wrapper.inline-root .modal-overlay {
+  position: static;
+  background: transparent;
+  display: block;
+  align-items: stretch;
+  justify-content: stretch;
+  padding: 0;
+}
+
+#global-modal-wrapper.inline-root .modal {
+  margin: 18px 0;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+  border-radius: 10px;
+  max-width: 100%;
+}
+
+#global-modal-wrapper.inline-root .modal .modal-body {
+  padding: 16px;
+}
+
+#global-modal-wrapper.inline-root .modal footer { background: transparent; border-top: none; padding: 12px 16px 16px 16px; }
+
+/* Inline form card used for adding/editing products inside the page flow */
+.inline-form-card {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+  overflow: hidden;
+  margin: 18px 0;
+  border: 1px solid #eef6ff;
+}
+.inline-form-card .modal-body label { display:block; margin-bottom:10px; }
+.inline-form-card .modal-body input { width:100%; padding:8px 10px; border:1px solid #e6eefc; border-radius:6px; }
+.inline-form-card footer button { min-width:100px; }
+
+/* Form grid rows: labels above inputs for clarity */
+.inline-form-card .form-grid { display:block; padding:8px 12px; }
+.inline-form-card .form-row { margin-bottom:12px; }
+.inline-form-card .form-row label { display:block; font-weight:600; margin-bottom:6px; color:#233; }
+.inline-form-card .form-row input { width:100%; box-sizing:border-box; padding:8px 10px; border:1px solid #e6eefc; border-radius:6px; background:#fff; }
+.inline-form-card .form-row input[type="number"] { -moz-appearance:textfield; }
+.inline-form-card .form-row input::placeholder { color:#9aaedb; }
+
+/* Inline grid (table-like) layout for compact entry */
+.inline-form-card .form-grid-inline {
+  display: grid;
+  grid-template-columns: 2fr 0.9fr 0.9fr 1fr 1fr;
+  gap: 12px;
+  align-items: end;
+  padding: 12px;
+}
+.inline-form-card .form-grid-inline .form-row { margin: 0; }
+.inline-form-card .form-grid-inline .form-row label { display:block; font-size:0.85rem; margin-bottom:6px; color:#2a3b4d; }
+.inline-form-card .form-grid-inline .form-row input { width:100%; }
+
+@media (max-width: 900px) {
+  .inline-form-card .form-grid-inline { grid-template-columns: 1fr; align-items: stretch; }
+  .inline-form-card .form-grid-inline .form-row { margin-bottom:10px; }
+}
+
+/* Styles for the edit-table variant so it visually matches the products list */
+.inline-form-card .edit-table-wrapper { padding: 24px; }
+.inline-form-card .edit-table { width: 100%; border-collapse: collapse; background: #fff; }
+.inline-form-card .edit-table thead { background: #f4f6fa; }
+.inline-form-card .edit-table th { padding: 12px 16px; text-align: left; font-weight: 600; color: #222; border-bottom: 2px solid #2e8bff; }
+.inline-form-card .edit-table td { padding: 12px 16px; border-bottom: 1px solid #eee; vertical-align: middle; color: #555; }
+.inline-form-card .edit-table input { width: 100%; box-sizing: border-box; padding: 8px 10px; height: 36px; border: 1px solid #e6eefc; border-radius: 6px; background: #fff; }
+.inline-form-card .edit-extra { margin-top:10px; display:flex; gap:8px; align-items:center; }
+
+/* Make inline edit-table columns align with the main list and avoid layout shifts */
+.inline-form-card .edit-table {
+  table-layout: fixed;
+  font-size: 0.98rem;
+}
+
+/* reduce any internal offsets so table lines up with other .productos-table cards */
+.inline-form-card { padding: 0; }
+.inline-form-card .modal-body { padding: 0; }
+.inline-form-card .edit-table { margin: 0; }
+.inline-form-card .edit-table th:nth-child(1),
+.inline-form-card .edit-table td:nth-child(1) {
+  width: 60px; /* ID */
+}
+.inline-form-card .edit-table th:nth-child(2),
+.inline-form-card .edit-table td:nth-child(2) {
+  width: 35%; /* Nombre */
+}
+.inline-form-card .edit-table th:nth-child(3),
+.inline-form-card .edit-table td:nth-child(3) {
+  width: 12%; /* Teléfono */
+}
+.inline-form-card .edit-table th:nth-child(4),
+.inline-form-card .edit-table td:nth-child(4) {
+  width: 28%; /* Email */
+}
+.inline-form-card .edit-table th:nth-child(5),
+.inline-form-card .edit-table td:nth-child(5) {
+  width: auto; /* Dirección - remaining space */
+}
+
+/* Ensure action footer aligns with table height on wide screens */
+.inline-form-card footer { display:flex; align-items:center; justify-content:flex-end; gap:8px; padding:12px 16px; }
+.inline-form-card footer .btn-primary, .inline-form-card footer .btn-secondary { min-width:110px; }
+
+@media (max-width: 900px) {
+  .inline-form-card .edit-table { font-size: 0.95rem; }
+  .inline-form-card .edit-extra { flex-direction: column; align-items: stretch; }
+}
+
+/* Mobile: convert inline edit-table to stacked blocks for small screens */
+@media (max-width: 700px) {
+  .inline-form-card .edit-table {
+    width: 100%;
+  }
+  .inline-form-card .edit-table thead { display: none; }
+  .inline-form-card .edit-table tbody tr {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 8px 0;
+    border-bottom: 1px solid #eef6ff;
+  }
+  .inline-form-card .edit-table td {
+    display: block;
+    padding: 6px 0;
+    border-bottom: none;
+  }
+  .inline-form-card .edit-table td input { width: 100%; }
+
+  /* add contextual labels before each cell so the user knows the field on small screens */
+  .inline-form-card .edit-table td:nth-child(1)::before { content: "ID"; display:block; font-weight:700; color:#445; margin-bottom:6px; }
+  .inline-form-card .edit-table td:nth-child(2)::before { content: "Nombre"; display:block; font-weight:700; color:#445; margin-bottom:6px; }
+  .inline-form-card .edit-table td:nth-child(3)::before { content: "Teléfono"; display:block; font-weight:700; color:#445; margin-bottom:6px; }
+  .inline-form-card .edit-table td:nth-child(4)::before { content: "Email"; display:block; font-weight:700; color:#445; margin-bottom:6px; }
+  .inline-form-card .edit-table td:nth-child(5)::before { content: "Dirección"; display:block; font-weight:700; color:#445; margin-bottom:6px; }
+
+  /* Action buttons full-width and aligned */
+  .inline-form-card footer { display:flex; flex-direction:column-reverse; gap:10px; padding:12px; }
+  .inline-form-card footer .btn-primary, .inline-form-card footer .btn-secondary { width:100%; }
+}

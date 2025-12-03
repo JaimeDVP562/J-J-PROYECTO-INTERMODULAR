@@ -26,4 +26,16 @@ class ProveedoresControlador {
     public function verProveedor(int $id): ?array {
         return $this->modelo->obtenerProveedorPorId($id);
     }
+
+    public function crearProveedor(array $data): int {
+        return $this->modelo->crearProveedor($data);
+    }
+
+    public function actualizarProveedor(int $id, array $data): bool {
+        return $this->modelo->actualizarProveedor($id, $data);
+    }
+
+    public function eliminarProveedor(int $id): bool {
+        return $this->modelo->eliminarProveedor($id);
+    }
 }

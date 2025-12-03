@@ -43,9 +43,20 @@ class Router {
       this.navigate(path);
     });
 
-    // Cargar la ruta inicial
+    // Cargar la ruta inicial: si hay token, navegar a la ruta solicitada;
+    // si no hay token, forzar la vista `login` y guardar la ruta pendiente.
     const initialPath = window.location.hash.slice(1) || 'dashboard';
-    this.navigate(initialPath);
+    try {
+      const token = (typeof getAuthToken === 'function') ? getAuthToken() : null;
+      if (!token) {
+        window.__pendingRoute = initialPath === 'login' ? 'dashboard' : initialPath;
+        this.navigate('login');
+      } else {
+        this.navigate(initialPath);
+      }
+    } catch (e) {
+      this.navigate(initialPath);
+    }
   }
 }
 

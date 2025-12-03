@@ -68,3 +68,24 @@ INSERT INTO productos (nombre, stock, precio, proveedor, ubicacionAlmacen) VALUE
 ('Válvula antirretorno 1/2"', 130, 8.40, 5, 'E-03'),
 ('Sifón botella extensible cromado', 100, 11.25, 5, 'E-04'),
 ('Cinta teflón fontanería (rollo 12m)', 280, 1.50, 5, 'E-05');
+
+-- Tabla de usuarios para autenticación (opcional para entorno de desarrollo)
+DROP TABLE IF EXISTS users;
+CREATE TABLE IF NOT EXISTS users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(100) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    role VARCHAR(50) DEFAULT 'user',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- INSERT de ejemplo: usuario de prueba para desarrollo
+-- Usuario: `admin`  |  Contraseña: `admin`
+-- Para facilitar copiar/pegar en phpMyAdmin en entornos de clase, aquí se inserta
+-- la contraseña como MD5 (NO recomendado en producción). El sistema de login
+-- aceptará este formato como fallback para entornos locales/educativos.
+INSERT INTO users (username, password_hash, role, created_at) VALUES
+('admin', '21232f297a57a5a743894a0e4a801fc3', 'admin', NOW());
+
+-- Si prefieres crear usuarios seguros, borra este INSERT y usa
+-- `backend/scripts/create_user.php` o genera contraseñas con `password_hash()`.

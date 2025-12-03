@@ -8,6 +8,7 @@
     require_once '../database.php';
     require_once '../modelo/proveedores_modelo.php';
     require_once '../controlador/proveedores_controlador.php';
+    require_once '../auth/jwt.php';
 
     $db = Database::getConnection();
     $modelo = new ProveedoresModelo($db);
@@ -29,6 +30,83 @@
             $result = $controlador->listarProveedores($limit, $offset);
             echo json_encode($result);
         }
+    } elseif ($method === 'POST') {
+        // Require JWT for write operations
+        require_jwt_or_401();
+        $input = json_decode(file_get_contents('php://input'), true);
+        if (!is_array($input)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'JSON inválido']);
+            exit;
+        }
+        $errors = [];
+        if (empty($input['nombre'])) $errors[] = 'El campo nombre es obligatorio.';
+        if (!empty($errors)) {
+            http_response_code(400);
+            echo json_encode(['errors' => $errors]);
+            exit;
+        }
+        $data = [
+            'nombre' => $input['nombre'],
+            'telefono' => $input['telefono'] ?? null,
+            'email' => $input['email'] ?? null,
+            'direccion' => $input['direccion'] ?? null
+        ];
+        $id = $controlador->crearProveedor($data);
+        http_response_code(201);
+        echo json_encode($controlador->verProveedor($id));
+
+    } elseif ($method === 'PUT') {
+        require_jwt_or_401();
+        if (!isset($_GET['id'])) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Falta parámetro id en la query string.']);
+            exit;
+        }
+        $id = (int) $_GET['id'];
+        $existing = $controlador->verProveedor($id);
+        if ($existing === null) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Proveedor no encontrado']);
+            exit;
+        }
+        $input = json_decode(file_get_contents('php://input'), true);
+        if (!is_array($input)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'JSON inválido']);
+            exit;
+        }
+        $data = array_merge($existing, $input);
+        $updated = $controlador->actualizarProveedor($id, $data);
+        if ($updated) {
+            echo json_encode($controlador->verProveedor($id));
+        } else {
+            http_response_code(304);
+            echo json_encode(['message' => 'No se realizaron cambios.']);
+        }
+
+    } elseif ($method === 'DELETE') {
+        require_jwt_or_401();
+        if (!isset($_GET['id'])) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Falta parámetro id en la query string.']);
+            exit;
+        }
+        $id = (int) $_GET['id'];
+        $existing = $controlador->verProveedor($id);
+        if ($existing === null) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Proveedor no encontrado']);
+            exit;
+        }
+        $deleted = $controlador->eliminarProveedor($id);
+        if ($deleted) {
+            http_response_code(204);
+        } else {
+            http_response_code(500);
+            echo json_encode(['error' => 'No se pudo eliminar el proveedor']);
+        }
+
     } else {
         http_response_code(405);
         echo json_encode(['error' => 'Método no permitido']);
