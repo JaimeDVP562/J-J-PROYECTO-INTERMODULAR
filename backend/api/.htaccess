@@ -1,7 +1,13 @@
 RewriteEngine On
 
+# Health check endpoint
+RewriteRule ^health/?$ health.php [L,QSA]
+
 # Login
 RewriteRule ^login/?$ login.php [L,QSA]
+
+# Endpoint anidado: Productos por proveedor (debe ir ANTES que la ruta de proveedores genérica)
+RewriteRule ^proveedores/([0-9]+)/productos/?$ proveedores.php?id=$1&productos=1 [L,QSA]
 
 # Lista de productos
 RewriteRule ^productos/?$ productos.php [L,QSA]

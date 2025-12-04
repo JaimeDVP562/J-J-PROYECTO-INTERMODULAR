@@ -546,7 +546,7 @@ Esta migración permitirá acelerar el desarrollo y garantizar un código más m
 - Jesús Ríos López
 - Jaime Gavilán Torrero
 
-**Proyecto Académico:** Desarrollo de Aplicaciones Web  
+**Proyecto Académico:** Desarrollo de Aplicaciones Web
 **Curso:** 2025-26
 
 ---

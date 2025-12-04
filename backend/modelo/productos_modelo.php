@@ -137,4 +137,24 @@ class ProductosModelo {
 
         return $stmt->rowCount() > 0;
     }
+
+    public function obtenerProductosPorProveedor(int $proveedorId, int $limit = 10, int $offset = 0): array {
+        $sql = "SELECT * FROM productos WHERE proveedor = :proveedor_id ORDER BY id ASC LIMIT :limit OFFSET :offset";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindValue(':proveedor_id', $proveedorId, PDO::PARAM_INT);
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        $stmt->setFetchMode(PDO::FETCH_ASSOC);
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+
+    public function contarProductosPorProveedor(int $proveedorId): int {
+        $sql = "SELECT COUNT(*) as total FROM productos WHERE proveedor = :proveedor_id";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindValue(':proveedor_id', $proveedorId, PDO::PARAM_INT);
+        $stmt->execute();
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return (int)$result['total'];
+    }
 }
