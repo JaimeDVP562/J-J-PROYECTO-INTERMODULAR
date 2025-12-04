@@ -83,8 +83,8 @@
             echo json_encode($result);
         }
     } elseif ($method === 'POST') {
-        // Require admin role for write operations
-        require_role_or_403(['admin']);
+        // Require admin or user role for write operations
+        require_role_or_403(['admin', 'user']);
         Logger::info('POST /proveedores - Solicitud recibida');
         $input = json_decode(file_get_contents('php://input'), true);
         if (!is_array($input)) {

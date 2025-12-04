@@ -90,8 +90,8 @@
         }
 
     } elseif ($method === 'POST') {
-        // Require admin role for write operations
-        $payload = require_role_or_403(['admin']);
+        // Require admin or user role for write operations
+        $payload = require_role_or_403(['admin', 'user']);
         Logger::info('POST /productos - Solicitud recibida');
         // Crear producto
         $input = json_decode(file_get_contents('php://input'), true);

@@ -36,7 +36,7 @@
             echo json_encode(['data' => $data, 'pagination' => ['total' => $total, 'limit' => $limit, 'offset' => $offset]]);
         }
     } elseif ($method === 'POST') {
-        require_role_or_403(['admin']);
+        require_role_or_403(['admin', 'user']);
         Logger::info('POST /categorias - Solicitud recibida');
         $input = json_decode(file_get_contents('php://input'), true);
         if (!is_array($input) || empty($input['nombre'])) {
