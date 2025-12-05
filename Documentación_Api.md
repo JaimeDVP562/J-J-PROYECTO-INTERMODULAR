@@ -1061,3 +1061,32 @@ GET http://localhost:8000/api/health
 ---
 
 *Documentación generada en Sprint 2 - Diciembre 2025*
+*Documentación generada en Sprint 2 - Diciembre 2025*
+
+## 🛠️ Mejoras
+
+A continuación se listan 6 mejoras que están implementadas en el backend, con una breve nota de cómo, dónde y por qué:
+
+- **Endpoint anidado (subrecursos): Sí**
+  - Cómo/Dónde: `backend/api/proveedores.php` ahora acepta `/api/proveedores/{id}/productos` (detecta `PATH_INFO`/`REQUEST_URI` y normaliza a `$_GET['id']` + `productos=1`).
+  - Por qué: Permite obtener fácilmente los productos de un proveedor usando una URL RESTful, útil para frontend y pruebas.
+
+- **Exportación sencilla (CSV): Sí**
+  - Cómo/Dónde: `backend/api/productos.php` soporta `?export=csv` y envía `Content-Type: text/csv` generando CSV con `fputcsv()`.
+  - Por qué: Facilita descargar listados para Excel/Calc sin herramientas adicionales.
+
+- **CORS básico (OBLIGATORIA): Sí**
+  - Cómo/Dónde: `backend/api/_cors.php` añade `Access-Control-Allow-Origin`, `Access-Control-Allow-Methods`, `Access-Control-Allow-Headers` y responde OPTIONS.
+  - Por qué: Permite consumir la API desde un frontend en otro origen durante desarrollo y despliegue.
+
+- **Varios recursos en la misma API: Sí**
+  - Cómo/Dónde: La API expone `productos`, `proveedores` y `categorias` mediante `backend/api/*.php` con modelos y controladores en `backend/modelo/` y `backend/controlador/`.
+  - Por qué: Organiza el backend en recursos separados, facilitando mantenimiento y extensibilidad.
+
+- **Fichero de logs: Sí**
+  - Cómo/Dónde: `backend/logger.php` escribe en `backend/logs/api.log` (crea la carpeta si no existe) y se usa en los endpoints con `Logger::info/warning/error/success`.
+  - Por qué: Permite auditar operaciones y depurar incidencias en producción/local.
+
+- **Batería de pruebas manuales: Sí**
+  - Cómo/Dónde: `Tests.md` en el repositorio contiene una tabla con casos de prueba (TC001..TC060) que describen endpoints, entradas y expectativas HTTP.
+  - Por qué: Facilita pruebas manuales y verificación por QA o desarrolladores sin necesidad de frameworks de test.

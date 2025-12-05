@@ -20,7 +20,39 @@
     $method = $_SERVER['REQUEST_METHOD'];
 
     // Detectar si es endpoint anidado: /api/proveedores/{id}/productos
+    // Soporta tanto la variante basada en query `?productos=1&id=...` como
+    // rutas RESTful si el servidor deja PATH_INFO o la URL contiene
+    // `/proveedores/{id}/productos` (útil con rewrite rules).
     $isProductosEndpoint = isset($_GET['productos']) && $_GET['productos'] === '1';
+
+    if (!$isProductosEndpoint) {
+        // Intentar detectar vía PATH_INFO (p.ej. /proveedores.php/3/productos)
+        $pathInfo = $_SERVER['PATH_INFO'] ?? null;
+        $requestUri = $_SERVER['REQUEST_URI'] ?? '';
+        $nestedId = null;
+
+        if ($pathInfo) {
+            if (preg_match('#/?(\d+)/productos#', $pathInfo, $m)) {
+                $nestedId = (int)$m[1];
+            }
+        }
+
+        if ($nestedId === null) {
+            // Buscar patrones en REQUEST_URI como /api/proveedores/3/productos
+            if (preg_match('#/api/proveedores/(\d+)/productos#', $requestUri, $m)) {
+                $nestedId = (int)$m[1];
+            } elseif (preg_match('#/proveedores/(\d+)/productos#', $requestUri, $m)) {
+                $nestedId = (int)$m[1];
+            }
+        }
+
+        if ($nestedId !== null) {
+            // Normalizar a los parámetros esperados por la lógica existente
+            $_GET['id'] = $nestedId;
+            $_GET['productos'] = '1';
+            $isProductosEndpoint = true;
+        }
+    }
     
     if ($method == 'GET') {
         if ($isProductosEndpoint && isset($_GET['id'])) {
