@@ -1,0 +1,607 @@
+openapi: 3.0.3
+info:
+  title: API de Productos y Proveedores
+  description: Especificación OpenAPI generada a partir del código en `backend/` (controladores y modelos). Documenta parámetros reales (query `id`, `q`, `page`, `export`, `include`) y comportamientos observados.
+  version: 1.0.1
+servers:
+  - url: /api
+    description: Servidor local (ruta base /api)
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Producto:
+      type: object
+      properties:
+        id:
+          type: integer
+        nombre:
+          type: string
+        descripcion:
+          type: string
+          nullable: true
+        precio:
+          type: number
+          format: float
+        stock:
+          type: integer
+        proveedor:
+          type: integer
+          nullable: true
+        ubicacionAlmacen:
+          type: string
+          nullable: true
+      required:
+        - id
+        - nombre
+
+    Proveedor:
+      type: object
+      properties:
+        id:
+          type: integer
+        nombre:
+          type: string
+        telefono:
+          type: string
+          nullable: true
+        email:
+          type: string
+          format: email
+          nullable: true
+        direccion:
+          type: string
+          nullable: true
+      required:
+        - id
+        - nombre
+
+    Pagination:
+      type: object
+      properties:
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+        page:
+          type: integer
+        totalPages:
+          type: integer
+
+    ListResponseProductos:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Producto'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    ListResponseProveedores:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Proveedor'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    ListProductosWithProveedor:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Producto'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+        proveedor:
+          $ref: '#/components/schemas/Proveedor'
+
+    ValidationError:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            type: string
+
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+
+    LoginRequest:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+      required:
+        - username
+        - password
+
+    AuthToken:
+      type: object
+      properties:
+        token:
+          type: string
+          description: JWT token (Bearer)
+
+paths:
+  /productos:
+    get:
+      summary: Listar productos o recuperar por `id`
+      description: |
+        - Si se proporciona `id` en query devuelve el producto.
+        - Si se proporciona `id` y `include=proveedor` devuelve `{ "proveedor": "nombre" }`.
+        - Si no hay `id` devuelve listado paginado. Parámetros: `page`, `limit`, `q` (búsqueda), `sort`, `order`, `proveedor`, `export` (csv|json).
+      parameters:
+        - in: query
+          name: id
+          schema:
+            type: integer
+          description: ID del producto (opcional). Si está presente se devuelve un único producto.
+        - in: query
+          name: include
+          schema:
+            type: string
+          description: 'Soporta `proveedor` para devolver el nombre del proveedor cuando se solicita un producto por id.'
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+        - in: query
+          name: q
+          schema:
+            type: string
+          description: Término de búsqueda para el nombre.
+        - in: query
+          name: sort
+          schema:
+            type: string
+            enum: [id, nombre, precio, stock]
+        - in: query
+          name: order
+          schema:
+            type: string
+            enum: [asc, desc]
+        - in: query
+          name: proveedor
+          schema:
+            type: integer
+        - in: query
+          name: export
+          schema:
+            type: string
+            enum: [csv, json]
+          description: Cuando se solicita export devuelve archivo CSV o JSON (no paginado).
+      responses:
+        '200':
+          description: Respuesta exitosa (lista o recurso)
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ListResponseProductos'
+                  - $ref: '#/components/schemas/Producto'
+                  - type: object
+                    properties:
+                      proveedor:
+                        type: string
+        '400':
+          description: Parámetros inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      summary: Crear producto
+      description: Crea un producto. Requiere autenticación (roles `admin` o `user`). Devuelve el objeto creado.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nombre:
+                  type: string
+                descripcion:
+                  type: string
+                precio:
+                  type: number
+                stock:
+                  type: integer
+                proveedor:
+                  type: integer
+                ubicacionAlmacen:
+                  type: string
+              required:
+                - nombre
+      responses:
+        '201':
+          description: Producto creado (objeto completo)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Producto'
+        '400':
+          description: Validación fallida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          description: Autenticación requerida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      summary: Actualizar producto
+      description: Actualiza un producto. Debe proporcionarse `id` como query param. Requiere rol `admin`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nombre:
+                  type: string
+                descripcion:
+                  type: string
+                precio:
+                  type: number
+                stock:
+                  type: integer
+                proveedor:
+                  type: integer
+                ubicacionAlmacen:
+                  type: string
+      responses:
+        '200':
+          description: Recurso actualizado (devuelve objeto actualizado)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Producto'
+        '304':
+          description: Sin cambios
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          description: Autenticación requerida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Eliminar producto
+      description: Elimina un producto; `id` en query. Requiere rol `admin`. Respuesta 204 No Content en éxito.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Eliminado correctamente (No Content)
+        '404':
+          description: No encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Autenticación requerida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /productos/raw:
+    get:
+      summary: Buscar productos (raw)
+      description: Devuelve arreglo plano de productos sin wrapper de paginación (uso para exportes).
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+        - in: query
+          name: q
+          schema:
+            type: string
+        - in: query
+          name: sort
+          schema:
+            type: string
+        - in: query
+          name: order
+          schema:
+            type: string
+            enum: [asc, desc]
+        - in: query
+          name: proveedor
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Arreglo de productos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Producto'
+
+  /proveedores:
+    get:
+      summary: Listar proveedores o recuperar por `id`
+      parameters:
+        - in: query
+          name: id
+          schema:
+            type: integer
+          description: Si se proporciona `id` devuelve un proveedor.
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Lista de proveedores con paginación o recurso único
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ListResponseProveedores'
+                  - $ref: '#/components/schemas/Proveedor'
+
+    post:
+      summary: Crear proveedor
+      description: Crea un proveedor. Requiere autenticación (roles `admin` o `user`). Devuelve el objeto creado.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nombre:
+                  type: string
+                telefono:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                direccion:
+                  type: string
+              required:
+                - nombre
+      responses:
+        '201':
+          description: Proveedor creado (objeto completo)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Proveedor'
+        '400':
+          description: Validación fallida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          description: Autenticación requerida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /proveedores/{id}/productos:
+    get:
+      summary: Obtener productos de un proveedor (endpoint anidado)
+      description: Devuelve los productos asociados a un proveedor, con paginación. El servidor acepta tanto query params (`?productos=1&id=...`) como rutas RESTful cuando hay rewrite.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Productos del proveedor con paginación y datos del proveedor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListProductosWithProveedor'
+        '404':
+          description: Proveedor no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /proveedores/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+    put:
+      summary: Actualizar proveedor
+      description: Actualiza un proveedor (id en path). Requiere rol `admin`.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nombre:
+                  type: string
+                telefono:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                direccion:
+                  type: string
+      responses:
+        '200':
+          description: Proveedor actualizado (objeto completo)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Proveedor'
+        '304':
+          description: Sin cambios
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '400':
+          description: Validación fallida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          description: Autenticación requerida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Eliminar proveedor
+      description: Elimina un proveedor (id en path). Requiere rol `admin`. Responde 204 en éxito.
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Eliminado correctamente (No Content)
+        '404':
+          description: No encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /login:
+    post:
+      summary: Autenticación (login)
+      description: Genera un token JWT cuando las credenciales son válidas. Devuelve `{ "token:" "..." }`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Autenticación correcta. Devuelve token JWT.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthToken'
+        '400':
+          description: JSON inválido o faltan credenciales
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Credenciales inválidas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+

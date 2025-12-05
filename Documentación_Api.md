@@ -1061,32 +1061,50 @@ GET http://localhost:8000/api/health
 ---
 
 *Documentación generada en Sprint 2 - Diciembre 2025*
-*Documentación generada en Sprint 2 - Diciembre 2025*
 
-## 🛠️ Mejoras
+## 🛠️ Mejoras (actualizado)
 
-A continuación se listan 6 mejoras que están implementadas en el backend, con una breve nota de cómo, dónde y por qué:
+Implementadas (6):
 
 - **Endpoint anidado (subrecursos): Sí**
-  - Cómo/Dónde: `backend/api/proveedores.php` ahora acepta `/api/proveedores/{id}/productos` (detecta `PATH_INFO`/`REQUEST_URI` y normaliza a `$_GET['id']` + `productos=1`).
-  - Por qué: Permite obtener fácilmente los productos de un proveedor usando una URL RESTful, útil para frontend y pruebas.
+  - Cómo/Dónde: `backend/api/proveedores.php` detecta ahora rutas RESTful `/api/proveedores/{id}/productos` (comprueba `PATH_INFO` y `REQUEST_URI`) y normaliza a `$_GET['id']` + `productos=1` para reutilizar la lógica existente.
+  - Por qué: Soporta URLs RESTful para el frontend y para pruebas; funciona sin cambiar la lógica principal del archivo. Nota: para que la URL limpia funcione sin el script en la ruta puede ser necesario añadir reglas de reescritura en el servidor (Apache/Nginx).
 
 - **Exportación sencilla (CSV): Sí**
-  - Cómo/Dónde: `backend/api/productos.php` soporta `?export=csv` y envía `Content-Type: text/csv` generando CSV con `fputcsv()`.
-  - Por qué: Facilita descargar listados para Excel/Calc sin herramientas adicionales.
+  - Cómo/Dónde: `backend/api/productos.php` soporta `?export=csv` — envía `Content-Type: text/csv` y genera CSV con `fputcsv()`.
+  - Por qué: Permite descargar listados para abrir en Excel/Calc de forma directa.
 
 - **CORS básico (OBLIGATORIA): Sí**
-  - Cómo/Dónde: `backend/api/_cors.php` añade `Access-Control-Allow-Origin`, `Access-Control-Allow-Methods`, `Access-Control-Allow-Headers` y responde OPTIONS.
-  - Por qué: Permite consumir la API desde un frontend en otro origen durante desarrollo y despliegue.
+  - Cómo/Dónde: `backend/api/_cors.php` añade `Access-Control-Allow-Origin`, `Access-Control-Allow-Methods`, `Access-Control-Allow-Headers` y responde a preflight OPTIONS.
+  - Por qué: Necesario para consumir la API desde un frontend en distinto origen durante desarrollo/despliegue.
 
 - **Varios recursos en la misma API: Sí**
-  - Cómo/Dónde: La API expone `productos`, `proveedores` y `categorias` mediante `backend/api/*.php` con modelos y controladores en `backend/modelo/` y `backend/controlador/`.
-  - Por qué: Organiza el backend en recursos separados, facilitando mantenimiento y extensibilidad.
+  - Cómo/Dónde: Recursos `productos`, `proveedores` y `categorias` están implementados en `backend/api/` con sus modelos en `backend/modelo/` y controladores en `backend/controlador/`.
+  - Por qué: Arquitectura modular facilita añadir más recursos.
 
 - **Fichero de logs: Sí**
-  - Cómo/Dónde: `backend/logger.php` escribe en `backend/logs/api.log` (crea la carpeta si no existe) y se usa en los endpoints con `Logger::info/warning/error/success`.
-  - Por qué: Permite auditar operaciones y depurar incidencias en producción/local.
+  - Cómo/Dónde: `backend/logger.php` escribe en `backend/logs/api.log` y es utilizado por los endpoints para registrar info/warning/error/success.
+  - Por qué: Provee trazabilidad y ayuda en depuración.
 
 - **Batería de pruebas manuales: Sí**
-  - Cómo/Dónde: `Tests.md` en el repositorio contiene una tabla con casos de prueba (TC001..TC060) que describen endpoints, entradas y expectativas HTTP.
-  - Por qué: Facilita pruebas manuales y verificación por QA o desarrolladores sin necesidad de frameworks de test.
+  - Cómo/Dónde: `Tests.md` incluye casos de prueba (TC001..TC060) para validar endpoints y respuestas esperadas.
+  - Por qué: Facilita verificación manual sin necesidad de frameworks de testing.
+
+## 🔎 Análisis actualizado y recomendaciones
+
+Resumen de hallazgos relevantes tras el re-análisis completo del `backend`:
+
+- **`login.php` contiene código duplicado**: hay un bloque repetido después del cierre PHP; esto puede provocar salida inesperada o errores. Recomiendo limpiar el archivo dejando una única implementación.
+- **`JWT_SECRET` por defecto** en `backend/config.php` es un valor de ejemplo. En producción cambiar por un secreto fuerte y almacenarlo en variable de entorno.
+- **Hashes MD5 en `schema.sql`**: la carga de ejemplo inserta usuarios con `MD5(...)`. El código acepta MD5 como fallback para pruebas, pero no es seguro; migrar a `password_hash()` para producción.
+- **CORS actualmente permisivo** (`Access-Control-Allow-Origin: *`): útil en desarrollo; en producción restringir a orígenes confiables.
+- **Endpoint `/api/me` y `/api/echo` no implementados**: si los necesitáis puedo añadirlos rápidamente. Actualmente `auth/jwt.php` provee utilidades para implementar `/api/me` fácilmente.
+- **Conteos**: las APIs devuelven `pagination.total` en listados; no existe un endpoint dedicado `/count`, pero es trivial de añadir si lo necesitáis.
+
+Si quieres, aplico parches para:
+- Limpiar `login.php` (eliminar duplicado) — recomendado.
+- Añadir `GET /api/me` (usa `require_jwt_or_401()` para devolver id/email/role). 
+- Añadir `POST /api/echo` para depuración. 
+- Añadir regla `.htaccess` de ejemplo para URLs RESTful.
+
+Indica cuáles de estas acciones deseas que aplique y las implemento en el repositorio.
