@@ -4,8 +4,8 @@ info:
   description: Especificación OpenAPI generada a partir del código en `backend/` (controladores y modelos). Documenta parámetros reales (query `id`, `q`, `page`, `export`, `include`) y comportamientos observados.
   version: 1.0.1
 servers:
-  - url: /api
-    description: Servidor local (ruta base /api)
+  - url: http://localhost:8080/backend/api
+    description: Servidor local
 components:
   securitySchemes:
     bearerAuth:
