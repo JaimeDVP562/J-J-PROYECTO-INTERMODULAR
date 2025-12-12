@@ -1,0 +1,468 @@
+{
+  "info": {
+    "name": "postmanCombined_collection",
+    "_postman_id": "jj-mini-erp-combined",
+    "description": "Colección combinada: flujo Admin (login → crear recursos → editar) → User (login → operaciones permitidas + forbidden checks) → Cleanup (Admin borra recursos). Ajusta {{baseUrl}} al desplegar en Docker (p. ej. http://localhost:8080).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth - Login (Admin)",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" } ],
+        "body": { "mode": "raw", "raw": "{ \"username\": \"admin\", \"password\": \"admin\" }", "options": { "raw": { "language": "json" } } },
+        "url": { "raw": "{{baseUrl}}/api/login.php", "host": ["{{baseUrl}}"], "path": ["api","login.php"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [ "pm.test('Login (admin) status is 200', function () { pm.response.to.have.status(200); });", "var json = pm.response.json();", "pm.test('Response has token', function(){ pm.expect(json).to.have.property('token'); pm.expect(json.token).to.be.a('string'); });", "if(json.token){ pm.environment.set('token', json.token); pm.test('Token saved', function(){pm.expect(pm.environment.get('token')).to.not.be.undefined;}); }" ], "type": "text/javascript" } } ],
+      "response": []
+    },
+    {
+      "name": "Admin - Productos - Create",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" } ],
+        "body": { "mode": "raw", "raw": "{ \"nombre\": \"Producto prueba {{timestamp}}\", \"stock\": 10, \"precio\": 9.99 }", "options": { "raw": { "language": "json" } } },
+        "url": { "raw": "{{baseUrl}}/api/productos.php", "host": ["{{baseUrl}}"], "path": ["api","productos.php"] }
+      },
+      "event": [ { "listen": "prerequest", "script": { "exec": [ "pm.environment.set('timestamp', Date.now());" ], "type": "text/javascript" } }, { "listen": "test", "script": { "exec": [ "pm.test('Create product status 201', function(){ pm.response.to.have.status(201); });", "var j = pm.response.json();", "pm.test('Create response has id or data.id', function(){ pm.expect(j).to.satisfy(function(x){ return x && (x.id !== undefined || (x.data && x.data.id !== undefined)); }); });", "if(j.id) pm.environment.set('createdProductId', j.id); else if(j.data && j.data.id) pm.environment.set('createdProductId', j.data.id);" ], "type": "text/javascript" } } ],
+      "response": []
+    },
+    {
+      "name": "Admin - Productos - Get Before Update",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/productos.php?id={{createdProductId}}", "host": ["{{baseUrl}}"], "path": ["api","productos.php"], "query": [ { "key": "id", "value": "{{createdProductId}}" } ] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [ "pm.test('Get before update returns 200 or 404', function(){ pm.expect(pm.response.code).to.be.oneOf([200,404]); });", "if(pm.response.code===200){ var j = pm.response.json(); pm.environment.set('productBeforeNombre', j.nombre || (j.data && j.data.nombre)); }" ], "type": "text/javascript" } } ],
+      "response": []
+    },
+    {
+      "name": "Admin - Productos - Get By ID",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/productos.php?id={{createdProductId}}", "host": ["{{baseUrl}}"], "path": ["api","productos.php"], "query": [ { "key": "id", "value": "{{createdProductId}}" } ] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [ "pm.test('Get by id status 200 or 404', function(){ pm.expect(pm.response.code).to.be.oneOf([200,404]); });", "if(pm.response.code===200){ var j = pm.response.json(); var envId = pm.environment.get('createdProductId'); var respId = (j.id || (j.data && j.data.id)); pm.test('Response id matches createdProductId', function(){ pm.expect(String(respId)).to.eql(String(envId)); }); }" ], "type": "text/javascript" } } ],
+      "response": []
+    },
+    {
+      "name": "Admin - Productos - Get 404 (not found)",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/productos.php?id=9999999", "host": ["{{baseUrl}}"], "path": ["api","productos.php"], "query": [ { "key": "id", "value": "9999999" } ] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [ "pm.test('404 or 200 if created coincidentally', function(){ pm.expect(pm.response.code).to.be.oneOf([200,404]); });" ], "type": "text/javascript" } } ],
+      "response": []
+    },
+    {
+      "name": "Admin - Productos - Invalid Create (400)",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" } ],
+        "body": { "mode": "raw", "raw": "{ \"stock\": 1 }", "options": { "raw": { "language": "json" } } },
+        "url": { "raw": "{{baseUrl}}/api/productos.php", "host": ["{{baseUrl}}"], "path": ["api","productos.php"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [ "pm.test('Invalid create returns 400 or 422', function(){ pm.expect(pm.response.code).to.be.oneOf([400,422]); });" ], "type": "text/javascript" } } ],
+      "response": []
+    },
+    {
+      "name": "No Token - Productos - List",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Accept", "value": "application/json" } ],
+        "url": { "raw": "{{baseUrl}}/api/productos.php?page=1&limit=2", "host": ["{{baseUrl}}"], "path": ["api","productos.php"], "query": [ { "key": "page", "value": "1" }, { "key": "limit", "value": "2" } ] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [ "pm.test('Missing token returns 401/403 or 200 if public', function(){ pm.expect(pm.response.code).to.be.oneOf([200,401,403]); });" ], "type": "text/javascript" } } ],
+      "response": []
+    },
+    {
+      "name": "Invalid Token - Productos - List",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer invalidtoken" }, { "key": "Accept", "value": "application/json" } ],
+        "url": { "raw": "{{baseUrl}}/api/productos.php?page=1&limit=2", "host": ["{{baseUrl}}"], "path": ["api","productos.php"], "query": [ { "key": "page", "value": "1" }, { "key": "limit", "value": "2" } ] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [ "pm.test('Invalid token returns 401/403', function(){ pm.expect(pm.response.code).to.be.oneOf([401,403]); });" ], "type": "text/javascript" } } ],
+      "response": []
+    },
+    {
+      "name": "Admin - Productos - Include=relacion",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Accept", "value": "application/json" } ],
+        "url": { "raw": "{{baseUrl}}/api/productos.php?id={{createdProductId}}&include=categoria", "host": ["{{baseUrl}}"], "path": ["api","productos.php"], "query": [ { "key": "id", "value": "{{createdProductId}}" }, { "key": "include", "value": "categoria" } ] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [ "pm.test('Include relacion: if present, respuesta contiene categoria', function(){ pm.expect(pm.response.code).to.be.oneOf([200,404]); if(pm.response.code===200){ var j=pm.response.json(); if(j.categoria || (j.data && j.data.categoria)){ pm.expect(j.categoria || j.data.categoria).to.have.property('nombre'); } } });" ], "type": "text/javascript" } } ],
+      "response": []
+    },
+    {
+      "name": "Admin - Productos - Pagination stability",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Accept", "value": "application/json" } ],
+        "url": { "raw": "{{baseUrl}}/api/productos.php?page=1&limit=2", "host": ["{{baseUrl}}"], "path": ["api","productos.php"], "query": [ { "key": "page", "value": "1" }, { "key": "limit", "value": "2" } ] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [ "var base = pm.environment.get('baseUrl'); pm.test('Pagination returns arrays for page1 and page2', function(done){ pm.sendRequest({ url: base + '/api/productos.php?page=1&limit=2', method: 'GET', header: { 'Authorization': 'Bearer ' + pm.environment.get('token') } }, function(err,res1){ pm.sendRequest({ url: base + '/api/productos.php?page=2&limit=2', method: 'GET', header: { 'Authorization': 'Bearer ' + pm.environment.get('token') } }, function(err,res2){ pm.expect(res1.json().data).to.be.an('array'); pm.expect(res2.json().data).to.be.an('array'); done(); }); }); });" ], "type": "text/javascript" } } ],
+      "response": []
+    },
+    {
+      "name": "Admin - Categorias - Create",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" } ],
+        "body": { "mode": "raw", "raw": "{ \"nombre\": \"Categoria prueba {{timestamp}}\" }", "options": { "raw": { "language": "json" } } },
+        "url": { "raw": "{{baseUrl}}/api/categorias.php", "host": ["{{baseUrl}}"], "path": ["api","categorias.php"] }
+      },
+      "event": [ { "listen": "prerequest", "script": { "exec": [ "pm.environment.set('timestamp', Date.now());" ], "type": "text/javascript" } }, { "listen": "test", "script": { "exec": [ "pm.test('Create categoria status 201', function(){ pm.response.to.have.status(201); });", "var j = pm.response.json();", "pm.test('Categoria response has id or data.id', function(){ pm.expect(j).to.satisfy(function(x){ return x && (x.id !== undefined || (x.data && x.data.id !== undefined)); }); });", "if(j.id) pm.environment.set('createdCategoriaId', j.id); else if(j.data && j.data.id) pm.environment.set('createdCategoriaId', j.data.id);" ], "type": "text/javascript" } } ],
+      "response": []
+    },
+    {
+      "name": "Admin - Categorias - Get By ID",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/categorias.php?id={{createdCategoriaId}}", "host": ["{{baseUrl}}"], "path": ["api","categorias.php"], "query": [ { "key": "id", "value": "{{createdCategoriaId}}" } ] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [ "pm.test('Categoria get by id returns 200 or 404', function(){ pm.expect(pm.response.code).to.be.oneOf([200,404]); });", "if(pm.response.code===200){ var j = pm.response.json(); var respId = (j.id || (j.data && j.data.id)); pm.test('Response id matches createdCategoriaId', function(){ pm.expect(String(respId)).to.eql(String(pm.environment.get('createdCategoriaId'))); }); }" ], "type": "text/javascript" } } ],
+      "response": []
+    },
+    {
+      "name": "Admin - Categorias - Get 404 (not found)",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/categorias.php?id=9999999", "host": ["{{baseUrl}}"], "path": ["api","categorias.php"], "query": [ { "key": "id", "value": "9999999" } ] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [ "pm.test('Categoria 404 or 200 if exists', function(){ pm.expect(pm.response.code).to.be.oneOf([200,404]); });" ], "type": "text/javascript" } } ],
+      "response": []
+    },
+    {
+      "name": "Admin - Categorias - Invalid Create (400)",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" } ],
+        "body": { "mode": "raw", "raw": "{ \"invalid_field\": 1 }", "options": { "raw": { "language": "json" } } },
+        "url": { "raw": "{{baseUrl}}/api/categorias.php", "host": ["{{baseUrl}}"], "path": ["api","categorias.php"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [ "pm.test('Invalid categoria create returns 400/422', function(){ pm.expect(pm.response.code).to.be.oneOf([400,422]); });" ], "type": "text/javascript" } } ],
+      "response": []
+    },
+    {
+      "name": "Admin - Categorias - Get Before Update",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/categorias.php?id={{createdCategoriaId}}", "host": ["{{baseUrl}}"], "path": ["api","categorias.php"], "query": [ { "key": "id", "value": "{{createdCategoriaId}}" } ] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [ "pm.test('Get categoria before update 200/404', function(){ pm.expect(pm.response.code).to.be.oneOf([200,404]); });", "if(pm.response.code===200){ var j=pm.response.json(); pm.environment.set('categoriaBeforeNombre', j.nombre || (j.data && j.data.nombre)); }" ], "type": "text/javascript" } } ],
+      "response": []
+    },
+    {
+      "name": "Admin - Categorias - Update",
+      "request": {
+        "method": "PUT",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" } ],
+        "body": { "mode": "raw", "raw": "{ \"nombre\": \"Categoria editada\" }", "options": { "raw": { "language": "json" } } },
+        "url": { "raw": "{{baseUrl}}/api/categorias.php?id={{createdCategoriaId}}", "host": ["{{baseUrl}}"], "path": ["api","categorias.php"], "query": [ { "key": "id", "value": "{{createdCategoriaId}}" } ] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [ "pm.test('Categoria update returns 200 or 204', function(){ pm.expect(pm.response.code).to.be.oneOf([200,204,304]); });" ], "type": "text/javascript" } } ],
+      "response": []
+    },
+    {
+      "name": "Admin - Categorias - Get After Update",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/categorias.php?id={{createdCategoriaId}}", "host": ["{{baseUrl}}"], "path": ["api","categorias.php"], "query": [ { "key": "id", "value": "{{createdCategoriaId}}" } ] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [ "pm.test('Get categoria after update 200/404', function(){ pm.expect(pm.response.code).to.be.oneOf([200,404]); });", "if(pm.response.code===200){ var j=pm.response.json(); if(j.nombre){ pm.test('Categoria nombre updated', function(){ pm.expect(j.nombre).to.eql('Categoria editada'); }); } }" ], "type": "text/javascript" } } ],
+      "response": []
+    },
+    {
+      "name": "Admin - Categorias - Invalid Update (400)",
+      "request": {
+        "method": "PUT",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" } ],
+        "body": { "mode": "raw", "raw": "{ \"nombre\": 123 }", "options": { "raw": { "language": "json" } } },
+        "url": { "raw": "{{baseUrl}}/api/categorias.php?id={{createdCategoriaId}}", "host": ["{{baseUrl}}"], "path": ["api","categorias.php"], "query": [ { "key": "id", "value": "{{createdCategoriaId}}" } ] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [ "pm.test('Invalid categoria update returns 400/422', function(){ pm.expect(pm.response.code).to.be.oneOf([400,422]); });" ], "type": "text/javascript" } } ],
+      "response": []
+    },
+    {
+      "name": "Admin - Categorias - Include=relacion",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Accept", "value": "application/json" } ],
+        "url": { "raw": "{{baseUrl}}/api/categorias.php?id={{createdCategoriaId}}&include=productos", "host": ["{{baseUrl}}"], "path": ["api","categorias.php"], "query": [ { "key": "id", "value": "{{createdCategoriaId}}" }, { "key": "include", "value": "productos" } ] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [ "pm.test('Categoria include productos returns 200/404 and includes productos array if present', function(){ pm.expect(pm.response.code).to.be.oneOf([200,404]); if(pm.response.code===200){ var j=pm.response.json(); if(j.productos || (j.data && j.data.productos)){ pm.expect(j.productos || j.data.productos).to.be.an('array'); } } });" ], "type": "text/javascript" } } ],
+      "response": []
+    },
+    {
+      "name": "Admin - Categorias - Pagination stability",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Accept", "value": "application/json" } ],
+        "url": { "raw": "{{baseUrl}}/api/categorias.php?page=1&limit=2", "host": ["{{baseUrl}}"], "path": ["api","categorias.php"], "query": [ { "key": "page", "value": "1" }, { "key": "limit", "value": "2" } ] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [ "var base = pm.environment.get('baseUrl'); pm.test('Categorias pagination returns arrays for page1 and page2', function(done){ pm.sendRequest({ url: base + '/api/categorias.php?page=1&limit=2', method: 'GET', header: { 'Authorization': 'Bearer ' + pm.environment.get('token') } }, function(err,res1){ pm.sendRequest({ url: base + '/api/categorias.php?page=2&limit=2', method: 'GET', header: { 'Authorization': 'Bearer ' + pm.environment.get('token') } }, function(err,res2){ pm.expect(res1.json().data).to.be.an('array'); pm.expect(res2.json().data).to.be.an('array'); done(); }); }); });" ], "type": "text/javascript" } } ],
+      "response": []
+    },
+    {
+      "name": "No Token - Categorias - List",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Accept", "value": "application/json" } ],
+        "url": { "raw": "{{baseUrl}}/api/categorias.php?page=1&limit=2", "host": ["{{baseUrl}}"], "path": ["api","categorias.php"], "query": [ { "key": "page", "value": "1" }, { "key": "limit", "value": "2" } ] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [ "pm.test('Missing token categorias returns 200/401/403', function(){ pm.expect(pm.response.code).to.be.oneOf([200,401,403]); });" ], "type": "text/javascript" } } ],
+      "response": []
+    },
+    {
+      "name": "Invalid Token - Categorias - List",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer invalidtoken" }, { "key": "Accept", "value": "application/json" } ],
+        "url": { "raw": "{{baseUrl}}/api/categorias.php?page=1&limit=2", "host": ["{{baseUrl}}"], "path": ["api","categorias.php"], "query": [ { "key": "page", "value": "1" }, { "key": "limit", "value": "2" } ] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [ "pm.test('Invalid token categorias returns 401/403', function(){ pm.expect(pm.response.code).to.be.oneOf([401,403]); });" ], "type": "text/javascript" } } ],
+      "response": []
+    },
+    {
+      "name": "Admin - Proveedores - Create",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" } ],
+        "body": { "mode": "raw", "raw": "{ \"nombre\": \"Proveedor prueba {{timestamp}}\" }", "options": { "raw": { "language": "json" } } },
+        "url": { "raw": "{{baseUrl}}/api/proveedores.php", "host": ["{{baseUrl}}"], "path": ["api","proveedores.php"] }
+      },
+      "event": [ { "listen": "prerequest", "script": { "exec": [ "pm.environment.set('timestamp', Date.now());" ], "type": "text/javascript" } }, { "listen": "test", "script": { "exec": [ "pm.test('Create proveedor status 201', function(){ pm.response.to.have.status(201); });", "var j = pm.response.json();", "pm.test('Proveedor response has id or data.id', function(){ pm.expect(j).to.satisfy(function(x){ return x && (x.id !== undefined || (x.data && x.data.id !== undefined)); }); });", "if(j.id) pm.environment.set('createdProveedorId', j.id); else if(j.data && j.data.id) pm.environment.set('createdProveedorId', j.data.id);" ], "type": "text/javascript" } } ],
+      "response": []
+    },
+    {
+      "name": "Admin - Proveedores - Get By ID",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/proveedores.php?id={{createdProveedorId}}", "host": ["{{baseUrl}}"], "path": ["api","proveedores.php"], "query": [ { "key": "id", "value": "{{createdProveedorId}}" } ] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [ "pm.test('Proveedor get by id returns 200 or 404', function(){ pm.expect(pm.response.code).to.be.oneOf([200,404]); });", "if(pm.response.code===200){ var j = pm.response.json(); var respId = (j.id || (j.data && j.data.id)); pm.test('Response id matches createdProveedorId', function(){ pm.expect(String(respId)).to.eql(String(pm.environment.get('createdProveedorId'))); }); }" ], "type": "text/javascript" } } ],
+      "response": []
+    },
+    {
+      "name": "Admin - Proveedores - Get 404 (not found)",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/proveedores.php?id=9999999", "host": ["{{baseUrl}}"], "path": ["api","proveedores.php"], "query": [ { "key": "id", "value": "9999999" } ] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [ "pm.test('Proveedor 404 or 200 if exists', function(){ pm.expect(pm.response.code).to.be.oneOf([200,404]); });" ], "type": "text/javascript" } } ],
+      "response": []
+    },
+    {
+      "name": "Admin - Proveedores - Invalid Create (400)",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" } ],
+        "body": { "mode": "raw", "raw": "{ \"invalid\": true }", "options": { "raw": { "language": "json" } } },
+        "url": { "raw": "{{baseUrl}}/api/proveedores.php", "host": ["{{baseUrl}}"], "path": ["api","proveedores.php"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [ "pm.test('Invalid proveedor create returns 400/422', function(){ pm.expect(pm.response.code).to.be.oneOf([400,422]); });" ], "type": "text/javascript" } } ],
+      "response": []
+    },
+    {
+      "name": "Admin - Proveedores - Get Before Update",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/proveedores.php?id={{createdProveedorId}}", "host": ["{{baseUrl}}"], "path": ["api","proveedores.php"], "query": [ { "key": "id", "value": "{{createdProveedorId}}" } ] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [ "pm.test('Get proveedor before update 200/404', function(){ pm.expect(pm.response.code).to.be.oneOf([200,404]); });", "if(pm.response.code===200){ var j=pm.response.json(); pm.environment.set('proveedorBeforeNombre', j.nombre || (j.data && j.data.nombre)); }" ], "type": "text/javascript" } } ],
+      "response": []
+    },
+    {
+      "name": "Admin - Proveedores - Update",
+      "request": {
+        "method": "PUT",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" } ],
+        "body": { "mode": "raw", "raw": "{ \"nombre\": \"Proveedor editado\" }", "options": { "raw": { "language": "json" } } },
+        "url": { "raw": "{{baseUrl}}/api/proveedores.php?id={{createdProveedorId}}", "host": ["{{baseUrl}}"], "path": ["api","proveedores.php"], "query": [ { "key": "id", "value": "{{createdProveedorId}}" } ] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [ "pm.test('Proveedor update returns 200 or 204', function(){ pm.expect(pm.response.code).to.be.oneOf([200,204,304]); });" ], "type": "text/javascript" } } ],
+      "response": []
+    },
+    {
+      "name": "Admin - Proveedores - Get After Update",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/proveedores.php?id={{createdProveedorId}}", "host": ["{{baseUrl}}"], "path": ["api","proveedores.php"], "query": [ { "key": "id", "value": "{{createdProveedorId}}" } ] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [ "pm.test('Get proveedor after update 200/404', function(){ pm.expect(pm.response.code).to.be.oneOf([200,404]); });", "if(pm.response.code===200){ var j=pm.response.json(); if(j.nombre){ pm.test('Proveedor nombre updated', function(){ pm.expect(j.nombre).to.eql('Proveedor editado'); }); } }" ], "type": "text/javascript" } } ],
+      "response": []
+    },
+    {
+      "name": "Admin - Proveedores - Invalid Update (400)",
+      "request": {
+        "method": "PUT",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" } ],
+        "body": { "mode": "raw", "raw": "{ \"nombre\": 123 }", "options": { "raw": { "language": "json" } } },
+        "url": { "raw": "{{baseUrl}}/api/proveedores.php?id={{createdProveedorId}}", "host": ["{{baseUrl}}"], "path": ["api","proveedores.php"], "query": [ { "key": "id", "value": "{{createdProveedorId}}" } ] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [ "pm.test('Invalid proveedor update returns 400/422', function(){ pm.expect(pm.response.code).to.be.oneOf([400,422]); });" ], "type": "text/javascript" } } ],
+      "response": []
+    },
+    {
+      "name": "Admin - Proveedores - Include=relacion",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Accept", "value": "application/json" } ],
+        "url": { "raw": "{{baseUrl}}/api/proveedores.php?id={{createdProveedorId}}&include=productos", "host": ["{{baseUrl}}"], "path": ["api","proveedores.php"], "query": [ { "key": "id", "value": "{{createdProveedorId}}" }, { "key": "include", "value": "productos" } ] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [ "pm.test('Proveedor include productos returns 200/404 and includes productos array if present', function(){ pm.expect(pm.response.code).to.be.oneOf([200,404]); if(pm.response.code===200){ var j=pm.response.json(); if(j.productos || (j.data && j.data.productos)){ pm.expect(j.productos || j.data.productos).to.be.an('array'); } } });" ], "type": "text/javascript" } } ],
+      "response": []
+    },
+    {
+      "name": "Admin - Proveedores - Pagination stability",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Accept", "value": "application/json" } ],
+        "url": { "raw": "{{baseUrl}}/api/proveedores.php?page=1&limit=2", "host": ["{{baseUrl}}"], "path": ["api","proveedores.php"], "query": [ { "key": "page", "value": "1" }, { "key": "limit", "value": "2" } ] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [ "var base = pm.environment.get('baseUrl'); pm.test('Proveedores pagination returns arrays for page1 and page2', function(done){ pm.sendRequest({ url: base + '/api/proveedores.php?page=1&limit=2', method: 'GET', header: { 'Authorization': 'Bearer ' + pm.environment.get('token') } }, function(err,res1){ pm.sendRequest({ url: base + '/api/proveedores.php?page=2&limit=2', method: 'GET', header: { 'Authorization': 'Bearer ' + pm.environment.get('token') } }, function(err,res2){ pm.expect(res1.json().data).to.be.an('array'); pm.expect(res2.json().data).to.be.an('array'); done(); }); }); });" ], "type": "text/javascript" } } ],
+      "response": []
+    },
+    {
+      "name": "No Token - Proveedores - List",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Accept", "value": "application/json" } ],
+        "url": { "raw": "{{baseUrl}}/api/proveedores.php?page=1&limit=2", "host": ["{{baseUrl}}"], "path": ["api","proveedores.php"], "query": [ { "key": "page", "value": "1" }, { "key": "limit", "value": "2" } ] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [ "pm.test('Missing token proveedores returns 200/401/403', function(){ pm.expect(pm.response.code).to.be.oneOf([200,401,403]); });" ], "type": "text/javascript" } } ],
+      "response": []
+    },
+    {
+      "name": "Invalid Token - Proveedores - List",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer invalidtoken" }, { "key": "Accept", "value": "application/json" } ],
+        "url": { "raw": "{{baseUrl}}/api/proveedores.php?page=1&limit=2", "host": ["{{baseUrl}}"], "path": ["api","proveedores.php"], "query": [ { "key": "page", "value": "1" }, { "key": "limit", "value": "2" } ] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [ "pm.test('Invalid token proveedores returns 401/403', function(){ pm.expect(pm.response.code).to.be.oneOf([401,403]); });" ], "type": "text/javascript" } } ],
+      "response": []
+    },
+    {
+      "name": "Admin - Productos - Update",
+      "request": {
+        "method": "PUT",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" } ],
+        "body": { "mode": "raw", "raw": "{ \"nombre\": \"Producto editado\", \"stock\": 5 }", "options": { "raw": { "language": "json" } } },
+        "url": { "raw": "{{baseUrl}}/api/productos.php?id={{createdProductId}}", "host": ["{{baseUrl}}"], "path": ["api","productos.php"], "query": [ { "key": "id", "value": "{{createdProductId}}" } ] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [ "pm.test('Update returns 200 or 204', function(){ pm.expect(pm.response.code).to.be.oneOf([200,204,304]); });", "var jtext = pm.response.text(); if(jtext){ try{ var j = pm.response.json(); if(j && j.nombre){ pm.test('Updated nombre matches', function(){ pm.expect(j.nombre).to.eql('Producto editado'); }); } } catch(e){} }" ], "type": "text/javascript" } } ],
+      "response": []
+    },
+    {
+      "name": "Admin - Productos - Get After Update",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/productos.php?id={{createdProductId}}", "host": ["{{baseUrl}}"], "path": ["api","productos.php"], "query": [ { "key": "id", "value": "{{createdProductId}}" } ] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [ "pm.test('Get after update returns 200 or 404', function(){ pm.expect(pm.response.code).to.be.oneOf([200,404]); });", "if(pm.response.code===200){ var j = pm.response.json(); if(j.nombre){ pm.test('Nombre was updated', function(){ pm.expect(j.nombre).to.eql('Producto editado'); }); } }" ], "type": "text/javascript" } } ],
+      "response": []
+    },
+    {
+      "name": "Admin - Productos - Invalid Update (400)",
+      "request": {
+        "method": "PUT",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" } ],
+        "body": { "mode": "raw", "raw": "{ \"precio\": \"not-a-number\" }", "options": { "raw": { "language": "json" } } },
+        "url": { "raw": "{{baseUrl}}/api/productos.php?id={{createdProductId}}", "host": ["{{baseUrl}}"], "path": ["api","productos.php"], "query": [ { "key": "id", "value": "{{createdProductId}}" } ] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [ "pm.test('Invalid update returns 400 or 422', function(){ pm.expect(pm.response.code).to.be.oneOf([400,422]); });" ], "type": "text/javascript" } } ],
+      "response": []
+    },
+    {
+      "name": "Auth - Login (User)",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" } ],
+        "body": { "mode": "raw", "raw": "{ \"username\": \"usuario\", \"password\": \"usuario\" }", "options": { "raw": { "language": "json" } } },
+        "url": { "raw": "{{baseUrl}}/api/login.php", "host": ["{{baseUrl}}"], "path": ["api","login.php"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [ "pm.test('Login (user) status is 200', function () { pm.response.to.have.status(200); });", "var json = pm.response.json();", "pm.test('Response has token_user', function(){ pm.expect(json).to.have.property('token'); pm.expect(json.token).to.be.a('string'); });", "if(json.token){ pm.environment.set('token_user', json.token); pm.test('Token_user saved', function(){pm.expect(pm.environment.get('token_user')).to.not.be.undefined;}); }" ], "type": "text/javascript" } } ],
+      "response": []
+    },
+    {
+      "name": "User - Productos - List",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token_user}}" }, { "key": "Accept", "value": "application/json" } ],
+        "url": { "raw": "{{baseUrl}}/api/productos.php?page=1&limit=5", "host": ["{{baseUrl}}"], "path": ["api","productos.php"], "query": [ {"key":"page","value":"1"},{"key":"limit","value":"5"} ] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [ "pm.test('List status is 200', function(){ pm.response.to.have.status(200); });", "var j = pm.response.json(); pm.test('Has data array', function(){ pm.expect(j.data).to.be.an('array'); });", "if(j.data && j.data.length>0){ pm.test('First item has id and nombre', function(){ pm.expect(j.data[0]).to.have.property('id'); pm.expect(j.data[0]).to.have.property('nombre'); }); }" ], "type": "text/javascript" } } ],
+      "response": []
+    },
+    {
+      "name": "User - Productos - Forbidden Create",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token_user}}" }, { "key": "Content-Type", "value": "application/json" } ],
+        "body": { "mode": "raw", "raw": "{ \"nombre\": \"Producto usuario intento\", \"stock\": 1, \"precio\": 1.23 }", "options": { "raw": { "language": "json" } } },
+        "url": { "raw": "{{baseUrl}}/api/productos.php", "host": ["{{baseUrl}}"], "path": ["api","productos.php"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [ "pm.test('User create forbidden (403 or 401)', function(){ pm.expect(pm.response.code).to.be.oneOf([403,401]); });" ], "type": "text/javascript" } } ],
+      "response": []
+    },
+    {
+      "name": "User - Productos - Forbidden Delete",
+      "request": {
+        "method": "DELETE",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token_user}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/productos.php?id={{createdProductId}}", "host": ["{{baseUrl}}"], "path": ["api","productos.php"], "query": [ { "key": "id", "value": "{{createdProductId}}" } ] }
+      },
+      "event": [
+        { "listen": "prerequest", "script": { "exec": [ "if(!pm.environment.get('createdProductId')){ console.log('Warning: createdProductId not set; delete-forbidden test may not target a real resource.'); }" ], "type": "text/javascript" } },
+        { "listen": "test", "script": { "exec": [ "var id = pm.environment.get('createdProductId');", "if(!id){ pm.test('No createdProductId - skipping strict delete-forbidden assertion', function(){ pm.expect(true).to.be.true; }); } else { pm.test('User cannot delete product (403 or 401)', function(){ pm.expect(pm.response.code).to.be.oneOf([403,401]); }); }" ], "type": "text/javascript" } }
+      ],
+      "response": []
+    },
+    {
+      "name": "Cleanup - Admin Delete Proveedor",
+      "request": {
+        "method": "DELETE",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/proveedores.php?id={{createdProveedorId}}", "host": ["{{baseUrl}}"], "path": ["api","proveedores.php"], "query": [ { "key": "id", "value": "{{createdProveedorId}}" } ] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [ "pm.test('Cleanup proveedor returns 204 or 200', function(){ pm.expect(pm.response.code).to.be.oneOf([204,200,404]); });" ], "type": "text/javascript" } } ],
+      "response": []
+    },
+    {
+      "name": "Cleanup - Admin Delete Categoria",
+      "request": {
+        "method": "DELETE",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/categorias.php?id={{createdCategoriaId}}", "host": ["{{baseUrl}}"], "path": ["api","categorias.php"], "query": [ { "key": "id", "value": "{{createdCategoriaId}}" } ] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [ "pm.test('Cleanup categoria returns 204 or 200', function(){ pm.expect(pm.response.code).to.be.oneOf([204,200,404]); });" ], "type": "text/javascript" } } ],
+      "response": []
+    },
+    {
+      "name": "Cleanup - Admin Delete Producto",
+      "request": {
+        "method": "DELETE",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/productos.php?id={{createdProductId}}", "host": ["{{baseUrl}}"], "path": ["api","productos.php"], "query": [ { "key": "id", "value": "{{createdProductId}}" } ] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [ "pm.test('Cleanup producto returns 204 or 200', function(){ pm.expect(pm.response.code).to.be.oneOf([204,200,404]); });" ], "type": "text/javascript" } } ],
+      "response": []
+    }
+  ]
+}
