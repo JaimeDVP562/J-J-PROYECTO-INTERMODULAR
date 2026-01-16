@@ -1,0 +1,7 @@
+#!/bin/bash
+set -e
+
+apt-get update -y
+apt-get upgrade -y
+
+hostnamectl set-hostname bastion.${domain}

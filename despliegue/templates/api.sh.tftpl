@@ -1,0 +1,130 @@
+#!/bin/bash
+set -e
+
+# ------------------------------------------------
+# Variables (modifica según tu entorno)
+# ------------------------------------------------
+APP_USER="laravel-api"
+APP_DIR="/var/www/laravel-api"
+DOMAIN="${domain}"  # Asegúrate de exportar $domain antes de ejecutar
+PHP_VERSION="8.2"   # Laravel 12 soporta PHP >= 8.1
+
+# ------------------------------------------------
+# 1️⃣ Actualizar sistema e instalar paquetes
+# ------------------------------------------------
+apt-get update -y
+apt-get upgrade -y
+apt-get install -y apache2 \
+                   libapache2-mod-security2 \
+                   ufw fail2ban \
+                   curl unzip git \
+                   php${PHP_VERSION} php${PHP_VERSION}-cli php${PHP_VERSION}-fpm php${PHP_VERSION}-xml php${PHP_VERSION}-mbstring php${PHP_VERSION}-bcmath php${PHP_VERSION}-curl php${PHP_VERSION}-zip
+
+# ------------------------------------------------
+# 2️⃣ Configurar firewall básico
+# ------------------------------------------------
+ufw default deny incoming
+ufw default allow outgoing
+ufw allow 22/tcp      # SSH
+ufw allow 80/tcp      # HTTP
+ufw allow 443/tcp     # HTTPS
+ufw --force enable
+
+# ------------------------------------------------
+# 3️⃣ Crear usuario dedicado para Apache
+# ------------------------------------------------
+if ! id -u $APP_USER >/dev/null 2>&1; then
+    useradd -r -s /usr/sbin/nologin $APP_USER
+fi
+
+# ------------------------------------------------
+# 4️⃣ Crear directorio de la aplicación
+# ------------------------------------------------
+mkdir -p $APP_DIR
+chown -R $APP_USER:$APP_USER $APP_DIR
+chmod -R 750 $APP_DIR
+
+# ------------------------------------------------
+# 5️⃣ Habilitar módulos de Apache necesarios
+# ------------------------------------------------
+a2enmod headers
+a2enmod rewrite
+a2enmod ssl
+
+# Deshabilitar módulos innecesarios
+a2dismod autoindex status
+
+# ------------------------------------------------
+# 6️⃣ Configuración de seguridad Apache
+# ------------------------------------------------
+# security-headers.conf
+tee /etc/apache2/conf-available/security-headers.conf > /dev/null <<'EOF'
+Header always set X-Content-Type-Options "nosniff"
+Header always set X-Frame-Options "DENY"
+Header always set Referrer-Policy "no-referrer"
+Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+EOF
+
+a2enconf security-headers
+
+# security.conf (solo ajustes esenciales)
+cp /etc/apache2/conf-available/security.conf /etc/apache2/conf-available/security.conf.bak
+tee /etc/apache2/conf-available/security.conf > /dev/null <<'EOF'
+ServerTokens Prod
+ServerSignature Off
+TraceEnable Off
+FileETag None
+Header unset ETag
+EOF
+
+# ------------------------------------------------
+# 7️⃣ Configuración de ModSecurity
+# ------------------------------------------------
+cp /etc/modsecurity/modsecurity.conf-recommended /etc/modsecurity/modsecurity.conf
+tee /etc/modsecurity/modsecurity.conf > /dev/null <<'EOF'
+SecRuleEngine On
+SecRequestBodyAccess On
+SecResponseBodyAccess On
+SecResponseBodyMimeType text/plain text/html text/xml application/json
+SecRequestBodyLimit 13107200
+SecRequestBodyNoFilesLimit 131072
+SecAuditEngine RelevantOnly
+SecAuditLogRelevantStatus "^(?:5|4(?!04))"
+SecAuditLogParts ABDEFHIJZ
+SecAuditLog /var/log/apache2/modsec_audit.log
+SecTmpDir /tmp/
+SecDataDir /tmp/
+SecStatusEngine On
+EOF
+
+# ------------------------------------------------
+# 8️⃣ Configuración de VirtualHost para Laravel
+# ------------------------------------------------
+tee /etc/apache2/sites-available/laravel-api.conf > /dev/null <<EOF
+<VirtualHost *:80>
+    ServerName $DOMAIN
+    DocumentRoot $APP_DIR/public
+
+    <Directory $APP_DIR/public>
+        Options -Indexes +FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
+
+    ErrorLog \${APACHE_LOG_DIR}/laravel-api_error.log
+    CustomLog \${APACHE_LOG_DIR}/laravel-api_access.log combined
+</VirtualHost>
+EOF
+
+a2ensite laravel-api.conf
+
+# ------------------------------------------------
+# 9️⃣ Reiniciar Apache
+# ------------------------------------------------
+apachectl configtest
+systemctl restart apache2
+
+# ------------------------------------------------
+# 10️⃣ Opcional: hostname
+# ------------------------------------------------
+hostnamectl set-hostname api.${DOMAIN}
