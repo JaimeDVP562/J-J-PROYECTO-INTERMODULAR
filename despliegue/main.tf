@@ -32,6 +32,12 @@ resource "aws_security_group" "api" {
     description = "Grupo de seguridad para api"
 }
 
+resource "aws_security_group" "database" {
+    name        = "database"
+    description = "Grupo de seguridad para base de datos"
+}
+
+
 #REGLAS BASTION
 
 resource "aws_vpc_security_group_ingress_rule" "bastion_ssh" {
@@ -110,6 +116,31 @@ resource "aws_vpc_security_group_egress_rule" "api_egress" {
     cidr_ipv4 = "0.0.0.0/0"
 }
 
+# REGLAS DATABASE
+
+resource "aws_vpc_security_group_ingress_rule" "database_ssh" {
+    security_group_id            = aws_security_group.database.id
+    ip_protocol                  = "tcp"
+    from_port                    = 22
+    to_port                      = 22
+    referenced_security_group_id = aws_security_group.bastion.id
+}
+
+resource "aws_vpc_security_group_ingress_rule" "database_mysql" {
+    security_group_id            = aws_security_group.database.id
+    ip_protocol                  = "tcp"
+    from_port                    = 3306
+    to_port                      = 3306
+    referenced_security_group_id = aws_security_group.api.id
+}
+
+resource "aws_vpc_security_group_egress_rule" "database_egress" {
+    security_group_id = aws_security_group.database.id
+    ip_protocol       = "-1"
+    from_port         = 0
+    to_port           = 0
+    cidr_ipv4         = "0.0.0.0/0"
+}
 
 #################################
 # INSTANCIAS
@@ -154,6 +185,20 @@ resource "aws_instance" "api" {
     tags = {Name = "API"}
 }
 
+# DATABASE
+
+resource "aws_instance" "database" {
+    ami = data.aws_ami.ubuntu.id
+    instance_type = "t2.medium"
+    key_name = var.key_name
+    vpc_security_group_ids = [aws_security_group.database.id]
+    user_data = templatefile("${path.module}/templates/database.sh.tftpl", {
+        domain = var.domain
+    })
+    tags = {Name = "Database"}
+}
+
+
 #################################
 # ZONA DNS ROUTE53
 #################################
@@ -184,4 +229,12 @@ resource "aws_route53_record" "api" {
     type = "A"
     ttl = 300
     records = [aws_instance.api.private_ip]
+}
+
+resource "aws_route53_record" "database" {
+    zone_id = aws_route53_zone.zona_privada.zone_id
+    name    = "database.${var.domain}"
+    type    = "A"
+    ttl     = 300
+    records = [aws_instance.database.private_ip]
 }
