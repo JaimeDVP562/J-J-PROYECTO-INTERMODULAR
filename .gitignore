@@ -1,0 +1,119 @@
+############################
+# Node / Angular (frontend)
+############################
+
+# Dependencias
+node_modules/
+**/node_modules/
+
+# Builds Angular
+dist/
+**/dist/
+frontend/.angular/cache/
+frontend/.angular/cache/*
+tmp/
+temp/
+out-tsc/
+
+# Tests / Cobertura
+coverage/
+.nyc_output/
+.junit/
+
+# Locks (si quieres ignorar alguno, comenta el que prefieras)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+############################
+# Configuración / entornos
+############################
+
+# Variables de entorno
+.env
+.env.*
+*.local.env
+
+# Archivos temporales
+*.tmp
+*.temp
+*.swp
+*.swo
+
+############################
+# Logs
+############################
+
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+logs/
+*.pid
+
+############################
+# Sistema operativo
+############################
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+############################
+# IDE / Editor
+############################
+
+# VS Code: ignorar todo menos lo que nos interesa
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/tasks.json
+
+# Otros IDEs
+.idea/
+*.iml
+*.sublime-project
+*.sublime-workspace
+
+############################
+# Docker / Dev Containers
+############################
+
+# Archivos de runtime
+docker-data/
+docker-volume-*/
+*.pid
+*.sock
+
+# Imágenes / dumps grandes
+*.tar
+*.tar.gz
+
+# Devcontainer: en general se versiona todo,
+# pero por si hay archivos locales
+.devcontainer/local-*
+.devcontainer/*.local.*
+
+############################
+# Otros
+############################
+
+# Archivos de compilación genéricos
+build/
+bin/
+obj/
+
+# Archivos de backup
+*.bak
+*.old
+*.orig
+*~
+

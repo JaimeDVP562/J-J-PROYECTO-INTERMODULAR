@@ -1,0 +1,65 @@
+{
+  "name": "Angular DevContainer",
+  "dockerFile": "../docker/frontend/Dockerfile.dev",
+
+  // Carpeta de trabajo por defecto en el contenedor
+  "workspaceFolder": "/workspace",
+
+  // Monta tu proyecto local en /workspace dentro del contenedor
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",
+
+
+  "runArgs": [
+    "--name", "angular2DAWT"
+  ],
+
+  // Puertos típicos de Angular (ng serve)
+  "forwardPorts": [4200],
+
+  // Comandos después de crear el contenedor (solo la primera vez) si el proyecto de angular está vacío y no hay un package.json
+  // la versión 20 de angular LTS
+  // "postCreateCommand": "npm install -g @angular/cli@20 && npm install",
+
+  // si se ha clonado un proyecto que ya se inició y tienen un package.json
+  "postCreateCommand": "npm install -g @angular/cli@20",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "Angular.ng-template",                // Angular Language Service
+        "dbaeumer.vscode-eslint",             // ESLint
+        "esbenp.prettier-vscode",             // Prettier – Code formatter
+        "johnpapa.Angular2",                  // Angular Snippets
+        "christian-kohler.path-intellisense", // Path Intellisense
+        "steoates.autoimport",                // Auto Import
+        "eamodio.gitlens",                    // GitLens
+        "PKief.material-icon-theme",          // Material Icon Theme
+        "humao.rest-client",                  // REST Client
+        "ms-azuretools.vscode-docker"         // Docker
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+
+        "[typescript]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+        "[html]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+        "[json]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+        "[scss]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+
+        "typescript.updateImportsOnFileMove.enabled": "always",
+
+        "eslint.validate": [
+          "typescript",
+          "html"
+        ]
+      }
+    }
+  }
+}
