@@ -9,6 +9,7 @@
     "eamodio.gitlens",                    // GitLens
     "PKief.material-icon-theme",          // Material Icon Theme
     "humao.rest-client",                  // REST Client (para probar APIs)
-    "ms-azuretools.vscode-docker"         // Docker
+    "ms-azuretools.vscode-docker",
+    "GitHub.copilot"         // Docker
   ]
 }
