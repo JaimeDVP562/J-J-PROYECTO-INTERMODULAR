@@ -1,0 +1,217 @@
+// J-J-PROJECT Database Schema
+// Docs: https://dbml.dbdiagram.io/docs
+// Complete ERP system with invoicing, inventory, HR and POS modules
+
+Table users {
+  id bigint [primary key]
+  nombre varchar [not null]
+  email varchar [not null, unique]
+  password varchar [not null]
+  rol varchar [note: 'admin, vendedor, gerente']
+  email_verified_at timestamp
+  remember_token varchar
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table proveedors {
+  id bigint [primary key]
+  nombre varchar [not null]
+  nif varchar [unique]
+  direccion varchar
+  email varchar
+  telefono varchar
+  contacto varchar
+  poblacion varchar
+  codigo_postal varchar
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table productos {
+  id bigint [primary key]
+  codigo varchar [unique, not null]
+  nombre varchar [not null]
+  descripcion text
+  costo_unitario decimal [note: 'Costo de compra']
+  precio_venta decimal [not null]
+  iva_porcentaje decimal [note: 'Porcentaje IVA (21%, etc)']
+  stock integer [default: 0]
+  proveedor_id bigint [not null]
+  fabricante varchar
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table clientes {
+  id bigint [primary key]
+  nombre varchar [not null]
+  cif varchar [unique]
+  poblacion varchar
+  direccion varchar
+  codigo_postal varchar
+  contacto varchar
+  email varchar
+  telefono varchar
+  saldo decimal [default: 0]
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table ventas {
+  id bigint [primary key]
+  numero_operacion varchar [unique, not null]
+  fecha_venta date [not null]
+  hora_venta time [not null]
+  usuario_id bigint [not null]
+  cliente_id bigint [note: 'Nullable para ventas sin cliente registrado']
+  total_sin_iva decimal [not null]
+  total_iva decimal [not null]
+  total_con_iva decimal [not null]
+  descuento_porcentaje decimal [default: 0]
+  estado varchar [note: 'abierta, cerrada, cancelada', default: 'abierta']
+  metodo_pago varchar [note: 'efectivo, tarjeta, mixto']
+  importe_efectivo decimal [default: 0]
+  importe_tarjeta decimal [default: 0]
+  importe_vuelta decimal [default: 0]
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table detalles_venta {
+  id bigint [primary key]
+  venta_id bigint [not null]
+  producto_id bigint [not null]
+  cantidad integer [not null]
+  precio_unitario decimal [not null]
+  porcentaje_descuento decimal [default: 0]
+  importe_linea decimal [not null, note: 'cantidad * precio_unitario - descuento']
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table facturas {
+  id bigint [primary key]
+  numero_factura varchar [unique, not null]
+  venta_id bigint [not null]
+  fecha_factura date [not null]
+  cliente_id bigint [not null]
+  total_sin_iva decimal [not null]
+  total_iva decimal [not null]
+  total_con_iva decimal [not null]
+  estado varchar [note: 'pendiente, pagada, vencida']
+  fecha_vencimiento date
+  observaciones text
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table control_horario {
+  id bigint [primary key]
+  usuario_id bigint [not null]
+  fecha_entrada date [not null]
+  hora_entrada time [not null]
+  fecha_salida date
+  hora_salida time
+  duracion_minutos integer [note: 'Calculado: (salida - entrada)']
+  estado varchar [note: 'entrada, salida, completado']
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table resumen_diario_horario {
+  id bigint [primary key]
+  usuario_id bigint [not null]
+  fecha date [not null, unique]
+  total_horas integer
+  total_minutos integer
+  total_segundos integer
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table cierre_caja_diaria {
+  id bigint [primary key]
+  fecha date [not null, unique]
+  usuario_id bigint [not null]
+  operaciones_efectivo integer
+  importe_efectivo decimal
+  operaciones_tarjeta integer
+  importe_tarjeta decimal
+  operaciones_total integer
+  importe_total decimal
+  importe_esperado decimal
+  efectivo_real decimal
+  tarjeta_real decimal
+  diferencia_efectivo decimal
+  diferencia_tarjeta decimal
+  observaciones text
+  estado varchar [note: 'abierta, cerrada']
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table reportes {
+  id bigint [primary key]
+  tipo varchar [note: 'ventas, financiero, stock, horario']
+  fecha_inicio date [not null]
+  fecha_fin date [not null]
+  usuario_id bigint [not null]
+  total_ventas decimal
+  total_items integer
+  total_clientes integer
+  contenido longtext [note: 'JSON con datos del reporte']
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table incidencias {
+  id bigint [primary key]
+  asunto varchar [not null]
+  mensaje text [not null]
+  usuario_id bigint [not null]
+  estado varchar [note: 'abierta, en_proceso, resuelta', default: 'abierta']
+  prioridad varchar [note: 'baja, media, alta']
+  created_at timestamp
+  updated_at timestamp
+  resuelto_en timestamp
+}
+
+Table configuracion {
+  id bigint [primary key]
+  clave varchar [unique, not null]
+  valor text
+  descripcion varchar
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table password_reset_tokens {
+  email varchar [primary key]
+  token varchar [not null]
+  created_at timestamp
+}
+
+Table sessions {
+  id varchar [primary key]
+  user_id bigint
+  ip_address varchar [note: '45 characters max']
+  user_agent text
+  payload longtext [not null]
+  last_activity integer [not null]
+}
+
+// Foreign Keys / Relationships
+Ref: productos.proveedor_id > proveedors.id [delete: cascade]
+Ref: ventas.usuario_id > users.id
+Ref: ventas.cliente_id > clientes.id [delete: set null]
+Ref: detalles_venta.venta_id > ventas.id [delete: cascade]
+Ref: detalles_venta.producto_id > productos.id
+Ref: facturas.venta_id > ventas.id [delete: cascade]
+Ref: facturas.cliente_id > clientes.id
+Ref: control_horario.usuario_id > users.id [delete: cascade]
+Ref: resumen_diario_horario.usuario_id > users.id [delete: cascade]
+Ref: cierre_caja_diaria.usuario_id > users.id
+Ref: reportes.usuario_id > users.id [delete: set null]
+Ref: incidencias.usuario_id > users.id [delete: set null]
+Ref: sessions.user_id > users.id
