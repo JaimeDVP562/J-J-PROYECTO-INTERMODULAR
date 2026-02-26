@@ -1,39 +1,89 @@
-version: '3.8'
-
 services:
-  web:
-    build:
-      context: .
-      dockerfile: docker/web/Dockerfile
-    image: jjproyect/web:latest
-    restart: unless-stopped
-    ports:
-      - "8080:80"
-    depends_on:
-      - db
-
-  db:
-    image: mariadb:11
+  database:
+    image: mysql:8.0
+    container_name: jj_database
     restart: unless-stopped
     environment:
-      MARIADB_ROOT_PASSWORD: root
-      MARIADB_DATABASE: JJPROYECT
-      MARIADB_USER: app
-      MARIADB_PASSWORD: app
-    volumes:
-      - db_data:/var/lib/mysql
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: jj_db
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
     ports:
-      - "3307:3306"
+      - "3306:3306"
+    volumes:
+      - jj_db_data:/var/lib/mysql
+    networks:
+      - jj_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "user", "-ppassword"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: jj_backend
+    restart: unless-stopped
+    depends_on:
+      database:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    working_dir: /workspaces/Pinturas/backend
+    volumes:
+      - .:/workspaces/Pinturas:cached
+    environment:
+      - DB_CONNECTION=mysql
+      - DB_HOST=database
+      - DB_PORT=3306
+      - DB_DATABASE=jj_db
+      - DB_USERNAME=user
+      - DB_PASSWORD=password
+    command: bash -c "composer install --no-interaction --prefer-dist && php artisan migrate --force && php artisan db:seed --force && php artisan serve --host 0.0.0.0 --port 8000"
+    networks:
+      - jj_network
+
+  frontend:
+    build:
+      context: ./docker/frontend
+      dockerfile: Dockerfile.dev
+    container_name: jj_frontend
+    restart: unless-stopped
+    ports:
+      - "80:4200"
+    working_dir: /workspaces/Pinturas/frontend
+    volumes:
+      - .:/workspaces/Pinturas:cached
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    command: bash -c "npm install -g @angular/cli@20 && npm install && ng serve --host 0.0.0.0 --port 4200 --poll 2000"
+    networks:
+      - jj_network
 
   phpmyadmin:
-    image: phpmyadmin:5
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: jj_phpmyadmin
     restart: unless-stopped
-    environment:
-      PMA_HOST: db
     depends_on:
-      - db
+      database:
+        condition: service_healthy
     ports:
-      - "8081:80"
+      - "8080:80"
+    environment:
+      PMA_HOST: database
+      PMA_PORT: 3306
+      PMA_USER: user
+      PMA_PASSWORD: password
+    networks:
+      - jj_network
 
 volumes:
-  db_data: {}
+  jj_db_data:
+
+
+networks:
+  jj_network:
+    driver: bridge

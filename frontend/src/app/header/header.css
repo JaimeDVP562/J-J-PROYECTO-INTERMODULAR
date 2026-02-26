@@ -1,0 +1,98 @@
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #d2f0f4;
+    padding: 0.7rem 2rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+@media (max-width: 768px) {
+  .header {
+    padding: 0.5rem 1rem;
+  }
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.logo {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    background: #fff;
+    object-fit: cover;
+    border: 2px solid #1976d2;
+}
+
+.brand {
+    font-size: 1.6rem;
+    font-weight: bold;
+    color: #222;
+    letter-spacing: 1px;
+}
+
+.header-center {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+}
+
+.search-form {
+    display: flex;
+    background: #eaf6f9;
+    border-radius: 2rem;
+    padding: 0.2rem 1rem;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+}
+
+.search-form input {
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: 1rem;
+    padding: 0.5rem 0.7rem;
+    width: 180px;
+}
+
+.search-form button {
+    background: none;
+    border: none;
+    color: #1976d2;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0 0.5rem;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.icon-btn {
+    background: none;
+    border: none;
+    font-size: 1.3rem;
+    color: #1976d2;
+    cursor: pointer;
+    padding: 0.3rem;
+    border-radius: 50%;
+    transition: background 0.2s;
+}
+
+.icon-btn:hover,
+.icon-btn:focus {
+    background: #eaf6f9;
+}
+
+.avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #1976d2;
+}

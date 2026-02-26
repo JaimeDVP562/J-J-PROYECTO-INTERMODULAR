@@ -1,0 +1,175 @@
+.stock {
+  padding: 2rem;
+}
+
+.stock h2 {
+  font-size: 1.6rem;
+  color: #0a2342;
+  margin-bottom: 1.5rem;
+}
+
+.loading, .error {
+  padding: 1rem;
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.error {
+  background: #ffeaea;
+  color: #c0392b;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.tabs button {
+  padding: 0.5rem 1.2rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  background: #f8fafc;
+  color: #475569;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.15s;
+}
+
+.tabs button.active {
+  background: #0a2342;
+  color: #fff;
+  border-color: #0a2342;
+}
+
+.summary-bar {
+  display: flex;
+  gap: 2rem;
+  align-items: center;
+  background: #f1f5f9;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+  color: #475569;
+}
+
+.summary-bar strong { color: #0a2342; }
+
+.alerta { color: #b45309; font-weight: 600; }
+
+.table-wrapper {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+th {
+  text-align: left;
+  padding: 0.6rem 1rem;
+  background: #0a2342;
+  color: #fff;
+  font-weight: 600;
+}
+
+td {
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+}
+
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: #f8fafc; }
+
+tr.stock-bajo td { background: #fffbeb; }
+
+.valor-bajo {
+  color: #dc2626;
+  font-weight: 700;
+}
+
+.empty { color: #94a3b8; font-size: 0.9rem; padding: 1rem; }
+
+/* Summary bar button */
+.summary-bar { justify-content: space-between; flex-wrap: wrap; }
+.btn-add {
+  background: #0a2342; color: #fff; border: none;
+  padding: 0.4rem 1rem; border-radius: 0.4rem;
+  font-size: 0.85rem; font-weight: 600; cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-add:hover { background: #17375e; }
+
+/* Form panel */
+.form-panel {
+  background: #f8fafc; border: 1px solid #e2e8f0;
+  border-radius: 0.75rem; padding: 1.2rem;
+  margin-bottom: 1rem;
+}
+.form-panel h4 { margin: 0 0 1rem; color: #0a2342; font-size: 1rem; }
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.form-field { display: flex; flex-direction: column; gap: 0.3rem; }
+.form-field label { font-size: 0.8rem; color: #475569; font-weight: 600; }
+.form-field input, .form-field select {
+  padding: 0.4rem 0.6rem; border: 1px solid #cbd5e1;
+  border-radius: 0.35rem; font-size: 0.88rem;
+}
+.form-actions { display: flex; gap: 0.5rem; }
+.btn-save-form {
+  background: #0a2342; color: #fff; border: none;
+  padding: 0.5rem 1.2rem; border-radius: 0.4rem;
+  font-size: 0.9rem; cursor: pointer;
+}
+.btn-save-form:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-cancel-form {
+  background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0;
+  padding: 0.5rem 1.2rem; border-radius: 0.4rem;
+  font-size: 0.9rem; cursor: pointer;
+}
+.error-inline { color: #dc2626; font-size: 0.83rem; margin-top: 0.3rem; }
+
+/* Stock +/- */
+.stock-btns { display: flex; align-items: center; gap: 0.4rem; white-space: nowrap; }
+.btn-menos, .btn-mas {
+  width: 1.8rem; height: 1.8rem;
+  border: 1px solid #cbd5e1; border-radius: 0.3rem;
+  background: #f8fafc; font-size: 1.1rem; font-weight: 700;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: background 0.1s;
+}
+.btn-menos:hover:not(:disabled) { background: #fee2e2; border-color: #fca5a5; color: #dc2626; }
+.btn-mas:hover:not(:disabled) { background: #d1fae5; border-color: #6ee7b7; color: #16a34a; }
+.btn-menos:disabled, .btn-mas:disabled { opacity: 0.4; cursor: not-allowed; }
+.stock-num { min-width: 2rem; text-align: center; font-weight: 700; font-size: 1rem; }
+.actualizando { opacity: 0.4; }
+
+/* Acciones inline */
+.acciones { white-space: nowrap; }
+.btn-edit, .btn-del, .btn-save, .btn-cancel {
+  background: none; border: none; font-size: 1rem;
+  cursor: pointer; padding: 0.2rem 0.35rem; border-radius: 0.3rem; transition: background 0.12s;
+}
+.btn-edit:hover { background: #e0f2fe; }
+.btn-del:hover { background: #fee2e2; }
+.btn-save:hover { background: #d1fae5; }
+.btn-cancel:hover { background: #f1f5f9; }
+
+/* Fila edición */
+.fila-edicion td { background: #fffbeb !important; }
+.input-edit {
+  width: 100%; padding: 0.3rem 0.4rem;
+  border: 1px solid #cbd5e1; border-radius: 0.3rem; font-size: 0.85rem;
+}

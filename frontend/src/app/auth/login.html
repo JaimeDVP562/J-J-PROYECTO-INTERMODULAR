@@ -1,0 +1,19 @@
+<div class="login-container">
+  <h2>Iniciar sesión</h2>
+
+  <form (ngSubmit)="submit()" #f="ngForm">
+    <div>
+      <label for="email">Email</label>
+      <input id="email" name="email" [(ngModel)]="email" required />
+    </div>
+
+    <div>
+      <label for="password">Contraseña</label>
+      <input id="password" name="password" type="password" [(ngModel)]="password" required />
+    </div>
+
+    <div *ngIf="error" style="color: red">{{ error }}</div>
+
+    <button type="submit" [disabled]="loading">{{ loading ? 'Entrando...' : 'Entrar' }}</button>
+  </form>
+</div>

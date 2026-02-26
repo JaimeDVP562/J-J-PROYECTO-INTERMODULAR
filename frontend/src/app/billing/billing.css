@@ -1,0 +1,116 @@
+.billing {
+  padding: 2rem;
+}
+
+.billing h2 {
+  font-size: 1.6rem;
+  color: #0a2342;
+  margin-bottom: 1.5rem;
+}
+
+.loading, .error {
+  padding: 1rem;
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.error {
+  background: #ffeaea;
+  color: #c0392b;
+}
+
+.summary-bar {
+  display: flex;
+  gap: 2rem;
+  background: #f1f5f9;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+  color: #475569;
+}
+
+.summary-bar strong {
+  color: #0a2342;
+}
+
+.table-wrapper {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+th {
+  text-align: left;
+  padding: 0.6rem 1rem;
+  background: #0a2342;
+  color: #fff;
+  font-weight: 600;
+}
+
+td {
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+}
+
+tr:last-child td {
+  border-bottom: none;
+}
+
+tr:hover td {
+  background: #f8fafc;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 1rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.badge--pending { background: #fef3c7; color: #b45309; }
+.badge--paid { background: #d1fae5; color: #065f46; }
+.badge--cancelled { background: #fee2e2; color: #991b1b; }
+
+.empty {
+  color: #94a3b8;
+  font-size: 0.9rem;
+  padding: 1rem;
+}
+
+/* Acciones */
+.acciones { white-space: nowrap; }
+.btn-edit, .btn-delete, .btn-save, .btn-cancel {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.3rem;
+  transition: background 0.15s;
+}
+.btn-edit:hover { background: #e0f2fe; }
+.btn-delete:hover { background: #fee2e2; }
+.btn-save:hover { background: #d1fae5; }
+.btn-cancel:hover { background: #f1f5f9; }
+.btn-delete:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Fila edición */
+.fila-edicion td { background: #fffbeb !important; }
+.input-edit {
+  width: 100%;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.3rem;
+  font-size: 0.85rem;
+}
