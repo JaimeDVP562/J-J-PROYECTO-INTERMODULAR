@@ -44,4 +44,12 @@ export class AuthService {
   isAdmin(): boolean {
     return this.getCurrentUser()?.rol === 'admin';
   }
+
+  isGerente(): boolean {
+    return this.getCurrentUser()?.rol === 'gerente';
+  }
+
+  isAdminOrGerente(): boolean {
+    return this.isAdmin() || this.isGerente();
+  }
 }

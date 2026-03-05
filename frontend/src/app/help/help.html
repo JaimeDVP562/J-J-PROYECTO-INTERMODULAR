@@ -1,5 +1,61 @@
 <div class="help">
-  <h2>Ayuda</h2>
-  <p>Centro de ayuda y soporte.</p>
-  <!-- Contenido de ayuda -->
+  <h2>Centro de Ayuda</h2>
+  <p class="help-subtitle">¿Tienes alguna incidencia o consulta? Rellena el formulario y nos pondremos en contacto contigo.</p>
+
+  <div class="help-card">
+    <h3>📩 Enviar incidencia</h3>
+
+    <div *ngIf="exito" class="exito-msg">
+      <span>✅</span> {{ exito }}
+    </div>
+    <div *ngIf="error && !exito" class="error-msg">
+      {{ error }}
+    </div>
+
+    <div class="form-grid">
+      <div class="form-field">
+        <label>Nombre de la empresa *</label>
+        <input
+          type="text"
+          [(ngModel)]="form.empresa"
+          placeholder="Nombre de tu empresa"
+          [disabled]="enviando"
+        />
+      </div>
+      <div class="form-field full">
+        <label>Descripción de la incidencia *</label>
+        <textarea
+          [(ngModel)]="form.descripcion"
+          placeholder="Describe detalladamente el problema o consulta..."
+          rows="6"
+          [disabled]="enviando"
+        ></textarea>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn-enviar" (click)="enviar()" [disabled]="enviando">
+        {{ enviando ? '⏳ Enviando...' : '📤 Enviar mensaje' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Info adicional -->
+  <div class="help-info-grid">
+    <div class="help-info-card">
+      <span class="info-icon">📧</span>
+      <h4>Email directo</h4>
+      <p>jjproyect&#64;gmail.com</p>
+    </div>
+    <div class="help-info-card">
+      <span class="info-icon">⏰</span>
+      <h4>Horario de soporte</h4>
+      <p>Lunes a Viernes<br>9:00 — 18:00</p>
+    </div>
+    <div class="help-info-card">
+      <span class="info-icon">⚡</span>
+      <h4>Tiempo de respuesta</h4>
+      <p>Menos de 24h en días laborables</p>
+    </div>
+  </div>
 </div>

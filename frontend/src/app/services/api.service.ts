@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import {
+  Estadisticas,
   Producto,
   Cliente,
   Proveedor,
@@ -15,7 +16,12 @@ import {
   DetalleVenta,
   Jornada,
   ResumenJornada,
+  ResumenMensualUsuario,
+  ResumenMensualAdmin,
   User,
+  CierreCaja,
+  Devolucion,
+  NuevaVenta,
 } from '../models/models';
 
 @Injectable({ providedIn: 'root' })
@@ -149,14 +155,42 @@ export class ApiService {
   getVenta(id: number): Observable<Venta> {
     return this.http.get<Venta>(`${this.baseUrl}/ventas/${id}`);
   }
-  createVenta(data: Partial<Venta>): Observable<any> {
-    return this.http.post(`${this.baseUrl}/ventas`, data);
+  crearVentaPOS(data: NuevaVenta): Observable<Venta> {
+    return this.http.post<Venta>(`${this.baseUrl}/ventas`, data);
+  }
+  pagarProveedor(data: { proveedor_id?: number; importe: number; concepto: string; metodo_pago: string }): Observable<Venta> {
+    return this.http.post<Venta>(`${this.baseUrl}/ventas/pago-proveedor`, data);
+  }
+  getVentasHoy(): Observable<Venta[]> {
+    return this.http.get<Venta[]>(`${this.baseUrl}/ventas/mis-hoy`);
   }
   updateVenta(id: number, data: Partial<Venta>): Observable<any> {
     return this.http.put(`${this.baseUrl}/ventas/${id}`, data);
   }
   deleteVenta(id: number): Observable<any> {
     return this.http.delete(`${this.baseUrl}/ventas/${id}`);
+  }
+
+  // Devoluciones
+  getDevoluciones(): Observable<Devolucion[]> {
+    return this.http.get<Devolucion[]>(`${this.baseUrl}/devoluciones`);
+  }
+  getDevolucionesHoy(): Observable<Devolucion[]> {
+    return this.http.get<Devolucion[]>(`${this.baseUrl}/devoluciones/mis-hoy`);
+  }
+  crearDevolucion(venta_id: number, motivo?: string): Observable<any> {
+    return this.http.post(`${this.baseUrl}/devoluciones`, { venta_id, motivo });
+  }
+
+  // Cierre de caja
+  getCierresCaja(): Observable<CierreCaja[]> {
+    return this.http.get<CierreCaja[]>(`${this.baseUrl}/cierre-cajas`);
+  }
+  getTotalVentasHoy(): Observable<{ total_ventas_hoy: number; fecha: string }> {
+    return this.http.get<any>(`${this.baseUrl}/cierre-cajas/total-hoy`);
+  }
+  crearCierreCaja(data: Partial<CierreCaja>): Observable<any> {
+    return this.http.post(`${this.baseUrl}/cierre-cajas`, data);
   }
 
   // Jornadas
@@ -175,6 +209,9 @@ export class ApiService {
   getResumenJornadasHoy(): Observable<ResumenJornada[]> {
     return this.http.get<ResumenJornada[]>(`${this.baseUrl}/jornadas/resumen-hoy`);
   }
+  getResumenMensual(mes: number, ano: number): Observable<ResumenMensualUsuario | ResumenMensualAdmin[]> {
+    return this.http.get<any>(`${this.baseUrl}/jornadas/resumen-mensual?mes=${mes}&ano=${ano}`);
+  }
 
   // Gestión de usuarios (admin)
   getUsuarios(): Observable<User[]> {
@@ -188,5 +225,26 @@ export class ApiService {
   }
   deleteUsuario(id: number): Observable<any> {
     return this.http.delete(`${this.baseUrl}/usuarios/${id}`);
+  }
+
+  // Perfil
+  getPerfil(): Observable<User> {
+    return this.http.get<User>(`${this.baseUrl}/perfil`);
+  }
+  getPerfilById(id: number): Observable<User> {
+    return this.http.get<User>(`${this.baseUrl}/perfil/${id}`);
+  }
+  updatePerfil(data: FormData): Observable<any> {
+    return this.http.post(`${this.baseUrl}/perfil`, data);
+  }
+
+  // Ayuda
+  enviarAyuda(empresa: string, descripcion: string): Observable<any> {
+    return this.http.post(`${this.baseUrl}/ayuda`, { empresa, descripcion });
+  }
+
+  // Estadísticas
+  getEstadisticas(desde: string, hasta: string): Observable<Estadisticas> {
+    return this.http.get<Estadisticas>(`${this.baseUrl}/estadisticas?desde=${desde}&hasta=${hasta}`);
   }
 }

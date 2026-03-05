@@ -19,6 +19,7 @@ export interface Proveedor {
 export interface Producto {
   id: number;
   nombre: string;
+  sku?: string;
   descripcion?: string;
   precio: number;
   stock_quantity: number;
@@ -90,18 +91,6 @@ export interface Inventario {
   updated_at?: string;
 }
 
-export interface Venta {
-  id: number;
-  user_id: number;
-  user?: User;
-  total: number;
-  fecha_venta: string;
-  metodo_pago: string;
-  detalles?: DetalleVenta[];
-  created_at?: string;
-  updated_at?: string;
-}
-
 export interface DetalleVenta {
   id: number;
   venta_id: number;
@@ -109,6 +98,38 @@ export interface DetalleVenta {
   producto?: Producto;
   cantidad: number;
   precio_unitario: number;
+  subtotal: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Devolucion {
+  id: number;
+  venta_id: number;
+  venta?: Venta;
+  user_id: number;
+  user?: User;
+  motivo?: string;
+  importe: number;
+  fecha: string;
+  created_at?: string;
+}
+
+export interface Venta {
+  id: number;
+  user_id: number;
+  cliente_id?: number;
+  user?: User;
+  cliente?: Cliente;
+  total: number;
+  fecha_venta: string;
+  metodo_pago: string;
+  notas?: string;
+  tipo?: 'venta' | 'pago_proveedor';
+  concepto?: string;
+  devuelta: boolean;
+  detalles?: DetalleVenta[];
+  devolucion?: Devolucion;
   created_at?: string;
   updated_at?: string;
 }
@@ -118,6 +139,7 @@ export interface User {
   nombre: string;
   email: string;
   rol: string;
+  photo?: string | null;
   created_at?: string;
 }
 
@@ -140,6 +162,81 @@ export interface ResumenJornada {
   total_minutos: number;
   jornada_activa?: Jornada | null;
   num_jornadas: number;
+}
+
+export interface ResumenMensualUsuario {
+  dias_trabajados: number;
+  total_minutos: number;
+  detalle_dias: { fecha: string; minutos: number; jornadas: number }[];
+}
+
+export interface ResumenMensualAdmin {
+  user_id: number;
+  nombre: string;
+  dias_trabajados: number;
+  total_minutos: number;
+  num_jornadas: number;
+}
+
+export interface CierreCaja {
+  id: number;
+  user_id: number;
+  user?: User;
+  fecha: string;
+  efectivo_retirado: number;
+  importe_datafono: number;
+  total_ventas: number;
+  diferencia: number;
+  notas?: string;
+  created_at?: string;
+}
+
+export interface ItemCarrito {
+  producto: Producto;
+  cantidad: number;
+  precio_unitario: number;
+  subtotal: number;
+}
+
+export interface NuevaVenta {
+  cliente_id?: number | null;
+  metodo_pago: 'efectivo' | 'tarjeta' | 'mixto';
+  notas?: string;
+  items: { producto_id: number; cantidad: number; precio_unitario: number }[];
+}
+
+export interface EstadisticasHoy {
+  ingresos: number;
+  gastos: number;
+  diferencia: number;
+  num_operaciones: number;
+  ticket_medio: number;
+  num_devoluciones: number;
+  importe_devoluciones: number;
+}
+
+export interface EstadisticasUsuario {
+  user_id: number;
+  nombre: string;
+  num_ventas: number;
+  total: number;
+  promedio: number;
+  num_devoluciones: number;
+  importe_devoluciones: number;
+}
+
+export interface Estadisticas {
+  desde: string;
+  hasta: string;
+  ingresos: number;
+  gastos: number;
+  diferencia: number;
+  num_operaciones: number;
+  ticket_medio: number;
+  num_devoluciones: number;
+  importe_devoluciones: number;
+  hoy: EstadisticasHoy;
+  usuarios_hoy: EstadisticasUsuario[];
 }
 
 export interface LoginResponse {

@@ -19,6 +19,8 @@ export class LoginComponent {
   password = '';
   error: string | null = null;
   loading = false;
+  showPassword = false;
+  readonly year = new Date().getFullYear();
 
   submit() {
     this.error = null;

@@ -22,11 +22,12 @@
       <div class="table-wrapper">
         <table *ngIf="inventarios.length > 0; else sinInventario">
           <thead>
-            <tr><th>Producto</th><th>Categoría</th><th>Disponible</th><th>Mínimo</th><th>Ubicación</th></tr>
+            <tr><th>Producto</th><th>SKU</th><th>Categoría</th><th>Disponible</th><th>Mínimo</th><th>Ubicación</th></tr>
           </thead>
           <tbody>
             <tr *ngFor="let inv of inventarios" [class.stock-bajo]="inv.cantidad_disponible <= inv.cantidad_minima">
               <td>{{ inv.producto?.nombre ?? '—' }}</td>
+              <td><span class="sku-badge">{{ inv.producto?.sku ?? '—' }}</span></td>
               <td>{{ inv.producto?.categoria?.nombre ?? '—' }}</td>
               <td><span [class.valor-bajo]="inv.cantidad_disponible <= inv.cantidad_minima">{{ inv.cantidad_disponible }}</span></td>
               <td>{{ inv.cantidad_minima }}</td>
@@ -40,17 +41,32 @@
 
     <!-- ── PRODUCTOS ──────────────────────────────────────── -->
     <ng-container *ngIf="vistaActiva === 'productos'">
-      <div class="summary-bar">
-        <span>Total: <strong>{{ productos.length }}</strong> productos</span>
-        <button *ngIf="auth.isAdmin()" class="btn-add" (click)="abrirFormProducto()">+ Añadir producto</button>
+      <!-- Barra de búsqueda y filtros -->
+      <div class="filter-bar">
+        <input
+          type="text"
+          [(ngModel)]="busquedaProducto"
+          (input)="filtrarProductos()"
+          placeholder="🔍 Buscar por nombre, SKU o descripción..."
+          class="search-input"
+        />
+        <select [(ngModel)]="categoriaFiltro" (change)="filtrarProductos()" class="cat-select">
+          <option value="">Todas las categorías</option>
+          <option *ngFor="let c of categorias" [value]="c.id">{{ c.nombre }}</option>
+        </select>
+        <button *ngIf="auth.isAdminOrGerente()" class="btn-add" (click)="abrirFormProducto()">+ Añadir producto</button>
       </div>
 
-      <div *ngIf="mostrarFormProducto && auth.isAdmin()" class="form-panel">
+      <div *ngIf="mostrarFormProducto && auth.isAdminOrGerente()" class="form-panel">
         <h4>Nuevo producto</h4>
         <div class="form-grid">
           <div class="form-field">
             <label>Nombre *</label>
             <input type="text" [(ngModel)]="nuevoProducto.nombre" placeholder="Nombre del producto" />
+          </div>
+          <div class="form-field">
+            <label>SKU</label>
+            <input type="text" [(ngModel)]="nuevoProducto.sku" placeholder="Código SKU único" />
           </div>
           <div class="form-field">
             <label>Descripción</label>
@@ -88,37 +104,42 @@
         </div>
       </div>
 
+      <div class="summary-bar" style="margin-top:0">
+        <span>Mostrando: <strong>{{ productosFiltrados.length }}</strong> de {{ productos.length }} productos</span>
+      </div>
+
       <div class="table-wrapper">
-        <table *ngIf="productos.length > 0; else sinProductos">
+        <table *ngIf="productosFiltrados.length > 0; else sinProductos">
           <thead>
             <tr>
-              <th>Nombre</th><th>Categoría</th><th>Proveedor</th><th>Precio</th>
+              <th>Nombre</th><th>SKU</th><th>Categoría</th><th>Proveedor</th><th>Precio</th>
               <th>Stock</th>
-              <th *ngIf="auth.isAdmin()">Ajustar stock</th>
-              <th *ngIf="auth.isAdmin()"></th>
+              <th *ngIf="auth.isAdminOrGerente()">Ajustar stock</th>
+              <th *ngIf="auth.isAdminOrGerente()"></th>
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let p of productos">
+            <tr *ngFor="let p of productosFiltrados">
               <td>{{ p.nombre }}</td>
+              <td><span class="sku-badge">{{ p.sku ?? '—' }}</span></td>
               <td>{{ p.categoria?.nombre ?? '—' }}</td>
               <td>{{ p.proveedor?.nombre ?? '—' }}</td>
               <td>{{ p.precio | currency:'EUR':'symbol':'1.2-2' }}</td>
               <td><strong>{{ p.stock_quantity }}</strong></td>
-              <td *ngIf="auth.isAdmin()" class="stock-btns">
+              <td *ngIf="auth.isAdminOrGerente()" class="stock-btns">
                 <button class="btn-menos" (click)="cambiarStock(p, -1)"
                   [disabled]="p.stock_quantity === 0 || actualizandoStockId === p.id">−</button>
                 <span class="stock-num" [class.actualizando]="actualizandoStockId === p.id">{{ p.stock_quantity }}</span>
                 <button class="btn-mas" (click)="cambiarStock(p, 1)"
                   [disabled]="actualizandoStockId === p.id">+</button>
               </td>
-              <td *ngIf="auth.isAdmin()">
+              <td *ngIf="auth.isAdminOrGerente()">
                 <button class="btn-del" (click)="eliminarProducto(p.id)" title="Eliminar">🗑️</button>
               </td>
             </tr>
           </tbody>
         </table>
-        <ng-template #sinProductos><p class="empty">No hay productos registrados.</p></ng-template>
+        <ng-template #sinProductos><p class="empty">No se encontraron productos.</p></ng-template>
       </div>
     </ng-container>
 
@@ -126,10 +147,10 @@
     <ng-container *ngIf="vistaActiva === 'proveedores'">
       <div class="summary-bar">
         <span>Total: <strong>{{ proveedores.length }}</strong> proveedores</span>
-        <button *ngIf="auth.isAdmin()" class="btn-add" (click)="abrirFormProveedor()">+ Añadir proveedor</button>
+        <button *ngIf="auth.isAdminOrGerente()" class="btn-add" (click)="abrirFormProveedor()">+ Añadir proveedor</button>
       </div>
 
-      <div *ngIf="mostrarFormProveedor && auth.isAdmin()" class="form-panel">
+      <div *ngIf="mostrarFormProveedor && auth.isAdminOrGerente()" class="form-panel">
         <h4>Nuevo proveedor</h4>
         <div class="form-grid">
           <div class="form-field">
@@ -163,7 +184,7 @@
           <thead>
             <tr>
               <th>Nombre</th><th>Email</th><th>Teléfono</th><th>Dirección</th>
-              <th *ngIf="auth.isAdmin()">Acciones</th>
+              <th *ngIf="auth.isAdminOrGerente()">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -173,7 +194,7 @@
                 <td>{{ pv.contact_email ?? '—' }}</td>
                 <td>{{ pv.phone ?? '—' }}</td>
                 <td>{{ pv.address ?? '—' }}</td>
-                <td *ngIf="auth.isAdmin()" class="acciones">
+                <td *ngIf="auth.isAdminOrGerente()" class="acciones">
                   <button class="btn-edit" (click)="iniciarEditProveedor(pv)">✏️</button>
                 </td>
               </tr>

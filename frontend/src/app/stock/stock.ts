@@ -19,12 +19,17 @@ export class StockComponent implements OnInit {
 
   inventarios: Inventario[] = [];
   productos: Producto[] = [];
+  productosFiltrados: Producto[] = [];
   proveedores: Proveedor[] = [];
   categorias: Categoria[] = [];
   cargando = true;
   error = '';
 
   vistaActiva: 'inventario' | 'productos' | 'proveedores' = 'inventario';
+
+  // Filters (productos)
+  busquedaProducto = '';
+  categoriaFiltro: number | '' = '';
 
   // Añadir producto
   mostrarFormProducto = false;
@@ -57,11 +62,24 @@ export class StockComponent implements OnInit {
       next: ({ inventarios, productos, proveedores, categorias }) => {
         this.inventarios = inventarios;
         this.productos = productos;
+        this.productosFiltrados = productos;
         this.proveedores = proveedores;
         this.categorias = categorias;
         this.cargando = false;
       },
       error: () => { this.error = 'Error al cargar el stock.'; this.cargando = false; },
+    });
+  }
+
+  filtrarProductos(): void {
+    const q = this.busquedaProducto.toLowerCase();
+    this.productosFiltrados = this.productos.filter(p => {
+      const matchQ = !q
+        || p.nombre.toLowerCase().includes(q)
+        || (p.sku ?? '').toLowerCase().includes(q)
+        || (p.descripcion ?? '').toLowerCase().includes(q);
+      const matchCat = !this.categoriaFiltro || p.categoria_id === Number(this.categoriaFiltro);
+      return matchQ && matchCat;
     });
   }
 
@@ -81,11 +99,12 @@ export class StockComponent implements OnInit {
 
   // ── Eliminar producto ──────────────────────────────────────────────
   eliminarProducto(id: number): void {
-    if (!confirm('¿Eliminar este producto?')) return;
+    if (!confirm('¿Eliminar este producto? Esta acción no se puede deshacer.')) return;
     this.api.deleteProducto(id).subscribe({
       next: () => {
         this.productos = this.productos.filter(p => p.id !== id);
         this.inventarios = this.inventarios.filter(i => i.producto_id !== id);
+        this.filtrarProductos();
       },
     });
   }
@@ -104,12 +123,18 @@ export class StockComponent implements OnInit {
     }
     this.guardandoProducto = true;
     this.api.createProducto(this.nuevoProducto).subscribe({
-      next: (res) => {
+      next: () => {
         this.guardandoProducto = false;
         this.mostrarFormProducto = false;
-        this.api.getProductos().subscribe(p => this.productos = p);
+        this.api.getProductos().subscribe(p => {
+          this.productos = p;
+          this.filtrarProductos();
+        });
       },
-      error: () => { this.errorProducto = 'Error al crear el producto.'; this.guardandoProducto = false; },
+      error: (e) => {
+        this.errorProducto = e?.error?.message ?? 'Error al crear el producto.';
+        this.guardandoProducto = false;
+      },
     });
   }
 

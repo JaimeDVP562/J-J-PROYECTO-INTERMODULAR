@@ -9,15 +9,20 @@ use Illuminate\Http\Request;
 
 class JornadaController extends Controller
 {
+    private function isPrivileged($user): bool
+    {
+        return in_array($user->rol, ['admin', 'gerente']);
+    }
+
     /**
-     * Admin: todas las jornadas de hoy con datos de usuario.
-     * Usuario normal: sus jornadas de las últimas 12h.
+     * Admin/Gerente: todas las jornadas de hoy con datos de usuario.
+     * Usuario normal: sus jornadas del día corriente.
      */
     public function index(Request $request)
     {
         $user = $request->user();
 
-        if ($user->rol === 'admin') {
+        if ($this->isPrivileged($user)) {
             $jornadas = Jornada::with('user')
                 ->whereDate('inicio', today())
                 ->orderBy('inicio', 'desc')
@@ -25,7 +30,7 @@ class JornadaController extends Controller
         } else {
             $jornadas = Jornada::with('user')
                 ->where('user_id', $user->id)
-                ->where('inicio', '>=', now()->subHours(12))
+                ->whereDate('inicio', today())
                 ->orderBy('inicio', 'desc')
                 ->get();
         }
@@ -47,7 +52,7 @@ class JornadaController extends Controller
             return response()->json(null);
         }
 
-        return new JornadaResource($jornada);
+        return response()->json((new JornadaResource($jornada))->toArray($request));
     }
 
     /**
@@ -67,7 +72,7 @@ class JornadaController extends Controller
             'inicio'  => now(),
         ]);
 
-        return response()->json(new JornadaResource($jornada), 201);
+        return response()->json((new JornadaResource($jornada))->toArray($request), 201);
     }
 
     /**
@@ -88,15 +93,15 @@ class JornadaController extends Controller
 
         $jornada->update(['fin' => now()]);
 
-        return new JornadaResource($jornada);
+        return response()->json((new JornadaResource($jornada))->toArray($request));
     }
 
     /**
-     * Resumen de horas por usuario para hoy (solo admin).
+     * Resumen de horas por usuario para hoy (admin y gerente).
      */
     public function resumenHoy(Request $request)
     {
-        if ($request->user()->rol !== 'admin') {
+        if (!$this->isPrivileged($request->user())) {
             return response()->json(['error' => 'No autorizado'], 403);
         }
 
@@ -104,7 +109,7 @@ class JornadaController extends Controller
             ->whereDate('inicio', today())
             ->get()
             ->groupBy('user_id')
-            ->map(function ($jornadasUsuario) {
+            ->map(function ($jornadasUsuario) use ($request) {
                 $usuario = $jornadasUsuario->first()->user;
                 $totalMinutos = $jornadasUsuario->sum('duracion_minutos');
                 $activa = $jornadasUsuario->whereNull('fin')->first();
@@ -122,5 +127,52 @@ class JornadaController extends Controller
             ->values();
 
         return response()->json($jornadas);
+    }
+
+    /**
+     * Resumen mensual de jornadas.
+     * Admin/Gerente: todos los usuarios. Usuario: solo el propio.
+     */
+    public function resumenMensual(Request $request)
+    {
+        $user = $request->user();
+        $mes  = (int) $request->query('mes', now()->month);
+        $ano  = (int) $request->query('ano', now()->year);
+
+        $query = \App\Models\Jornada::with('user')
+            ->whereMonth('inicio', $mes)
+            ->whereYear('inicio', $ano);
+
+        if (!$this->isPrivileged($user)) {
+            $query->where('user_id', $user->id);
+        }
+
+        $jornadas = $query->get();
+
+        if ($this->isPrivileged($user)) {
+            $resumen = $jornadas->groupBy('user_id')->map(function ($jornadasUser) {
+                $u = $jornadasUser->first()->user;
+                return [
+                    'user_id'         => $u->id,
+                    'nombre'          => $u->nombre,
+                    'dias_trabajados' => $jornadasUser->groupBy(fn($j) => $j->inicio->format('Y-m-d'))->count(),
+                    'total_minutos'   => $jornadasUser->sum('duracion_minutos'),
+                    'num_jornadas'    => $jornadasUser->count(),
+                ];
+            })->values();
+        } else {
+            $porDia  = $jornadas->groupBy(fn($j) => $j->inicio->format('Y-m-d'));
+            $resumen = [
+                'dias_trabajados' => $porDia->count(),
+                'total_minutos'   => $jornadas->sum('duracion_minutos'),
+                'detalle_dias'    => $porDia->map(fn($js, $fecha) => [
+                    'fecha'    => $fecha,
+                    'minutos'  => $js->sum('duracion_minutos'),
+                    'jornadas' => $js->count(),
+                ])->values(),
+            ];
+        }
+
+        return response()->json($resumen);
     }
 }

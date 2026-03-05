@@ -1,13 +1,20 @@
 <div class="time-control">
   <h2>Control Horario</h2>
 
+  <!-- Sub-tabs -->
+  <div class="tabs">
+    <button [class.active]="vistaActiva === 'hoy'" (click)="vistaActiva = 'hoy'">📅 Hoy</button>
+    <button [class.active]="vistaActiva === 'mensual'" (click)="vistaActiva = 'mensual'; cargarMensual()">📊 Resumen mensual</button>
+  </div>
+
   <div *ngIf="cargando" class="loading">Cargando...</div>
   <div *ngIf="error" class="error">{{ error }}</div>
 
-  <ng-container *ngIf="!cargando && !error">
+  <!-- ── VISTA HOY ── -->
+  <ng-container *ngIf="vistaActiva === 'hoy' && !cargando && !error">
 
-    <!-- ── VISTA ADMIN ─────────────────────────────────────── -->
-    <ng-container *ngIf="auth.isAdmin()">
+    <!-- ADMIN -->
+    <ng-container *ngIf="auth.isAdminOrGerente()">
       <div class="summary-bar">
         <span>Empleados con actividad hoy: <strong>{{ resumen.length }}</strong></span>
       </div>
@@ -40,8 +47,8 @@
       </div>
     </ng-container>
 
-    <!-- ── VISTA USUARIO NORMAL ────────────────────────────── -->
-    <ng-container *ngIf="!auth.isAdmin()">
+    <!-- USUARIO NORMAL -->
+    <ng-container *ngIf="!auth.isAdminOrGerente()">
       <div class="summary-bar">
         <span>Mis jornadas — últimas 12 horas: <strong>{{ misJornadas.length }}</strong></span>
       </div>
@@ -69,4 +76,72 @@
     </ng-container>
 
   </ng-container>
+
+  <!-- ── VISTA MENSUAL ── -->
+  <ng-container *ngIf="vistaActiva === 'mensual'">
+    <div class="mensual-filter">
+      <select [(ngModel)]="mesSeleccionado" class="mes-select">
+        <option *ngFor="let m of meses" [value]="m.n">{{ m.label }}</option>
+      </select>
+      <input type="number" [(ngModel)]="anoSeleccionado" min="2020" max="2099" class="ano-input" />
+      <button class="btn-filtrar" (click)="cargarMensual()">Consultar</button>
+    </div>
+
+    <div *ngIf="cargandoMensual" class="loading">Cargando resumen...</div>
+
+    <!-- Admin: tabla por usuario -->
+    <ng-container *ngIf="auth.isAdminOrGerente() && !cargandoMensual && resumenMensualAdmin.length > 0">
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>Empleado</th><th>Días trabajados</th><th>Total horas</th><th>Nº jornadas</th></tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let r of resumenMensualAdmin">
+              <td>{{ r.nombre }}</td>
+              <td>{{ r.dias_trabajados }}</td>
+              <td>{{ formatMin(r.total_minutos) }}</td>
+              <td>{{ r.num_jornadas }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </ng-container>
+    <p *ngIf="auth.isAdminOrGerente() && !cargandoMensual && resumenMensualAdmin.length === 0" class="empty">
+      Sin datos para el período seleccionado.
+    </p>
+
+    <!-- Usuario: resumen propio -->
+    <ng-container *ngIf="!auth.isAdminOrGerente() && !cargandoMensual && resumenMensualUsuario">
+      <div class="mensual-resumen-cards">
+        <div class="resumen-card">
+          <span class="card-value">{{ resumenMensualUsuario.dias_trabajados }}</span>
+          <span class="card-label">Días trabajados</span>
+        </div>
+        <div class="resumen-card">
+          <span class="card-value">{{ formatMin(resumenMensualUsuario.total_minutos) }}</span>
+          <span class="card-label">Total horas</span>
+        </div>
+      </div>
+
+      <div class="table-wrapper" *ngIf="resumenMensualUsuario.detalle_dias.length > 0">
+        <table>
+          <thead>
+            <tr><th>Fecha</th><th>Horas</th><th>Jornadas</th></tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let d of resumenMensualUsuario.detalle_dias">
+              <td>{{ d.fecha | date:'dd/MM/yyyy' }}</td>
+              <td>{{ formatMin(d.minutos) }}</td>
+              <td>{{ d.jornadas }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p *ngIf="resumenMensualUsuario.detalle_dias.length === 0" class="empty">
+        Sin jornadas en el período seleccionado.
+      </p>
+    </ng-container>
+  </ng-container>
+
 </div>

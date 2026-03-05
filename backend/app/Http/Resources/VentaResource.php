@@ -10,14 +10,22 @@ class VentaResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->id,
-            'user' => $this->user,
-            'total' => $this->total,
+            'id'          => $this->id,
+            'user_id'     => $this->user_id,
+            'cliente_id'  => $this->cliente_id,
+            'user'        => $this->whenLoaded('user'),
+            'cliente'     => $this->whenLoaded('cliente'),
+            'total'       => $this->total,
             'fecha_venta' => $this->fecha_venta,
             'metodo_pago' => $this->metodo_pago,
-            'detalles' => $this->detalles,
-            'created_at' => $this->created_at,
-            'updated_at' => $this->updated_at,
+            'notas'       => $this->notas,
+            'tipo'        => $this->tipo ?? 'venta',
+            'concepto'    => $this->concepto,
+            'devuelta'    => $this->devuelta,
+            'detalles'    => $this->whenLoaded('detalles'),
+            'devolucion'  => $this->whenLoaded('devolucion'),
+            'created_at'  => $this->created_at,
+            'updated_at'  => $this->updated_at,
         ];
     }
 }

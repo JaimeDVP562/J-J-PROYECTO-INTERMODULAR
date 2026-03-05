@@ -1,18 +1,15 @@
 <header class="header">
   <div class="header-left">
-    <img src="assets/logo.png" alt="Logo empresa" class="logo" />
     <span class="brand">J-J-PROYECT</span>
   </div>
   <div class="header-center">
-    <form class="search-form">
-      <input type="text" placeholder="Buscar..." />
-      <button type="submit" aria-label="Buscar"><span class="icon">🔍</span></button>
-    </form>
+    <span class="header-title">ERP · Panel de gestión</span>
   </div>
   <div class="header-right">
-    <button class="icon-btn" aria-label="Buscar"><span class="icon">🔍</span></button>
-    <button class="icon-btn" aria-label="Usuario"><span class="icon">👤</span></button>
-    <button class="icon-btn" aria-label="Ajustes"><span class="icon">⚙️</span></button>
-    <img src="assets/user.jpg" alt="Usuario" class="avatar" />
+    <button class="avatar-btn" (click)="navigateToPerfil()" title="Mi perfil">
+      <img *ngIf="fotoUsuario" [src]="fotoUsuario" [alt]="nombreUsuario" class="avatar-img" />
+      <div *ngIf="!fotoUsuario" class="avatar-inicial">{{ inicialNombre }}</div>
+      <span class="avatar-nombre">{{ nombreUsuario }}</span>
+    </button>
   </div>
 </header>

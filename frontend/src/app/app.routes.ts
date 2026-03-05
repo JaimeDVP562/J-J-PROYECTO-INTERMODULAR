@@ -8,6 +8,8 @@ import { StockComponent } from './stock/stock';
 import { SettingsComponent } from './settings/settings';
 import { HelpComponent } from './help/help';
 import { UsuariosComponent } from './usuarios/usuarios';
+import { PosComponent } from './pos/pos';
+import { PerfilComponent } from './perfil/perfil';
 
 export const routes: Routes = [
   { path: 'login', loadComponent: () => import('./auth/login').then((m) => m.LoginComponent) },
@@ -19,10 +21,12 @@ export const routes: Routes = [
     children: [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       { path: 'dashboard', component: DashboardComponent },
+      { path: 'pos', component: PosComponent },
       { path: 'billing', component: BillingComponent, canActivate: [AdminGuard] },
       { path: 'time-control', component: TimeControlComponent },
       { path: 'stock', component: StockComponent },
       { path: 'usuarios', component: UsuariosComponent, canActivate: [AdminGuard] },
+      { path: 'perfil', component: PerfilComponent },
       { path: 'settings', component: SettingsComponent },
       { path: 'help', component: HelpComponent },
     ],

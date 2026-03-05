@@ -2,6 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../services/api.service';
+import { AuthService } from '../auth/auth.service';
 import { User } from '../models/models';
 
 @Component({
@@ -13,6 +14,7 @@ import { User } from '../models/models';
 })
 export class UsuariosComponent implements OnInit {
   private api = inject(ApiService);
+  public auth = inject(AuthService);
 
   usuarios: User[] = [];
   cargando = true;

@@ -7,7 +7,7 @@ export class AdminGuard implements CanActivate {
   constructor(private auth: AuthService, private router: Router) {}
 
   canActivate(): boolean {
-    if (this.auth.isAdmin()) return true;
+    if (this.auth.isAdminOrGerente()) return true;
     this.router.navigate(['/dashboard']);
     return false;
   }

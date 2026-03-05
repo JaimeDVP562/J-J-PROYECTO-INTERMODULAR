@@ -1,15 +1,16 @@
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { forkJoin, interval, Subscription } from 'rxjs';
-import { startWith } from 'rxjs/operators';
+import { FormsModule } from '@angular/forms';
+import { forkJoin, interval, of, Subscription } from 'rxjs';
+import { catchError, startWith } from 'rxjs/operators';
 import { ApiService } from '../services/api.service';
 import { AuthService } from '../auth/auth.service';
-import { Factura, Venta, Jornada, ResumenJornada } from '../models/models';
+import { Jornada, ResumenJornada, Estadisticas } from '../models/models';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.css',
 })
@@ -17,78 +18,105 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private api = inject(ApiService);
   public auth = inject(AuthService);
 
-  cargando = true;
-  error = '';
-
-  // Stats (admin)
-  totalProductos = 0;
-  totalClientes = 0;
-  totalFacturas = 0;
-  importeFacturas = 0;
-  totalVentas = 0;
-  importeVentas = 0;
-  ultimasFacturas: Factura[] = [];
-  ultimasVentas: Venta[] = [];
-  resumenJornadas: ResumenJornada[] = [];
-
-  // Jornada propia (todos los roles)
+  // ── Jornada propia (todos los roles) ──
   jornadaActiva: Jornada | null = null;
+  jornadaCargada = false;
   accionJornada = false;
   errorJornada = '';
-  misJornadas: Jornada[] = [];
-  tiempoTranscurrido = '';
+  tiempoTranscurrido = '00:00:00';
   private timerSub?: Subscription;
 
+  // ── Vista admin/gerente ──
+  cargandoAdmin = false;
+  errorAdmin = '';
+  resumenJornadas: ResumenJornada[] = [];
+
+  // Estadísticas
+  stats: Estadisticas | null = null;
+  cargandoStats = false;
+  errorStats = '';
+
+  // Rango de fechas (default: primer día del mes corriente → hoy)
+  fechaDesde = this.primerDiaMes();
+  fechaHasta = this.hoyISO();
+
+  // ── Vista usuario normal ──
+  misJornadas: Jornada[] = [];
+  misVentasHoy: any[] = [];
+  misDevolucionesHoy: any[] = [];
+  cargandoUsuario = true;
+
+  readonly DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+  readonly today = new Date();
+
   ngOnInit(): void {
-    if (this.auth.isAdmin()) {
+    this.cargarJornadaActiva();
+    if (this.auth.isAdminOrGerente()) {
       this.cargarAdmin();
     } else {
       this.cargarUsuario();
     }
-    this.cargarJornadaActiva();
   }
 
   ngOnDestroy(): void {
     this.timerSub?.unsubscribe();
   }
 
+  // ── Helpers de fecha ──
+  private hoyISO(): string {
+    return new Date().toISOString().split('T')[0];
+  }
+  private primerDiaMes(): string {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+  }
+
+  // ── Carga admin/gerente ──
   cargarAdmin(): void {
+    this.cargandoAdmin = true;
     forkJoin({
-      productos: this.api.getProductos(),
-      clientes: this.api.getClientes(),
-      facturas: this.api.getFacturas(),
-      ventas: this.api.getVentas(),
       resumen: this.api.getResumenJornadasHoy(),
     }).subscribe({
-      next: ({ productos, clientes, facturas, ventas, resumen }) => {
-        this.totalProductos = productos.length;
-        this.totalClientes = clientes.length;
-        this.totalFacturas = facturas.length;
-        this.importeFacturas = facturas.reduce((s, f) => s + Number(f.total_amount), 0);
-        this.totalVentas = ventas.length;
-        this.importeVentas = ventas.reduce((s, v) => s + Number(v.total), 0);
-        this.ultimasFacturas = facturas.slice(-5).reverse();
-        this.ultimasVentas = ventas.slice(-5).reverse();
+      next: ({ resumen }) => {
         this.resumenJornadas = resumen;
-        this.cargando = false;
+        this.cargandoAdmin = false;
       },
-      error: () => { this.error = 'Error al cargar el panel.'; this.cargando = false; },
+      error: () => { this.errorAdmin = 'Error al cargar datos.'; this.cargandoAdmin = false; },
+    });
+    this.consultarEstadisticas();
+  }
+
+  consultarEstadisticas(): void {
+    this.cargandoStats = true;
+    this.errorStats = '';
+    this.api.getEstadisticas(this.fechaDesde, this.fechaHasta).subscribe({
+      next: (s) => { this.stats = s; this.cargandoStats = false; },
+      error: () => { this.errorStats = 'Error al cargar estadísticas.'; this.cargandoStats = false; },
     });
   }
 
+  // ── Carga usuario normal ──
   cargarUsuario(): void {
-    this.api.getJornadas().subscribe({
-      next: (j) => { this.misJornadas = j; this.cargando = false; },
-      error: () => { this.error = 'Error al cargar actividad.'; this.cargando = false; },
+    forkJoin({
+      jornadas: this.api.getJornadas().pipe(catchError(() => of<any[]>([]))),
+      ventas: this.api.getVentasHoy().pipe(catchError(() => of<any[]>([]))),
+      devoluciones: this.api.getDevolucionesHoy().pipe(catchError(() => of<any[]>([]))),
+    }).subscribe({
+      next: ({ jornadas, ventas, devoluciones }) => {
+        this.misJornadas = jornadas;
+        this.misVentasHoy = ventas;
+        this.misDevolucionesHoy = devoluciones;
+        this.cargandoUsuario = false;
+      },
+      error: () => { this.cargandoUsuario = false; },
     });
   }
 
+  // ── Jornada ──
   cargarJornadaActiva(): void {
     this.api.getJornadaActiva().subscribe({
-      next: (j) => {
-        this.jornadaActiva = j;
-        if (j) this.iniciarTimer();
-      },
+      next: (j) => { this.jornadaActiva = j; this.jornadaCargada = true; if (j) this.iniciarTimer(); },
+      error: () => { this.jornadaActiva = null; this.jornadaCargada = true; },
     });
   }
 
@@ -100,12 +128,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.jornadaActiva = j;
         this.accionJornada = false;
         this.iniciarTimer();
-        if (!this.auth.isAdmin()) this.cargarUsuario();
-        else this.api.getResumenJornadasHoy().subscribe(r => this.resumenJornadas = r);
+        if (this.auth.isAdminOrGerente()) {
+          this.api.getResumenJornadasHoy().subscribe(r => this.resumenJornadas = r);
+        } else {
+          this.api.getJornadas().subscribe(js => this.misJornadas = js);
+        }
       },
       error: (e) => {
         this.errorJornada = e?.error?.error ?? 'Error al iniciar jornada.';
         this.accionJornada = false;
+        // Re-sync with DB in case there's an open jornada we didn't know about
+        if (e?.status === 422) { this.cargarJornadaActiva(); }
       },
     });
   }
@@ -118,26 +151,58 @@ export class DashboardComponent implements OnInit, OnDestroy {
       next: () => {
         this.jornadaActiva = null;
         this.timerSub?.unsubscribe();
-        this.tiempoTranscurrido = '';
+        this.tiempoTranscurrido = '00:00:00';
         this.accionJornada = false;
-        if (!this.auth.isAdmin()) this.cargarUsuario();
-        else this.api.getResumenJornadasHoy().subscribe(r => this.resumenJornadas = r);
+        if (this.auth.isAdminOrGerente()) {
+          this.api.getResumenJornadasHoy().subscribe(r => this.resumenJornadas = r);
+        } else {
+          this.api.getJornadas().subscribe(js => this.misJornadas = js);
+        }
       },
       error: () => { this.errorJornada = 'Error al finalizar jornada.'; this.accionJornada = false; },
     });
+  }
+
+  private parseFecha(s: string | null | undefined): Date {
+    if (!s) return new Date(NaN);
+    return new Date(s.replace(' ', 'T'));
+  }
+
+  get jornadaInicioDate(): Date | null {
+    if (!this.jornadaActiva?.inicio) return null;
+    const d = this.parseFecha(this.jornadaActiva.inicio);
+    return isNaN(d.getTime()) ? null : d;
   }
 
   private iniciarTimer(): void {
     this.timerSub?.unsubscribe();
     this.timerSub = interval(1000).pipe(startWith(0)).subscribe(() => {
       if (!this.jornadaActiva) return;
-      const diff = Math.floor((Date.now() - new Date(this.jornadaActiva.inicio).getTime()) / 1000);
+      const diff = Math.floor((Date.now() - this.parseFecha(this.jornadaActiva.inicio).getTime()) / 1000);
       const h = Math.floor(diff / 3600);
       const m = Math.floor((diff % 3600) / 60);
       const s = diff % 60;
       this.tiempoTranscurrido = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
     });
   }
+
+  // ── Getters usuario normal ──
+  get diaSemana(): string { return this.DIAS[new Date().getDay()]; }
+
+  get tiempoTrabajadoHoy(): string {
+    const min = this.misJornadas.reduce((s, j) => s + (j.duracion_minutos ?? 0), 0);
+    if (this.jornadaActiva) {
+      const extra = Math.floor((Date.now() - this.parseFecha(this.jornadaActiva.inicio).getTime()) / 60000);
+      return this.formatMinutos(min + extra);
+    }
+    return this.formatMinutos(min);
+  }
+
+  get ventasHoyCount(): number { return this.misVentasHoy.length; }
+  get importeTotalHoy(): number { return this.misVentasHoy.reduce((s: number, v: any) => s + Number(v.total), 0); }
+  get promedioVentaHoy(): number { return this.ventasHoyCount > 0 ? this.importeTotalHoy / this.ventasHoyCount : 0; }
+  get devolucionesHoyCount(): number { return this.misDevolucionesHoy.length; }
+  get importeDevolucionesHoy(): number { return this.misDevolucionesHoy.reduce((s: number, d: any) => s + Number(d.importe), 0); }
 
   formatMinutos(min: number): string {
     const h = Math.floor(min / 60);
@@ -148,5 +213,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   getStatusLabel(status: string): string {
     const map: Record<string, string> = { pending: 'Pendiente', paid: 'Pagada', cancelled: 'Cancelada' };
     return map[status] ?? status;
+  }
+
+  get signoBalance(): string {
+    if (!this.stats) return '';
+    return this.stats.diferencia >= 0 ? 'positivo' : 'negativo';
   }
 }

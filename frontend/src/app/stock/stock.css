@@ -173,3 +173,24 @@ tr.stock-bajo td { background: #fffbeb; }
   width: 100%; padding: 0.3rem 0.4rem;
   border: 1px solid #cbd5e1; border-radius: 0.3rem; font-size: 0.85rem;
 }
+
+/* Search/filter bar */
+.filter-bar {
+  display: flex; gap: 0.5rem; align-items: center;
+  margin-bottom: 0.75rem; flex-wrap: wrap;
+}
+.search-input {
+  flex: 1; min-width: 180px; padding: 0.45rem 0.7rem;
+  border: 1px solid #cbd5e1; border-radius: 0.4rem; font-size: 0.9rem;
+}
+.cat-select {
+  padding: 0.45rem 0.65rem; border: 1px solid #cbd5e1;
+  border-radius: 0.4rem; font-size: 0.88rem; background: #fff;
+}
+
+/* SKU badge */
+.sku-badge {
+  display: inline-block; background: #f1f5f9; color: #475569;
+  padding: 0.1rem 0.45rem; border-radius: 0.3rem;
+  font-size: 0.75rem; font-family: monospace;
+}
