@@ -16,6 +16,7 @@ class User extends Authenticatable
     public function createApiToken(): string
     {
         $this->api_token = Str::random(60);
+        $this->api_token_expires_at = now()->addHours(12);
         $this->save();
         return $this->api_token;
     }
@@ -42,6 +43,7 @@ class User extends Authenticatable
         'password',
         'remember_token',
         'api_token',
+        'api_token_expires_at',
     ];
 
     /**
@@ -52,8 +54,9 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
+            'email_verified_at'     => 'datetime',
+            'api_token_expires_at'  => 'datetime',
+            'password'              => 'hashed',
         ];
     }
 }

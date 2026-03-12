@@ -48,11 +48,12 @@
 
 .productos-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fill, 160px);
   gap: 0.75rem;
   overflow-y: auto;
   flex: 1;
   padding-bottom: 5rem;
+  align-content: start;
 }
 
 .producto-card {
@@ -66,6 +67,9 @@
   flex-direction: column;
   gap: 0.25rem;
   box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  width: 160px;
+  height: 110px;
+  overflow: hidden;
 }
 
 .producto-card:hover:not(.sin-stock) {
@@ -315,3 +319,51 @@ textarea.pos-input { resize: vertical; }
   transition: background .2s;
 }
 .btn-pago-proveedor-fijo:hover { background: #a93226; }
+
+/* ── Pago mixto desglose ── */
+.mixto-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+.mixto-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.mixto-label {
+  font-size: 0.8rem;
+  color: #64748b;
+  font-weight: 500;
+}
+.mixto-aviso {
+  font-size: 0.8rem;
+  color: #d97706;
+  margin-top: 0.25rem;
+  margin-bottom: 0;
+}
+
+/* ── Vuelta preview (inline) ── */
+.vuelta-preview {
+  font-size: 0.85rem;
+  color: #16a34a;
+  font-weight: 600;
+  margin-top: 0.25rem;
+  margin-bottom: 0;
+}
+
+/* ── Vuelta en modal ── */
+.overlay-vuelta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-radius: 0.5rem;
+  padding: 0.6rem 1rem;
+  margin: 0.5rem 0 0.25rem;
+  font-size: 1rem;
+}
+.overlay-vuelta span { color: #64748b; }
+.overlay-vuelta strong { font-size: 1.4rem; color: #16a34a; }

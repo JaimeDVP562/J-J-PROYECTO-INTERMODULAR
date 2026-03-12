@@ -37,9 +37,13 @@ Route::middleware('auth.apitoken')->group(function () {
     Route::get('jornadas/activa', [JornadaController::class, 'activa']);
     Route::get('jornadas/resumen-hoy', [JornadaController::class, 'resumenHoy']);
     Route::get('jornadas/resumen-mensual', [JornadaController::class, 'resumenMensual']);
+    Route::get('jornadas/usuario/{userId}', [JornadaController::class, 'jornadasUsuario']);
+    Route::post('jornadas/admin', [JornadaController::class, 'adminStore']);
     Route::get('jornadas', [JornadaController::class, 'index']);
     Route::post('jornadas', [JornadaController::class, 'store']);
     Route::patch('jornadas/{id}/fin', [JornadaController::class, 'marcarFin']);
+    Route::put('jornadas/{id}', [JornadaController::class, 'adminUpdate']);
+    Route::delete('jornadas/{id}', [JornadaController::class, 'adminDestroy']);
 
     // Gestión de usuarios (solo admin)
     Route::get('usuarios', [UserController::class, 'index']);

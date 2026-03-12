@@ -45,9 +45,7 @@ class VentaController extends Controller
             'items.*.precio_unitario' => 'required|numeric|min:0',
         ]);
 
-        $venta = null;
-
-        DB::transaction(function () use ($validated, $request, &$venta) {
+        $venta = DB::transaction(function () use ($validated, $request) {
             $total = collect($validated['items'])->sum(
                 fn($i) => $i['cantidad'] * $i['precio_unitario']
             );
@@ -80,6 +78,8 @@ class VentaController extends Controller
 
                 $producto->decrement('stock_quantity', $item['cantidad']);
             }
+
+            return $venta;
         });
 
         return response()->json(

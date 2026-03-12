@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../services/api.service';
 import { AuthService } from '../auth/auth.service';
-import { Factura, Venta } from '../models/models';
+import { Factura, Venta, CierreCaja } from '../models/models';
 
 @Component({
   selector: 'app-billing',
@@ -16,7 +16,7 @@ export class BillingComponent implements OnInit {
   private api = inject(ApiService);
   public auth = inject(AuthService);
 
-  vistaActiva: 'facturas' | 'ventas' | 'devoluciones' = 'facturas';
+  vistaActiva: 'facturas' | 'ventas' | 'devoluciones' | 'cierres' = 'facturas';
 
   // Facturas
   facturas: Factura[] = [];
@@ -33,12 +33,18 @@ export class BillingComponent implements OnInit {
   errorVentas = '';
   devolucionVentaId: number | null = null;
   motivoDevolucion = '';
+  passwordDevolucion = '';
   procesandoDevolucion = false;
   errorDevolucion = '';
 
   // Devoluciones
   devoluciones: any[] = [];
   cargandoDevoluciones = false;
+
+  // Cierres de caja
+  cierres: CierreCaja[] = [];
+  cargandoCierres = false;
+  expandedCierreId: number | null = null;
 
   ngOnInit(): void {
     this.cargarFacturas();
@@ -70,10 +76,24 @@ export class BillingComponent implements OnInit {
     });
   }
 
-  cambiarVista(v: 'facturas' | 'ventas' | 'devoluciones'): void {
+  cambiarVista(v: 'facturas' | 'ventas' | 'devoluciones' | 'cierres'): void {
     this.vistaActiva = v;
     if (v === 'ventas') this.cargarVentas();
     if (v === 'devoluciones') this.cargarDevoluciones();
+    if (v === 'cierres') this.cargarCierres();
+  }
+
+  cargarCierres(): void {
+    if (this.cierres.length > 0) return;
+    this.cargandoCierres = true;
+    this.api.getCierresCaja().subscribe({
+      next: (data) => { this.cierres = data; this.cargandoCierres = false; },
+      error: () => { this.cargandoCierres = false; },
+    });
+  }
+
+  toggleCierre(id: number): void {
+    this.expandedCierreId = this.expandedCierreId === id ? null : id;
   }
 
   // ── Facturas ──
@@ -123,30 +143,31 @@ export class BillingComponent implements OnInit {
   iniciarDevolucion(venta: Venta): void {
     this.devolucionVentaId = venta.id;
     this.motivoDevolucion = '';
+    this.passwordDevolucion = '';
     this.errorDevolucion = '';
   }
 
   cancelarDevolucion(): void {
     this.devolucionVentaId = null;
     this.motivoDevolucion = '';
+    this.passwordDevolucion = '';
   }
 
   confirmarDevolucion(): void {
     if (!this.devolucionVentaId) return;
-
-    const confirmacion1 = confirm('¿Está seguro de procesar esta devolución? Se restaurará el stock.');
-    if (!confirmacion1) return;
-
-    const confirmacion2 = confirm('⚠️ SEGUNDA CONFIRMACIÓN: ¿Proceder con la devolución? Esta acción no se puede deshacer.');
-    if (!confirmacion2) return;
+    if (!this.passwordDevolucion) {
+      this.errorDevolucion = 'Introduce tu contraseña para confirmar la devolución.';
+      return;
+    }
 
     this.procesandoDevolucion = true;
     this.errorDevolucion = '';
 
-    this.api.crearDevolucion(this.devolucionVentaId, this.motivoDevolucion || undefined).subscribe({
+    this.api.crearDevolucion(this.devolucionVentaId, this.passwordDevolucion, this.motivoDevolucion || undefined).subscribe({
       next: () => {
         this.procesandoDevolucion = false;
         this.devolucionVentaId = null;
+        this.passwordDevolucion = '';
         // Refresh ventas
         this.ventas = [];
         this.cargarVentas();

@@ -11,7 +11,7 @@ class UserController extends Controller
 {
     private function soloAdmin(Request $request)
     {
-        if ($request->user()->rol !== 'admin') {
+        if (!in_array($request->user()->rol, ['admin', 'gerente'])) {
             abort(response()->json(['error' => 'No autorizado'], 403));
         }
     }
@@ -32,11 +32,13 @@ class UserController extends Controller
     {
         $this->soloAdmin($request);
 
+        $rolesPermitidos = $request->user()->rol === 'admin' ? 'gerente,vendedor' : 'vendedor';
+
         $validated = $request->validate([
             'nombre'   => 'required|string|max:255',
             'email'    => 'required|email|unique:users,email',
             'password' => 'required|string|min:6',
-            'rol'      => 'required|in:gerente,vendedor',
+            'rol'      => 'required|in:' . $rolesPermitidos,
         ]);
 
         $usuario = User::create([

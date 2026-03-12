@@ -27,6 +27,10 @@ class AuthenticateWithApiToken
         if ($token) {
             $user = User::where('api_token', $token)->first();
             if ($user) {
+                if ($user->api_token_expires_at && $user->api_token_expires_at->isPast()) {
+                    $user->update(['api_token' => null, 'api_token_expires_at' => null]);
+                    return response()->json(['message' => 'Token expirado'], 401);
+                }
                 auth()->login($user);
                 $request->setUserResolver(fn() => $user);
                 return $next($request);

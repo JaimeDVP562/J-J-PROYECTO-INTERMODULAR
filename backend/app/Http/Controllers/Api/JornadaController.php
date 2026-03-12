@@ -49,7 +49,9 @@ class JornadaController extends Controller
             ->first();
 
         if (!$jornada) {
-            return response()->json(null);
+            // response()->json(null) usa Symfony JsonResponse que convierte null → {} (objeto vacío).
+            // fromJsonString envía un JSON null real.
+            return \Illuminate\Http\JsonResponse::fromJsonString('null');
         }
 
         return response()->json((new JornadaResource($jornada))->toArray($request));
@@ -122,6 +124,10 @@ class JornadaController extends Controller
                     'total_minutos'   => $totalMinutos,
                     'jornada_activa'  => $activa ? (new \App\Http\Resources\JornadaResource($activa))->toArray($request) : null,
                     'num_jornadas'    => $jornadasUsuario->count(),
+                    'periodos'        => $jornadasUsuario->sortBy('inicio')->map(fn($j) => [
+                        'inicio' => $j->inicio->format('H:i'),
+                        'fin'    => $j->fin ? $j->fin->format('H:i') : null,
+                    ])->values(),
                 ];
             })
             ->values();
@@ -174,5 +180,83 @@ class JornadaController extends Controller
         }
 
         return response()->json($resumen);
+    }
+
+    /**
+     * Admin/Gerente: jornadas de un usuario específico filtradas por mes/año.
+     */
+    public function jornadasUsuario(Request $request, $userId)
+    {
+        if (!$this->isPrivileged($request->user())) {
+            return response()->json(['error' => 'No autorizado'], 403);
+        }
+
+        $mes = (int) $request->query('mes', now()->month);
+        $ano = (int) $request->query('ano', now()->year);
+
+        $jornadas = Jornada::with('user')
+            ->where('user_id', $userId)
+            ->whereMonth('inicio', $mes)
+            ->whereYear('inicio', $ano)
+            ->orderBy('inicio')
+            ->get();
+
+        return JornadaResource::collection($jornadas);
+    }
+
+    /**
+     * Admin/Gerente: crear jornada para cualquier usuario.
+     */
+    public function adminStore(Request $request)
+    {
+        if (!$this->isPrivileged($request->user())) {
+            return response()->json(['error' => 'No autorizado'], 403);
+        }
+
+        $validated = $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'inicio'  => 'required|date',
+            'fin'     => 'nullable|date|after:inicio',
+        ]);
+
+        $jornada = Jornada::create($validated);
+
+        return response()->json((new JornadaResource($jornada))->toArray($request), 201);
+    }
+
+    /**
+     * Admin/Gerente: actualizar inicio/fin de una jornada.
+     */
+    public function adminUpdate(Request $request, $id)
+    {
+        if (!$this->isPrivileged($request->user())) {
+            return response()->json(['error' => 'No autorizado'], 403);
+        }
+
+        $jornada = Jornada::findOrFail($id);
+
+        $validated = $request->validate([
+            'inicio' => 'required|date',
+            'fin'    => 'nullable|date|after:inicio',
+        ]);
+
+        $jornada->update($validated);
+
+        return response()->json((new JornadaResource($jornada->fresh()))->toArray($request));
+    }
+
+    /**
+     * Admin/Gerente: eliminar una jornada.
+     */
+    public function adminDestroy(Request $request, $id)
+    {
+        if (!$this->isPrivileged($request->user())) {
+            return response()->json(['error' => 'No autorizado'], 403);
+        }
+
+        $jornada = Jornada::findOrFail($id);
+        $jornada->delete();
+
+        return response()->json(['mensaje' => 'Jornada eliminada']);
     }
 }

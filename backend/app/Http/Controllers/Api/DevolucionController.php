@@ -8,6 +8,7 @@ use App\Models\Venta;
 use App\Models\Producto;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 class DevolucionController extends Controller
 {
@@ -34,11 +35,14 @@ class DevolucionController extends Controller
         $validated = $request->validate([
             'venta_id' => 'required|exists:ventas,id',
             'motivo'   => 'nullable|string|max:500',
+            'password' => 'required|string',
         ]);
 
-        $devolucion = null;
+        if (!Hash::check($validated['password'], $request->user()->password)) {
+            return response()->json(['message' => 'Contraseña incorrecta.'], 422);
+        }
 
-        DB::transaction(function () use ($validated, $request, &$devolucion) {
+        $devolucion = DB::transaction(function () use ($validated, $request) {
             $venta = Venta::with('detalles')->lockForUpdate()->findOrFail($validated['venta_id']);
 
             if ($venta->devuelta) {
@@ -52,7 +56,7 @@ class DevolucionController extends Controller
 
             $venta->update(['devuelta' => true]);
 
-            $devolucion = Devolucion::create([
+            return Devolucion::create([
                 'venta_id' => $venta->id,
                 'user_id'  => $request->user()->id,
                 'motivo'   => $validated['motivo'] ?? null,

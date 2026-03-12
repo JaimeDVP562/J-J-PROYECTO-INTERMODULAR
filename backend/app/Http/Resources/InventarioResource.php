@@ -10,8 +10,9 @@ class InventarioResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->id,
-            'producto' => $this->producto,
+            'id'                  => $this->id,
+            'producto_id'         => $this->producto_id,
+            'producto'            => $this->whenLoaded('producto'),
             'cantidad_disponible' => $this->cantidad_disponible,
             'cantidad_minima' => $this->cantidad_minima,
             'ubicacion' => $this->ubicacion,

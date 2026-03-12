@@ -162,6 +162,13 @@ export class StockComponent implements OnInit {
     });
   }
 
+  eliminarProveedor(id: number): void {
+    if (!confirm('¿Eliminar este proveedor? Esta acción no se puede deshacer.')) return;
+    this.api.deleteProveedor(id).subscribe({
+      next: () => { this.proveedores = this.proveedores.filter(p => p.id !== id); },
+    });
+  }
+
   abrirFormProveedor(): void {
     this.nuevoProveedor = {};
     this.mostrarFormProveedor = true;

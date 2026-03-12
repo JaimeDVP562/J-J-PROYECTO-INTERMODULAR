@@ -9,16 +9,33 @@ use Illuminate\Http\Request;
 
 class CierreCajaController extends Controller
 {
+    private function isPrivileged($user): bool
+    {
+        return in_array($user->rol, ['admin', 'gerente']);
+    }
+
     public function index(Request $request)
     {
         $user = $request->user();
         $query = CierreCaja::with('user')->orderBy('fecha', 'desc');
 
-        if ($user->rol !== 'admin') {
+        if (!$this->isPrivileged($user)) {
             $query->where('user_id', $user->id);
         }
 
-        return response()->json($query->get());
+        $cierres = $query->get();
+
+        if ($this->isPrivileged($user)) {
+            $cierres = $cierres->map(function ($cierre) {
+                $cierre->efectivo_esperado = (float) Venta::whereDate('fecha_venta', $cierre->fecha)
+                    ->where('metodo_pago', 'efectivo')->sum('total');
+                $cierre->tarjeta_esperada = (float) Venta::whereDate('fecha_venta', $cierre->fecha)
+                    ->where('metodo_pago', 'tarjeta')->sum('total');
+                return $cierre;
+            });
+        }
+
+        return response()->json($cierres);
     }
 
     public function store(Request $request)

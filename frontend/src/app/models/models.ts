@@ -162,6 +162,7 @@ export interface ResumenJornada {
   total_minutos: number;
   jornada_activa?: Jornada | null;
   num_jornadas: number;
+  periodos?: { inicio: string; fin: string | null }[];
 }
 
 export interface ResumenMensualUsuario {
@@ -188,6 +189,9 @@ export interface CierreCaja {
   total_ventas: number;
   diferencia: number;
   notas?: string;
+  // Computed for admin/gerente
+  efectivo_esperado?: number;
+  tarjeta_esperada?: number;
   created_at?: string;
 }
 

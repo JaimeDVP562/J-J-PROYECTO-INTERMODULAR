@@ -22,7 +22,7 @@ export const routes: Routes = [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       { path: 'dashboard', component: DashboardComponent },
       { path: 'pos', component: PosComponent },
-      { path: 'billing', component: BillingComponent, canActivate: [AdminGuard] },
+      { path: 'billing', component: BillingComponent },
       { path: 'time-control', component: TimeControlComponent },
       { path: 'stock', component: StockComponent },
       { path: 'usuarios', component: UsuariosComponent, canActivate: [AdminGuard] },

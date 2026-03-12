@@ -196,6 +196,7 @@
                 <td>{{ pv.address ?? '—' }}</td>
                 <td *ngIf="auth.isAdminOrGerente()" class="acciones">
                   <button class="btn-edit" (click)="iniciarEditProveedor(pv)">✏️</button>
+                  <button class="btn-del" (click)="eliminarProveedor(pv.id)" title="Eliminar">🗑️</button>
                 </td>
               </tr>
               <tr *ngIf="editandoProveedorId === pv.id" class="fila-edicion">

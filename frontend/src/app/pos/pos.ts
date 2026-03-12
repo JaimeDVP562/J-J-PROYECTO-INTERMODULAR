@@ -33,6 +33,9 @@ export class PosComponent implements OnInit {
   clienteId: number | null = null;
   metodoPago: 'efectivo' | 'tarjeta' | 'mixto' = 'efectivo';
   notas = '';
+  importeEntregado = 0;
+  mixtoEfectivo = 0;
+  mixtoTarjeta = 0;
 
   // State
   cargando = true;
@@ -40,6 +43,7 @@ export class PosComponent implements OnInit {
   error = '';
   ventaRealizada = false;
   totalUltimaVenta = 0;
+  vueltaUltimaVenta = 0;
 
   // Pago a proveedor
   mostrarPagoProveedor = false;
@@ -120,16 +124,33 @@ export class PosComponent implements OnInit {
     this.carrito = this.carrito.filter(i => i !== item);
   }
 
+  setMetodoPago(m: 'efectivo' | 'tarjeta' | 'mixto'): void {
+    this.metodoPago = m;
+    this.importeEntregado = 0;
+    this.mixtoEfectivo = 0;
+    this.mixtoTarjeta = 0;
+  }
+
   limpiarCarrito(): void {
     this.carrito = [];
     this.clienteId = null;
     this.metodoPago = 'efectivo';
     this.notas = '';
+    this.importeEntregado = 0;
+    this.mixtoEfectivo = 0;
+    this.mixtoTarjeta = 0;
     this.error = '';
   }
 
   get totalCarrito(): number {
     return this.carrito.reduce((s, i) => s + i.subtotal, 0);
+  }
+
+  get vuelta(): number {
+    const entregado = this.metodoPago === 'mixto'
+      ? this.mixtoEfectivo + this.mixtoTarjeta
+      : this.importeEntregado;
+    return Math.max(0, entregado - this.totalCarrito);
   }
 
   cobrar(): void {
@@ -151,6 +172,7 @@ export class PosComponent implements OnInit {
     this.api.crearVentaPOS(payload).subscribe({
       next: () => {
         this.totalUltimaVenta = this.totalCarrito;
+        this.vueltaUltimaVenta = this.vuelta;
         this.ventaRealizada = true;
         this.limpiarCarrito();
         this.procesando = false;

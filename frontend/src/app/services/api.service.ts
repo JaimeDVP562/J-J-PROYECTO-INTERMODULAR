@@ -1,6 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 import {
   Estadisticas,
@@ -178,8 +179,8 @@ export class ApiService {
   getDevolucionesHoy(): Observable<Devolucion[]> {
     return this.http.get<Devolucion[]>(`${this.baseUrl}/devoluciones/mis-hoy`);
   }
-  crearDevolucion(venta_id: number, motivo?: string): Observable<any> {
-    return this.http.post(`${this.baseUrl}/devoluciones`, { venta_id, motivo });
+  crearDevolucion(venta_id: number, password: string, motivo?: string): Observable<any> {
+    return this.http.post(`${this.baseUrl}/devoluciones`, { venta_id, password, motivo });
   }
 
   // Cierre de caja
@@ -198,7 +199,9 @@ export class ApiService {
     return this.http.get<Jornada[]>(`${this.baseUrl}/jornadas`);
   }
   getJornadaActiva(): Observable<Jornada | null> {
-    return this.http.get<Jornada | null>(`${this.baseUrl}/jornadas/activa`);
+    return this.http.get<Jornada | null>(`${this.baseUrl}/jornadas/activa`).pipe(
+      map(j => (j != null && typeof j === 'object' && 'id' in j) ? j : null),
+    );
   }
   iniciarJornada(): Observable<Jornada> {
     return this.http.post<Jornada>(`${this.baseUrl}/jornadas`, {});
@@ -211,6 +214,18 @@ export class ApiService {
   }
   getResumenMensual(mes: number, ano: number): Observable<ResumenMensualUsuario | ResumenMensualAdmin[]> {
     return this.http.get<any>(`${this.baseUrl}/jornadas/resumen-mensual?mes=${mes}&ano=${ano}`);
+  }
+  getJornadasUsuario(userId: number, mes: number, ano: number): Observable<Jornada[]> {
+    return this.http.get<Jornada[]>(`${this.baseUrl}/jornadas/usuario/${userId}?mes=${mes}&ano=${ano}`);
+  }
+  createJornadaAdmin(data: { user_id: number; inicio: string; fin?: string }): Observable<Jornada> {
+    return this.http.post<Jornada>(`${this.baseUrl}/jornadas/admin`, data);
+  }
+  updateJornada(id: number, data: { inicio: string; fin?: string | null }): Observable<Jornada> {
+    return this.http.put<Jornada>(`${this.baseUrl}/jornadas/${id}`, data);
+  }
+  deleteJornada(id: number): Observable<any> {
+    return this.http.delete(`${this.baseUrl}/jornadas/${id}`);
   }
 
   // Gestión de usuarios (admin)
