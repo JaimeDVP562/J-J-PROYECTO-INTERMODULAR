@@ -26,7 +26,11 @@
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f''{len\\(d\\)} inventarios''\\)\")",
       "Bash(curl -s \"http://backend:8000/api/facturas\" -H \"Accept: application/json\" -H \"Authorization: Bearer $TOKEN\")",
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f''{len\\(d\\)} facturas''\\)\")",
-      "Bash(curl -s http://backend:8000/api/run-migrate -H \"Accept: application/json\")"
+      "Bash(curl -s http://backend:8000/api/run-migrate -H \"Accept: application/json\")",
+      "Bash(docker stats:*)",
+      "Bash(docker ps:*)",
+      "Bash(docker compose:*)",
+      "Bash(docker exec:*)"
     ]
   }
 }

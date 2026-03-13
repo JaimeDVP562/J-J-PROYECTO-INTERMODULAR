@@ -18,7 +18,7 @@ RUN apt-get update && apt-get install -y \
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 # Crear directorio de trabajo
-WORKDIR /workspaces/Pinturas/backend
+WORKDIR /workspaces/J-J-PROYECTO-INTERMODULAR/backend
 
 # Copiar el resto del código (esto se hará vía mount en devcontainer)
 # COPY . .

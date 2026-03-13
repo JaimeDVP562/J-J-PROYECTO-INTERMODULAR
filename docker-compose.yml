@@ -35,7 +35,13 @@ services:
     working_dir: /workspaces/J-J-PROYECTO-INTERMODULAR/backend
     volumes:
       - .:/workspaces/J-J-PROYECTO-INTERMODULAR:cached
+      - backend_vendor:/workspaces/J-J-PROYECTO-INTERMODULAR/backend/vendor
     environment:
+      - APP_NAME=JJ
+      - APP_ENV=local
+      - APP_KEY=base64:hIuI8x9FS/yvdoe1Tn/+/8lU2x7LX2INFu9lC03gf7k=
+      - APP_DEBUG=true
+      - APP_URL=http://localhost:8000
       - DB_CONNECTION=mysql
       - DB_HOST=database
       - DB_PORT=3306
@@ -57,9 +63,10 @@ services:
     working_dir: /workspaces/J-J-PROYECTO-INTERMODULAR/frontend
     volumes:
       - .:/workspaces/J-J-PROYECTO-INTERMODULAR:cached
+      - frontend_node_modules:/workspaces/J-J-PROYECTO-INTERMODULAR/frontend/node_modules
     environment:
       - CHOKIDAR_USEPOLLING=true
-    command: bash -c "npm install -g @angular/cli@20 && npm install && ng serve --host 0.0.0.0 --port 4200 --poll 2000"
+    command: bash -c "npm install && npm install -g @angular/cli && ng serve --host 0.0.0.0 --port 4200 --poll 2000"
     networks:
       - jj_network
 
@@ -82,6 +89,8 @@ services:
 
 volumes:
   jj_db_data:
+  frontend_node_modules:
+  backend_vendor:
 
 
 networks:
