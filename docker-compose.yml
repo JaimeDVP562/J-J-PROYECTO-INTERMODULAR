@@ -32,9 +32,9 @@ services:
         condition: service_healthy
     ports:
       - "8000:8000"
-    working_dir: /workspaces/Pinturas/backend
+    working_dir: /workspaces/J-J-PROYECTO-INTERMODULAR/backend
     volumes:
-      - .:/workspaces/Pinturas:cached
+      - .:/workspaces/J-J-PROYECTO-INTERMODULAR:cached
     environment:
       - DB_CONNECTION=mysql
       - DB_HOST=database
@@ -54,9 +54,9 @@ services:
     restart: unless-stopped
     ports:
       - "80:4200"
-    working_dir: /workspaces/Pinturas/frontend
+    working_dir: /workspaces/J-J-PROYECTO-INTERMODULAR/frontend
     volumes:
-      - .:/workspaces/Pinturas:cached
+      - .:/workspaces/J-J-PROYECTO-INTERMODULAR:cached
     environment:
       - CHOKIDAR_USEPOLLING=true
     command: bash -c "npm install -g @angular/cli@20 && npm install && ng serve --host 0.0.0.0 --port 4200 --poll 2000"
