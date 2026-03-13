@@ -1,0 +1,54 @@
+{
+  "name": "JJ-Environment",
+  "dockerComposeFile": [
+    "../docker-compose.yml"
+  ],
+  "service": "frontend",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "shutdownAction": "stopCompose",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "Angular.ng-template",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "johnpapa.Angular2",
+        "christian-kohler.path-intellisense",
+        "steoates.autoimport",
+        "eamodio.gitlens",
+        "PKief.material-icon-theme",
+        "humao.rest-client",
+        "ms-azuretools.vscode-docker",
+        "bmewburn.vscode-intelephense-client"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "[typescript]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+        "[html]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+        "[json]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+        "[scss]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+        "typescript.updateImportsOnFileMove.enabled": "always",
+        "eslint.validate": [
+          "typescript",
+          "html"
+        ]
+      }
+    }
+  },
+  "forwardPorts": [
+    80,
+    8000,
+    8080,
+    3306
+  ],
+  "postCreateCommand": "cd frontend && npm install",
+  "remoteUser": "root"
+}

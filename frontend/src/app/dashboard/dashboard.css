@@ -1,0 +1,318 @@
+.dashboard {
+  padding: 2rem;
+}
+
+.dashboard h2 {
+  font-size: 1.6rem;
+  color: #0a2342;
+  margin-bottom: 1.5rem;
+}
+
+.loading, .error {
+  padding: 1rem;
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.error {
+  background: #ffeaea;
+  color: #c0392b;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  padding: 1.2rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+
+.stat-icon {
+  font-size: 2rem;
+}
+
+.stat-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-value {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #0a2342;
+}
+
+.stat-label {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.table-section {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  padding: 1.2rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+
+.table-section h3 {
+  font-size: 1.1rem;
+  color: #0a2342;
+  margin-bottom: 1rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+th {
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  background: #f1f5f9;
+  color: #475569;
+  font-weight: 600;
+}
+
+td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+}
+
+tr:last-child td {
+  border-bottom: none;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 1rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.badge--pending { background: #fef3c7; color: #b45309; }
+.badge--paid { background: #d1fae5; color: #065f46; }
+.badge--cancelled { background: #fee2e2; color: #991b1b; }
+
+.empty {
+  color: #94a3b8;
+  font-size: 0.9rem;
+  padding: 0.5rem 0;
+}
+
+/* Jornada */
+.jornada-section { margin-bottom: 1.5rem; }
+
+.jornada-card {
+  background: #fff;
+  border: 2px solid #e2e8f0;
+  border-radius: 0.75rem;
+  padding: 1.2rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  transition: border-color 0.2s;
+}
+.jornada-card.activa { border-color: #22c55e; background: #f0fdf4; }
+
+.jornada-center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  text-align: center;
+}
+.jornada-icon { font-size: 1.8rem; }
+.jornada-estado { font-weight: 600; color: #0a2342; margin: 0 0 0.2rem; }
+.jornada-timer { font-size: 1.5rem; font-weight: 700; color: #16a34a; margin: 0; font-variant-numeric: tabular-nums; }
+.jornada-inicio { font-size: 0.82rem; color: #64748b; margin: 0.1rem 0 0; }
+
+.btn-iniciar, .btn-finalizar {
+  padding: 0.6rem 1.4rem;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.btn-iniciar { background: #0a2342; color: #fff; }
+.btn-finalizar { background: #dc2626; color: #fff; }
+.btn-iniciar:disabled, .btn-finalizar:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-iniciar:hover:not(:disabled) { background: #17375e; }
+.btn-finalizar:hover:not(:disabled) { background: #b91c1c; }
+
+.error-inline { color: #dc2626; font-size: 0.85rem; margin-top: 0.4rem; }
+
+/* Badges jornada */
+.badge-activa { color: #16a34a; font-size: 0.85rem; font-weight: 600; }
+.badge-inactiva { color: #94a3b8; font-size: 0.85rem; }
+
+/* ── Balance section ── */
+.balance-section {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.08);
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.balance-header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.balance-header h3 {
+  font-size: 1.1rem;
+  color: #0a2342;
+  margin: 0;
+  flex: 1 1 auto;
+}
+
+.date-range {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  flex-wrap: wrap;
+}
+
+.date-range label {
+  font-size: .85rem;
+  color: #555;
+  font-weight: 600;
+}
+
+.date-input {
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  padding: .4rem .6rem;
+  font-size: .9rem;
+  color: #333;
+}
+
+.btn-consultar {
+  background: #0a2342;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: .45rem 1rem;
+  font-size: .9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .2s;
+}
+.btn-consultar:hover { background: #1a3a5c; }
+.btn-consultar:disabled { opacity: .6; cursor: not-allowed; }
+
+.balance-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+}
+
+@media (max-width: 600px) { .balance-grid { grid-template-columns: 1fr; } }
+
+.balance-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem;
+  border-radius: 10px;
+  border-left: 5px solid transparent;
+}
+
+.balance-card.ingresos {
+  background: #eafaf1;
+  border-color: #27ae60;
+}
+
+.balance-card.gastos {
+  background: #fef9e7;
+  border-color: #e67e22;
+}
+
+.balance-card.diferencia.positivo {
+  background: #e8f8f5;
+  border-color: #1abc9c;
+}
+
+.balance-card.diferencia.negativo {
+  background: #ffeaea;
+  border-color: #c0392b;
+}
+
+.balance-card.devoluciones {
+  background: #fdf3e7;
+  border-color: #e67e22;
+}
+
+.balance-icon {
+  font-size: 2rem;
+}
+
+.balance-card > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.balance-valor {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #0a2342;
+}
+
+.balance-label {
+  font-size: .8rem;
+  color: #666;
+  margin-top: .2rem;
+}
+
+.hoy-header {
+  margin-bottom: 1rem;
+}
+
+.hoy-header h3 {
+  font-size: 1rem;
+  color: #0a2342;
+  text-transform: capitalize;
+}
+
+/* ── Día header (usuario normal) ── */
+.dia-header {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.dia-nombre {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #0a2342;
+  text-transform: capitalize;
+}
+
+.dia-fecha {
+  font-size: 1rem;
+  color: #888;
+}

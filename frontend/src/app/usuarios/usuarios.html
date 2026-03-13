@@ -1,0 +1,103 @@
+<div class="usuarios">
+  <h2>Gestión de Usuarios</h2>
+
+  <div *ngIf="cargando" class="loading">Cargando usuarios...</div>
+  <div *ngIf="error" class="error">{{ error }}</div>
+
+  <ng-container *ngIf="!cargando && !error">
+    <div class="summary-bar">
+      <span>Total usuarios: <strong>{{ usuarios.length }}</strong></span>
+      <button class="btn-add" (click)="abrirForm()">+ Añadir usuario</button>
+    </div>
+
+    <!-- Formulario nuevo usuario -->
+    <div *ngIf="mostrarForm" class="form-panel">
+      <h4>Nuevo usuario</h4>
+      <div class="form-grid">
+        <div class="form-field">
+          <label>Nombre *</label>
+          <input type="text" [(ngModel)]="nuevoUsuario.nombre" placeholder="Nombre completo" />
+        </div>
+        <div class="form-field">
+          <label>Email *</label>
+          <input type="email" [(ngModel)]="nuevoUsuario.email" placeholder="email@empresa.com" />
+        </div>
+        <div class="form-field">
+          <label>Contraseña *</label>
+          <input type="password" [(ngModel)]="nuevoUsuario.password" placeholder="Mínimo 6 caracteres" />
+        </div>
+        <div class="form-field">
+          <label>Rol *</label>
+          <select [(ngModel)]="nuevoUsuario.rol">
+            <option value="vendedor">Vendedor</option>
+            <option *ngIf="auth.isAdmin()" value="gerente">Gerente</option>
+          </select>
+        </div>
+      </div>
+      <p *ngIf="errorForm" class="error-inline">{{ errorForm }}</p>
+      <div class="form-actions">
+        <button class="btn-save-form" (click)="crearUsuario()" [disabled]="guardando">
+          {{ guardando ? 'Guardando...' : '💾 Crear usuario' }}
+        </button>
+        <button class="btn-cancel-form" (click)="mostrarForm = false">Cancelar</button>
+      </div>
+    </div>
+
+    <!-- Tabla de usuarios -->
+    <div class="table-wrapper">
+      <table *ngIf="usuarios.length > 0; else sinUsuarios">
+        <thead>
+          <tr>
+            <th>#</th><th>Nombre</th><th>Email</th><th>Rol</th>
+            <th>Alta</th><th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <ng-container *ngFor="let u of usuarios">
+            <!-- Fila normal -->
+            <tr *ngIf="editandoId !== u.id">
+              <td>{{ u.id }}</td>
+              <td>{{ u.nombre }}</td>
+              <td>{{ u.email }}</td>
+              <td><span class="badge-rol" [class]="'badge-' + u.rol">{{ rolLabel(u.rol) }}</span></td>
+              <td>{{ u.created_at | date:'dd/MM/yyyy' }}</td>
+              <td class="acciones">
+                <button *ngIf="auth.isAdminOrGerente()" class="btn-edit" (click)="iniciarEdicion(u)" title="Editar">✏️</button>
+                <button class="btn-delete" (click)="eliminar(u.id)"
+                  [disabled]="eliminandoId === u.id" title="Eliminar">🗑️</button>
+              </td>
+            </tr>
+            <!-- Fila edición inline (solo admin) -->
+            <tr *ngIf="editandoId === u.id && auth.isAdminOrGerente()" class="fila-edicion">
+              <td>{{ u.id }}</td>
+              <td><input type="text" [(ngModel)]="editForm.nombre" class="input-edit" /></td>
+              <td><input type="email" [(ngModel)]="editForm.email" class="input-edit" /></td>
+              <td>
+                <select [(ngModel)]="editForm.rol" class="input-edit">
+                  <option value="vendedor">Vendedor</option>
+                  <option value="gerente">Gerente</option>
+                </select>
+              </td>
+              <td>
+                <input type="password" [(ngModel)]="editForm.password"
+                  class="input-edit" placeholder="Nueva contraseña (opcional)" />
+              </td>
+              <td class="acciones">
+                <button class="btn-save" (click)="guardarEdicion()" [disabled]="guardando">
+                  {{ guardando ? '...' : '💾' }}
+                </button>
+                <button class="btn-cancel" (click)="cancelarEdicion()">✖</button>
+              </td>
+            </tr>
+            <tr *ngIf="editandoId === u.id && auth.isAdminOrGerente() && editError">
+              <td colspan="6" class="error-inline">{{ editError }}</td>
+            </tr>
+          </ng-container>
+        </tbody>
+      </table>
+      <ng-template #sinUsuarios>
+        <p class="empty">No hay usuarios creados.</p>
+      </ng-template>
+    </div>
+  </ng-container>
+</div>

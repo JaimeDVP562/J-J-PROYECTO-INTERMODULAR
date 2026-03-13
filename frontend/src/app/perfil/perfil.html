@@ -1,0 +1,56 @@
+<div class="perfil">
+  <h2>Mi Perfil</h2>
+
+  <div *ngIf="cargando" class="loading">Cargando perfil...</div>
+  <div *ngIf="error" class="error">{{ error }}</div>
+
+  <ng-container *ngIf="!cargando && !error">
+    <div class="perfil-layout">
+
+      <!-- Avatar -->
+      <div class="avatar-section">
+        <div class="avatar-wrap">
+          <img *ngIf="fotoPreview" [src]="fotoPreview" alt="Foto de perfil" class="avatar-img" />
+          <div *ngIf="!fotoPreview" class="avatar-placeholder">{{ inicialNombre }}</div>
+        </div>
+        <label class="btn-cambiar-foto">
+          📷 Cambiar foto
+          <input type="file" accept="image/*" (change)="onFotoSeleccionada($event)" hidden />
+        </label>
+        <div class="user-rol-badge">{{ usuario?.rol }}</div>
+      </div>
+
+      <!-- Formulario -->
+      <div class="form-section">
+        <div class="form-grid">
+          <div class="form-field">
+            <label>Nombre completo</label>
+            <input type="text" [(ngModel)]="form.nombre" placeholder="Tu nombre" />
+          </div>
+          <div class="form-field">
+            <label>Email</label>
+            <input type="email" [(ngModel)]="form.email" placeholder="email@empresa.com" />
+          </div>
+          <div class="form-field">
+            <label>Nueva contraseña (opcional)</label>
+            <input type="password" [(ngModel)]="form.password" placeholder="Dejar vacío para no cambiar" />
+          </div>
+          <div class="form-field info-field">
+            <label>Cuenta creada</label>
+            <span>{{ usuario?.created_at | date:'dd/MM/yyyy' }}</span>
+          </div>
+        </div>
+
+        <div *ngIf="exito" class="exito">{{ exito }}</div>
+        <div *ngIf="errorForm" class="error-inline">{{ errorForm }}</div>
+
+        <div class="form-actions">
+          <button class="btn-guardar" (click)="guardar()" [disabled]="guardando">
+            {{ guardando ? 'Guardando...' : '💾 Guardar cambios' }}
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </ng-container>
+</div>
