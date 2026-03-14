@@ -1,9 +1,10 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { ApiService } from '../services/api.service';
 import { AuthService } from '../auth/auth.service';
-import { Factura, Venta, CierreCaja } from '../models/models';
+import { Factura, Venta } from '../models/models';
 
 @Component({
   selector: 'app-billing',
@@ -14,9 +15,8 @@ import { Factura, Venta, CierreCaja } from '../models/models';
 })
 export class BillingComponent implements OnInit {
   private api = inject(ApiService);
+  private router = inject(Router);
   public auth = inject(AuthService);
-
-  vistaActiva: 'facturas' | 'ventas' | 'devoluciones' | 'cierres' = 'facturas';
 
   // Facturas
   facturas: Factura[] = [];
@@ -27,24 +27,8 @@ export class BillingComponent implements OnInit {
   guardando = false;
   eliminandoId: number | null = null;
 
-  // Ventas
+  // Ventas (para el total)
   ventas: Venta[] = [];
-  cargandoVentas = false;
-  errorVentas = '';
-  devolucionVentaId: number | null = null;
-  motivoDevolucion = '';
-  passwordDevolucion = '';
-  procesandoDevolucion = false;
-  errorDevolucion = '';
-
-  // Devoluciones
-  devoluciones: any[] = [];
-  cargandoDevoluciones = false;
-
-  // Cierres de caja
-  cierres: CierreCaja[] = [];
-  cargandoCierres = false;
-  expandedCierreId: number | null = null;
 
   ngOnInit(): void {
     this.cargarFacturas();
@@ -53,47 +37,19 @@ export class BillingComponent implements OnInit {
   cargarFacturas(): void {
     this.cargandoFacturas = true;
     this.api.getFacturas().subscribe({
-      next: (data) => { this.facturas = data; this.cargandoFacturas = false; },
-      error: () => { this.errorFacturas = 'Error al cargar las facturas.'; this.cargandoFacturas = false; },
+      next: (data) => {
+        this.facturas = data;
+        this.cargandoFacturas = false;
+      },
+      error: () => {
+        this.errorFacturas = 'Error al cargar las facturas.';
+        this.cargandoFacturas = false;
+      },
     });
   }
 
-  cargarVentas(): void {
-    if (this.ventas.length > 0) return;
-    this.cargandoVentas = true;
-    this.api.getVentas().subscribe({
-      next: (data) => { this.ventas = data; this.cargandoVentas = false; },
-      error: () => { this.errorVentas = 'Error al cargar ventas.'; this.cargandoVentas = false; },
-    });
-  }
-
-  cargarDevoluciones(): void {
-    if (this.devoluciones.length > 0) return;
-    this.cargandoDevoluciones = true;
-    this.api.getDevoluciones().subscribe({
-      next: (data) => { this.devoluciones = data; this.cargandoDevoluciones = false; },
-      error: () => { this.cargandoDevoluciones = false; },
-    });
-  }
-
-  cambiarVista(v: 'facturas' | 'ventas' | 'devoluciones' | 'cierres'): void {
-    this.vistaActiva = v;
-    if (v === 'ventas') this.cargarVentas();
-    if (v === 'devoluciones') this.cargarDevoluciones();
-    if (v === 'cierres') this.cargarCierres();
-  }
-
-  cargarCierres(): void {
-    if (this.cierres.length > 0) return;
-    this.cargandoCierres = true;
-    this.api.getCierresCaja().subscribe({
-      next: (data) => { this.cierres = data; this.cargandoCierres = false; },
-      error: () => { this.cargandoCierres = false; },
-    });
-  }
-
-  toggleCierre(id: number): void {
-    this.expandedCierreId = this.expandedCierreId === id ? null : id;
+  irAVentas(): void {
+    this.router.navigate(['/pos']);
   }
 
   // ── Facturas ──
@@ -123,7 +79,9 @@ export class BillingComponent implements OnInit {
         this.editandoId = null;
         this.cargarFacturas();
       },
-      error: () => { this.guardando = false; },
+      error: () => {
+        this.guardando = false;
+      },
     });
   }
 
@@ -132,57 +90,22 @@ export class BillingComponent implements OnInit {
     this.eliminandoId = id;
     this.api.deleteFactura(id).subscribe({
       next: () => {
-        this.facturas = this.facturas.filter(f => f.id !== id);
+        this.facturas = this.facturas.filter((f) => f.id !== id);
         this.eliminandoId = null;
       },
-      error: () => { this.eliminandoId = null; },
-    });
-  }
-
-  // ── Devoluciones ──
-  iniciarDevolucion(venta: Venta): void {
-    this.devolucionVentaId = venta.id;
-    this.motivoDevolucion = '';
-    this.passwordDevolucion = '';
-    this.errorDevolucion = '';
-  }
-
-  cancelarDevolucion(): void {
-    this.devolucionVentaId = null;
-    this.motivoDevolucion = '';
-    this.passwordDevolucion = '';
-  }
-
-  confirmarDevolucion(): void {
-    if (!this.devolucionVentaId) return;
-    if (!this.passwordDevolucion) {
-      this.errorDevolucion = 'Introduce tu contraseña para confirmar la devolución.';
-      return;
-    }
-
-    this.procesandoDevolucion = true;
-    this.errorDevolucion = '';
-
-    this.api.crearDevolucion(this.devolucionVentaId, this.passwordDevolucion, this.motivoDevolucion || undefined).subscribe({
-      next: () => {
-        this.procesandoDevolucion = false;
-        this.devolucionVentaId = null;
-        this.passwordDevolucion = '';
-        // Refresh ventas
-        this.ventas = [];
-        this.cargarVentas();
-        this.devoluciones = [];
-      },
-      error: (e) => {
-        this.errorDevolucion = e?.error?.message ?? 'Error al procesar la devolución.';
-        this.procesandoDevolucion = false;
+      error: () => {
+        this.eliminandoId = null;
       },
     });
   }
 
   // ── Helpers ──
   getStatusLabel(status: string): string {
-    const map: Record<string, string> = { pending: 'Pendiente', paid: 'Pagada', cancelled: 'Cancelada' };
+    const map: Record<string, string> = {
+      pending: 'Pendiente',
+      paid: 'Pagada',
+      cancelled: 'Cancelada',
+    };
     return map[status] ?? status;
   }
 
