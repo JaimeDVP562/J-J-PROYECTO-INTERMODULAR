@@ -8,6 +8,19 @@
   background: #f0f4f8;
 }
 
+/* Ensure billing header spans both columns, and catalog + cart sit side-by-side */
+.pos-container>.billing {
+  grid-column: 1 / -1;
+}
+
+.pos-catalogo {
+  grid-column: 1 / 2;
+}
+
+.pos-carrito {
+  grid-column: 2 / 3;
+}
+
 .loading-screen {
   grid-column: 1 / -1;
   display: flex;
