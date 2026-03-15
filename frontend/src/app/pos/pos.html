@@ -134,7 +134,6 @@
               <ng-template #sinVentas><p class="empty">No hay ventas registradas.</p></ng-template>
             </div>
           </ng-container>
-        </ng-container>
 
         <!-- ── DEVOLUCIONES ── -->
         <ng-container *ngIf="vistaActiva === 'devoluciones'">
@@ -331,8 +330,6 @@
             <ng-template #sinCierres><p class="empty">No hay cierres de caja registrados.</p></ng-template>
           </ng-container>
         </ng-container>
-      </div>
-    </div>
       <!-- ── Catálogo de productos ─── -->
       <div class="pos-catalogo">
         <div class="pos-search-bar">
@@ -511,9 +508,7 @@
           </button>
         </div>
       </div>
-    </ng-container>
 
-  </div>
 
 
 
@@ -530,7 +525,6 @@
       🏭 Pagar Proveedor
     </button>
 
-    <!-- ── Modal: Venta realizada ─── -->
     <div *ngIf="ventaRealizada" class="overlay" (click)="ventaRealizada = false">
       <div class="overlay-card" (click)="$event.stopPropagation()">
         <div class="overlay-icon">✅</div>
@@ -685,5 +679,4 @@
         </div>
       </div>
     </div>
-  </div>
 
