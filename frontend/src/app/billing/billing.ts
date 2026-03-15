@@ -1,10 +1,9 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
 import { ApiService } from '../services/api.service';
 import { AuthService } from '../auth/auth.service';
-import { Factura, Venta } from '../models/models';
+import { Factura } from '../models/models';
 
 @Component({
   selector: 'app-billing',
@@ -15,7 +14,6 @@ import { Factura, Venta } from '../models/models';
 })
 export class BillingComponent implements OnInit {
   private api = inject(ApiService);
-  private router = inject(Router);
   public auth = inject(AuthService);
 
   // Facturas
@@ -26,9 +24,6 @@ export class BillingComponent implements OnInit {
   editForm: Partial<Factura> = {};
   guardando = false;
   eliminandoId: number | null = null;
-
-  // Ventas (para el total)
-  ventas: Venta[] = [];
 
   ngOnInit(): void {
     this.cargarFacturas();
@@ -48,11 +43,6 @@ export class BillingComponent implements OnInit {
     });
   }
 
-  irAVentas(): void {
-    this.router.navigate(['/pos']);
-  }
-
-  // ── Facturas ──
   iniciarEdicion(f: Factura): void {
     this.editandoId = f.id;
     this.editForm = {
@@ -99,7 +89,6 @@ export class BillingComponent implements OnInit {
     });
   }
 
-  // ── Helpers ──
   getStatusLabel(status: string): string {
     const map: Record<string, string> = {
       pending: 'Pendiente',
@@ -111,9 +100,5 @@ export class BillingComponent implements OnInit {
 
   get totalImporte(): number {
     return this.facturas.reduce((sum, f) => sum + Number(f.total_amount), 0);
-  }
-
-  get totalVentas(): number {
-    return this.ventas.reduce((sum, v) => sum + Number(v.total), 0);
   }
 }
