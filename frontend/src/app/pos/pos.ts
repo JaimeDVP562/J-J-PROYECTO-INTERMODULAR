@@ -1,19 +1,29 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, AfterViewInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 import { ApiService } from '../services/api.service';
 import { AuthService } from '../auth/auth.service';
-import { Producto, Cliente, Categoria, Proveedor, ItemCarrito } from '../models/models';
+import {
+  Producto,
+  Cliente,
+  Categoria,
+  Proveedor,
+  ItemCarrito,
+  Factura,
+  Venta,
+  Devolucion,
+  CierreCaja,
+} from '../models/models';
 
 @Component({
   selector: 'app-pos',
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './pos.html',
-  styleUrl: './pos.css',
+  styleUrls: ['./pos.css'],
 })
-export class PosComponent implements OnInit {
+export class PosComponent implements OnInit, AfterViewInit {
   private api = inject(ApiService);
   public auth = inject(AuthService);
 
@@ -47,7 +57,12 @@ export class PosComponent implements OnInit {
 
   // Pago a proveedor
   mostrarPagoProveedor = false;
-  pagoProveedorForm = { proveedor_id: '' as number | '', importe: 0, concepto: '', metodo_pago: 'efectivo' as string };
+  pagoProveedorForm = {
+    proveedor_id: '' as number | '',
+    importe: 0,
+    concepto: '',
+    metodo_pago: 'efectivo' as string,
+  };
   errorPago = '';
   procesandoPago = false;
 
@@ -57,6 +72,38 @@ export class PosComponent implements OnInit {
   errorCierre = '';
   guardandoCierre = false;
   cierreCaja = { efectivo_retirado: 0, importe_datafono: 0, notas: '' };
+
+  // Facturación / listados
+  seccionActiva: 'tpv' | 'listado' = 'tpv';
+  vistaActiva: 'facturas' | 'ventas' | 'devoluciones' | 'cierres' = 'ventas';
+
+  // Facturas
+  facturas: Factura[] = [];
+  cargandoFacturas = false;
+  errorFacturas = '';
+  editandoId: number | null = null;
+  editForm: Partial<Factura> = {};
+  guardando = false;
+  eliminandoId: number | null = null;
+
+  // Ventas (lista)
+  ventas: Venta[] = [];
+  cargandoVentas = false;
+  errorVentas = '';
+  devolucionVentaId: number | null = null;
+  motivoDevolucion = '';
+  passwordDevolucion = '';
+  procesandoDevolucion = false;
+  errorDevolucion = '';
+
+  // Devoluciones
+  devoluciones: Devolucion[] = [];
+  cargandoDevoluciones = false;
+
+  // Cierres de caja
+  cierres: CierreCaja[] = [];
+  cargandoCierres = false;
+  expandedCierreId: number | null = null;
 
   ngOnInit(): void {
     forkJoin({
@@ -73,14 +120,25 @@ export class PosComponent implements OnInit {
         this.proveedores = proveedores;
         this.cargando = false;
       },
-      error: () => { this.error = 'Error al cargar datos.'; this.cargando = false; },
+      error: () => {
+        this.error = 'Error al cargar datos.';
+        this.cargando = false;
+      },
     });
+  }
+
+  ngAfterViewInit(): void {
+    // Al entrar en TPV, desplaza automáticamente hasta las pestañas de facturación/ventas
+    setTimeout(() => {
+      document.querySelector('.billing')?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
   }
 
   filtrar(): void {
     const q = this.busqueda.toLowerCase();
-    this.productosFiltrados = this.productos.filter(p => {
-      const matchBusqueda = !q || p.nombre.toLowerCase().includes(q) || (p.sku ?? '').toLowerCase().includes(q);
+    this.productosFiltrados = this.productos.filter((p) => {
+      const matchBusqueda =
+        !q || p.nombre.toLowerCase().includes(q) || (p.sku ?? '').toLowerCase().includes(q);
       const matchCat = !this.categoriaFiltro || p.categoria_id === Number(this.categoriaFiltro);
       return matchBusqueda && matchCat;
     });
@@ -88,7 +146,7 @@ export class PosComponent implements OnInit {
 
   agregarAlCarrito(p: Producto): void {
     if (p.stock_quantity <= 0) return;
-    const existing = this.carrito.find(i => i.producto.id === p.id);
+    const existing = this.carrito.find((i) => i.producto.id === p.id);
     if (existing) {
       if (existing.cantidad < p.stock_quantity) {
         existing.cantidad++;
@@ -121,7 +179,7 @@ export class PosComponent implements OnInit {
   }
 
   eliminarItem(item: ItemCarrito): void {
-    this.carrito = this.carrito.filter(i => i !== item);
+    this.carrito = this.carrito.filter((i) => i !== item);
   }
 
   setMetodoPago(m: 'efectivo' | 'tarjeta' | 'mixto'): void {
@@ -147,9 +205,8 @@ export class PosComponent implements OnInit {
   }
 
   get vuelta(): number {
-    const entregado = this.metodoPago === 'mixto'
-      ? this.mixtoEfectivo + this.mixtoTarjeta
-      : this.importeEntregado;
+    const entregado =
+      this.metodoPago === 'mixto' ? this.mixtoEfectivo + this.mixtoTarjeta : this.importeEntregado;
     return Math.max(0, entregado - this.totalCarrito);
   }
 
@@ -162,7 +219,7 @@ export class PosComponent implements OnInit {
       cliente_id: this.clienteId ?? undefined,
       metodo_pago: this.metodoPago,
       notas: this.notas || undefined,
-      items: this.carrito.map(i => ({
+      items: this.carrito.map((i) => ({
         producto_id: i.producto.id,
         cantidad: i.cantidad,
         precio_unitario: i.precio_unitario,
@@ -177,7 +234,7 @@ export class PosComponent implements OnInit {
         this.limpiarCarrito();
         this.procesando = false;
         // Refresh products to update stock
-        this.api.getProductos().subscribe(p => {
+        this.api.getProductos().subscribe((p) => {
           this.productos = p;
           this.filtrar();
         });
@@ -190,7 +247,12 @@ export class PosComponent implements OnInit {
   }
 
   abrirPagoProveedor(): void {
-    this.pagoProveedorForm = { proveedor_id: '', importe: 0, concepto: '', metodo_pago: 'efectivo' };
+    this.pagoProveedorForm = {
+      proveedor_id: '',
+      importe: 0,
+      concepto: '',
+      metodo_pago: 'efectivo',
+    };
     this.errorPago = '';
     this.mostrarPagoProveedor = true;
   }
@@ -232,33 +294,221 @@ export class PosComponent implements OnInit {
     this.errorCierre = '';
     this.mostrarCierreCaja = true;
     this.api.getTotalVentasHoy().subscribe({
-      next: (r) => { this.totalVentasHoy = r.total_ventas_hoy; },
+      next: (r) => {
+        this.totalVentasHoy = r.total_ventas_hoy;
+      },
     });
   }
 
   get diferenciaCierre(): number {
-    return (this.cierreCaja.efectivo_retirado + this.cierreCaja.importe_datafono) - this.totalVentasHoy;
+    return (
+      this.cierreCaja.efectivo_retirado + this.cierreCaja.importe_datafono - this.totalVentasHoy
+    );
   }
 
   guardarCierre(): void {
     this.guardandoCierre = true;
     this.errorCierre = '';
     const hoy = new Date().toISOString().split('T')[0];
-    this.api.crearCierreCaja({
-      fecha: hoy,
-      efectivo_retirado: this.cierreCaja.efectivo_retirado,
-      importe_datafono: this.cierreCaja.importe_datafono,
-      notas: this.cierreCaja.notas || undefined,
-    }).subscribe({
-      next: () => {
-        this.guardandoCierre = false;
-        this.mostrarCierreCaja = false;
-        alert('Cierre de caja guardado correctamente.');
+    this.api
+      .crearCierreCaja({
+        fecha: hoy,
+        efectivo_retirado: this.cierreCaja.efectivo_retirado,
+        importe_datafono: this.cierreCaja.importe_datafono,
+        notas: this.cierreCaja.notas || undefined,
+      })
+      .subscribe({
+        next: () => {
+          this.guardandoCierre = false;
+          this.mostrarCierreCaja = false;
+          alert('Cierre de caja guardado correctamente.');
+        },
+        error: (e) => {
+          this.errorCierre = e?.error?.message ?? 'Error al guardar el cierre.';
+          this.guardandoCierre = false;
+        },
+      });
+  }
+
+  cambiarVista(v: 'facturas' | 'ventas' | 'devoluciones' | 'cierres'): void {
+    this.vistaActiva = v;
+    if (v === 'facturas') this.cargarFacturas();
+    if (v === 'ventas') this.cargarVentas();
+    if (v === 'devoluciones') this.cargarDevoluciones();
+    if (v === 'cierres') this.cargarCierres();
+  }
+
+  cargarFacturas(): void {
+    if (this.facturas.length > 0) return;
+    this.cargandoFacturas = true;
+    this.api.getFacturas().subscribe({
+      next: (data) => {
+        this.facturas = data;
+        this.cargandoFacturas = false;
       },
-      error: (e) => {
-        this.errorCierre = e?.error?.message ?? 'Error al guardar el cierre.';
-        this.guardandoCierre = false;
+      error: () => {
+        this.errorFacturas = 'Error al cargar las facturas.';
+        this.cargandoFacturas = false;
       },
     });
+  }
+
+  cargarVentas(): void {
+    if (this.ventas.length > 0) return;
+    this.cargandoVentas = true;
+    this.api.getVentas().subscribe({
+      next: (data) => {
+        this.ventas = data;
+        this.cargandoVentas = false;
+      },
+      error: () => {
+        this.errorVentas = 'Error al cargar ventas.';
+        this.cargandoVentas = false;
+      },
+    });
+  }
+
+  cargarDevoluciones(): void {
+    if (this.devoluciones.length > 0) return;
+    this.cargandoDevoluciones = true;
+    this.api.getDevoluciones().subscribe({
+      next: (data) => {
+        this.devoluciones = data;
+        this.cargandoDevoluciones = false;
+      },
+      error: () => {
+        this.cargandoDevoluciones = false;
+      },
+    });
+  }
+
+  cargarCierres(): void {
+    if (this.cierres.length > 0) return;
+    this.cargandoCierres = true;
+    this.api.getCierresCaja().subscribe({
+      next: (data) => {
+        this.cierres = data;
+        this.cargandoCierres = false;
+      },
+      error: () => {
+        this.cargandoCierres = false;
+      },
+    });
+  }
+
+  toggleCierre(id: number): void {
+    this.expandedCierreId = this.expandedCierreId === id ? null : id;
+  }
+
+  // ── Facturas ──
+  iniciarEdicion(f: Factura): void {
+    this.editandoId = f.id;
+    this.editForm = {
+      cliente_id: f.cliente_id,
+      user_id: f.user_id,
+      total_amount: f.total_amount,
+      status: f.status,
+      invoice_date: f.invoice_date,
+      due_date: f.due_date ?? '',
+    };
+  }
+
+  cancelarEdicion(): void {
+    this.editandoId = null;
+    this.editForm = {};
+  }
+
+  guardarEdicion(): void {
+    if (!this.editandoId) return;
+    this.guardando = true;
+    this.api.updateFactura(this.editandoId, this.editForm).subscribe({
+      next: () => {
+        this.guardando = false;
+        this.editandoId = null;
+        this.cargarFacturas();
+      },
+      error: () => {
+        this.guardando = false;
+      },
+    });
+  }
+
+  eliminarFactura(id: number): void {
+    if (!confirm('¿Eliminar esta factura?')) return;
+    this.eliminandoId = id;
+    this.api.deleteFactura(id).subscribe({
+      next: () => {
+        this.facturas = this.facturas.filter((f) => f.id !== id);
+        this.eliminandoId = null;
+      },
+      error: () => {
+        this.eliminandoId = null;
+      },
+    });
+  }
+
+  // ── Devoluciones ──
+  iniciarDevolucion(venta: Venta): void {
+    this.devolucionVentaId = venta.id;
+    this.motivoDevolucion = '';
+    this.passwordDevolucion = '';
+    this.errorDevolucion = '';
+  }
+
+  cancelarDevolucion(): void {
+    this.devolucionVentaId = null;
+    this.motivoDevolucion = '';
+    this.passwordDevolucion = '';
+  }
+
+  confirmarDevolucion(): void {
+    if (!this.devolucionVentaId) return;
+    if (!this.passwordDevolucion) {
+      this.errorDevolucion = 'Introduce tu contraseña para confirmar la devolución.';
+      return;
+    }
+
+    this.procesandoDevolucion = true;
+    this.errorDevolucion = '';
+
+    this.api
+      .crearDevolucion(
+        this.devolucionVentaId,
+        this.passwordDevolucion,
+        this.motivoDevolucion || undefined,
+      )
+      .subscribe({
+        next: () => {
+          this.procesandoDevolucion = false;
+          this.devolucionVentaId = null;
+          this.passwordDevolucion = '';
+          // Refresh ventas
+          this.ventas = [];
+          this.cargarVentas();
+          this.devoluciones = [];
+        },
+        error: (e) => {
+          this.errorDevolucion = e?.error?.message ?? 'Error al procesar la devolución.';
+          this.procesandoDevolucion = false;
+        },
+      });
+  }
+
+  // ── Helpers ──
+  getStatusLabel(status: string): string {
+    const map: Record<string, string> = {
+      pending: 'Pendiente',
+      paid: 'Pagada',
+      cancelled: 'Cancelada',
+    };
+    return map[status] ?? status;
+  }
+
+  get totalImporte(): number {
+    return this.facturas.reduce((sum, f) => sum + Number(f.total_amount), 0);
+  }
+
+  get totalVentas(): number {
+    return this.ventas.reduce((sum, v) => sum + Number(v.total), 0);
   }
 }
