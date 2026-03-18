@@ -1,18 +1,17 @@
-import { Component, OnInit, AfterViewInit, inject } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 import { ApiService } from '../services/api.service';
 import { AuthService } from '../auth/auth.service';
 import {
-  Venta,
-  Devolucion,
-  CierreCaja,
   Producto,
   Cliente,
   Categoria,
   Proveedor,
   ItemCarrito,
+  Venta,
+  CierreCaja,
 } from '../models/models';
 
 @Component({
@@ -20,9 +19,9 @@ import {
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './pos.html',
-  styleUrls: ['./pos.css'],
+  styleUrl: './pos.css',
 })
-export class PosComponent implements OnInit, AfterViewInit {
+export class PosComponent implements OnInit {
   private api = inject(ApiService);
   public auth = inject(AuthService);
 
@@ -72,11 +71,7 @@ export class PosComponent implements OnInit, AfterViewInit {
   guardandoCierre = false;
   cierreCaja = { efectivo_retirado: 0, importe_datafono: 0, notas: '' };
 
-  // Facturación / listados
-  seccionActiva: 'tpv' | 'listado' = 'tpv';
-  vistaActiva: any = 'ventas';
-
-  // Ventas (lista)
+  // Ventas
   ventas: Venta[] = [];
   cargandoVentas = false;
   errorVentas = '';
@@ -86,14 +81,117 @@ export class PosComponent implements OnInit, AfterViewInit {
   procesandoDevolucion = false;
   errorDevolucion = '';
 
+  // Pagination (client-side)
+  pageSizeVentas = 10;
+  ventasPage = 1;
+  ventasTotal = 0;
+  ventasLastPage = 1;
+
   // Devoluciones
-  devoluciones: Devolucion[] = [];
+  devoluciones: any[] = [];
   cargandoDevoluciones = false;
+  pageSizeDevoluciones = 10;
+  devolucionesPage = 1;
+  devolucionesTotal = 0;
+  devolucionesLastPage = 1;
 
   // Cierres de caja
   cierres: CierreCaja[] = [];
   cargandoCierres = false;
   expandedCierreId: number | null = null;
+  pageSizeCierres = 10;
+  cierresPage = 1;
+  cierresTotal = 0;
+  cierresLastPage = 1;
+
+  // Vista activa para pestañas: facturas/ventas/devoluciones/cierres
+  vistaActiva: 'facturas' | 'ventas' | 'devoluciones' | 'cierres' = 'ventas';
+
+  get totalVentas(): number {
+    return this.ventas.reduce((sum, v) => sum + Number(v.total ?? 0), 0);
+  }
+
+  /* --- Pagination helpers --- */
+  get ventasTotalPages(): number {
+    return Math.max(1, this.ventasLastPage ?? 1);
+  }
+  get ventasPaged(): Venta[] {
+    return this.ventas;
+  }
+  get ventasPages(): number[] {
+    return Array.from({ length: this.ventasTotalPages }, (_, i) => i + 1);
+  }
+  goToVentasPage(n: number) {
+    if (n < 1 || n > this.ventasTotalPages) return;
+    this.ventasPage = n;
+    this.cargarVentas();
+  }
+  prevVentas() {
+    if (this.ventasPage > 1) {
+      this.ventasPage--;
+      this.cargarVentas();
+    }
+  }
+  nextVentas() {
+    if (this.ventasPage < this.ventasTotalPages) {
+      this.ventasPage++;
+      this.cargarVentas();
+    }
+  }
+
+  get devolucionesTotalPages(): number {
+    return Math.max(1, this.devolucionesLastPage ?? 1);
+  }
+  get devolucionesPaged(): any[] {
+    return this.devoluciones;
+  }
+  get devolucionesPages(): number[] {
+    return Array.from({ length: this.devolucionesTotalPages }, (_, i) => i + 1);
+  }
+  goToDevolucionesPage(n: number) {
+    if (n < 1 || n > this.devolucionesTotalPages) return;
+    this.devolucionesPage = n;
+    this.cargarDevoluciones();
+  }
+  prevDevoluciones() {
+    if (this.devolucionesPage > 1) {
+      this.devolucionesPage--;
+      this.cargarDevoluciones();
+    }
+  }
+  nextDevoluciones() {
+    if (this.devolucionesPage < this.devolucionesTotalPages) {
+      this.devolucionesPage++;
+      this.cargarDevoluciones();
+    }
+  }
+
+  get cierresTotalPages(): number {
+    return Math.max(1, this.cierresLastPage ?? 1);
+  }
+  get cierresPaged(): CierreCaja[] {
+    return this.cierres;
+  }
+  get cierresPages(): number[] {
+    return Array.from({ length: this.cierresTotalPages }, (_, i) => i + 1);
+  }
+  goToCierresPage(n: number) {
+    if (n < 1 || n > this.cierresTotalPages) return;
+    this.cierresPage = n;
+    this.cargarCierres();
+  }
+  prevCierres() {
+    if (this.cierresPage > 1) {
+      this.cierresPage--;
+      this.cargarCierres();
+    }
+  }
+  nextCierres() {
+    if (this.cierresPage < this.cierresTotalPages) {
+      this.cierresPage++;
+      this.cargarCierres();
+    }
+  }
 
   ngOnInit(): void {
     forkJoin({
@@ -101,8 +199,11 @@ export class PosComponent implements OnInit, AfterViewInit {
       clientes: this.api.getClientes(),
       categorias: this.api.getCategorias(),
       proveedores: this.api.getProveedores(),
+      ventas: this.api.getVentas(),
+      devoluciones: this.api.getDevoluciones(),
+      cierres: this.api.getCierresCaja(),
     }).subscribe({
-      next: ({ productos, clientes, categorias, proveedores }) => {
+      next: ({ productos, clientes, categorias, proveedores, ventas, devoluciones, cierres }) => {
         this.productos = productos;
         this.productosFiltrados = productos;
         this.clientes = clientes;
@@ -115,13 +216,6 @@ export class PosComponent implements OnInit, AfterViewInit {
         this.cargando = false;
       },
     });
-  }
-
-  ngAfterViewInit(): void {
-    // Al entrar en TPV, desplaza automáticamente hasta las pestañas de facturación/ventas
-    setTimeout(() => {
-      document.querySelector('.billing')?.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
   }
 
   filtrar(): void {
@@ -319,23 +413,17 @@ export class PosComponent implements OnInit, AfterViewInit {
         },
       });
   }
-
-  cambiarVista(v: any): void {
-    // Note: 'facturas' view is handled in the separate `BillingComponent`.
-    this.vistaActiva = v;
-    if (v === 'ventas') this.cargarVentas();
-    if (v === 'devoluciones') this.cargarDevoluciones();
-    if (v === 'cierres') this.cargarCierres();
-  }
-
-  // Facturas are managed in `BillingComponent`.
-
   cargarVentas(): void {
-    if (this.ventas.length > 0) return;
     this.cargandoVentas = true;
-    this.api.getVentas().subscribe({
-      next: (data) => {
-        this.ventas = data;
+    this.api.getVentas(this.ventasPage, this.pageSizeVentas).subscribe({
+      next: (res) => {
+        const items = res && (res.data ?? res.items ?? (Array.isArray(res) ? res : null));
+        this.ventas = Array.isArray(items) ? items : [];
+        const meta = res && (res.meta ?? res);
+        this.ventasTotal = (meta && (meta.total ?? meta.totalItems)) ?? this.ventas.length ?? 0;
+        this.ventasLastPage =
+          (meta && (meta.last_page ?? meta.lastPage)) ??
+          Math.max(1, Math.ceil(this.ventasTotal / this.pageSizeVentas));
         this.cargandoVentas = false;
       },
       error: () => {
@@ -346,11 +434,17 @@ export class PosComponent implements OnInit, AfterViewInit {
   }
 
   cargarDevoluciones(): void {
-    if (this.devoluciones.length > 0) return;
     this.cargandoDevoluciones = true;
-    this.api.getDevoluciones().subscribe({
-      next: (data) => {
-        this.devoluciones = data;
+    this.api.getDevoluciones(this.devolucionesPage, this.pageSizeDevoluciones).subscribe({
+      next: (res) => {
+        const items = res && (res.data ?? res.items ?? (Array.isArray(res) ? res : null));
+        this.devoluciones = Array.isArray(items) ? items : [];
+        const metaD = res && (res.meta ?? res);
+        this.devolucionesTotal =
+          (metaD && (metaD.total ?? metaD.totalItems)) ?? this.devoluciones.length ?? 0;
+        this.devolucionesLastPage =
+          (metaD && (metaD.last_page ?? metaD.lastPage)) ??
+          Math.max(1, Math.ceil(this.devolucionesTotal / this.pageSizeDevoluciones));
         this.cargandoDevoluciones = false;
       },
       error: () => {
@@ -359,12 +453,25 @@ export class PosComponent implements OnInit, AfterViewInit {
     });
   }
 
+  cambiarVista(v: 'facturas' | 'ventas' | 'devoluciones' | 'cierres'): void {
+    this.vistaActiva = v;
+    if (v === 'ventas') this.cargarVentas();
+    if (v === 'devoluciones') this.cargarDevoluciones();
+    if (v === 'cierres') this.cargarCierres();
+  }
+
   cargarCierres(): void {
-    if (this.cierres.length > 0) return;
     this.cargandoCierres = true;
-    this.api.getCierresCaja().subscribe({
-      next: (data) => {
-        this.cierres = data;
+    this.api.getCierresCaja(this.cierresPage, this.pageSizeCierres).subscribe({
+      next: (res) => {
+        const items = res && (res.data ?? res.items ?? (Array.isArray(res) ? res : null));
+        this.cierres = Array.isArray(items) ? items : [];
+        const metaC = res && (res.meta ?? res);
+        this.cierresTotal =
+          (metaC && (metaC.total ?? metaC.totalItems)) ?? this.cierres.length ?? 0;
+        this.cierresLastPage =
+          (metaC && (metaC.last_page ?? metaC.lastPage)) ??
+          Math.max(1, Math.ceil(this.cierresTotal / this.pageSizeCierres));
         this.cargandoCierres = false;
       },
       error: () => {
@@ -376,8 +483,6 @@ export class PosComponent implements OnInit, AfterViewInit {
   toggleCierre(id: number): void {
     this.expandedCierreId = this.expandedCierreId === id ? null : id;
   }
-
-  // Factura CRUD removed from POS — handled by `BillingComponent`.
 
   // ── Devoluciones ──
   iniciarDevolucion(venta: Venta): void {
@@ -424,10 +529,5 @@ export class PosComponent implements OnInit, AfterViewInit {
           this.procesandoDevolucion = false;
         },
       });
-  }
-
-  // ── Helpers ──
-  get totalVentas(): number {
-    return this.ventas.reduce((sum, v) => sum + Number(v.total), 0);
   }
 }

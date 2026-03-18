@@ -156,7 +156,6 @@ tr:hover td {
   font-size: 0.85rem;
 }
 
-/* Tabs */
 .form-panel {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
@@ -197,6 +196,92 @@ tr:hover td {
   border-radius: 0.4rem;
   font-size: 0.9rem;
   cursor: pointer;
+}
+
+/* ── Cierres de caja ── */
+.fila-cierre {
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.12s;
+}
+
+.fila-cierre:hover td {
+  background: #f8fafc;
+}
+
+.fila-expandida td {
+  background: #e8f0fe !important;
+  font-weight: 600;
+}
+
+.expand-icon {
+  display: inline-block;
+  width: 1rem;
+  font-size: 0.7rem;
+  color: #64748b;
+  margin-right: 0.25rem;
+}
+
+.fila-detalle-cierre td {
+  padding: 0 !important;
+}
+
+.cierre-detalle-panel {
+  background: #f8fafc;
+  border-left: 3px solid #3b82f6;
+  padding: 1rem 1.25rem;
+}
+
+.cierre-detalle-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.cierre-detalle-bloque {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+}
+
+.cierre-detalle-bloque h5 {
+  margin: 0 0 0.6rem;
+  font-size: 0.85rem;
+  color: #0a2342;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 0.35rem;
+}
+
+.cierre-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  padding: 0.2rem 0;
+  color: #475569;
+}
+
+.cierre-row-label {
+  color: #94a3b8;
+}
+
+.cierre-row-diff {
+  border-top: 1px dashed #e2e8f0;
+  margin-top: 0.3rem;
+  padding-top: 0.3rem;
+  font-weight: 700;
+}
+
+.cierre-notas {
+  font-size: 0.82rem;
+  color: #475569;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.4rem;
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  gap: 0.5rem;
 }
 
 /* Diferencia positiva (declaró más = sobrante) → verde */

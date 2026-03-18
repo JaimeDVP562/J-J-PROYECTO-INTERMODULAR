@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../services/api.service';
 import { AuthService } from '../auth/auth.service';
-import { Factura } from '../models/models';
+import { Factura, Venta, CierreCaja } from '../models/models';
 
 @Component({
   selector: 'app-billing',
@@ -16,10 +16,14 @@ export class BillingComponent implements OnInit {
   private api = inject(ApiService);
   public auth = inject(AuthService);
 
+  // Este componente solo gestiona facturas; vistas de ventas/devoluciones/cierres están en `pos`
+
   // Facturas
   facturas: Factura[] = [];
   cargandoFacturas = true;
   errorFacturas = '';
+  // Control de pestañas/vistas (la plantilla usa `vistaActiva`)
+  vistaActiva: 'facturas' = 'facturas';
   editandoId: number | null = null;
   editForm: Partial<Factura> = {};
   guardando = false;
@@ -43,6 +47,7 @@ export class BillingComponent implements OnInit {
     });
   }
 
+  // ── Facturas ──
   iniciarEdicion(f: Factura): void {
     this.editandoId = f.id;
     this.editForm = {
@@ -89,6 +94,7 @@ export class BillingComponent implements OnInit {
     });
   }
 
+  // ── Helpers ──
   getStatusLabel(status: string): string {
     const map: Record<string, string> = {
       pending: 'Pendiente',

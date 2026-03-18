@@ -12,21 +12,23 @@ use Illuminate\Support\Facades\Hash;
 
 class DevolucionController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $limit = (int) $request->query('limit', 10);
         $devoluciones = Devolucion::with('venta.detalles.producto', 'user')
             ->orderBy('fecha', 'desc')
-            ->get();
+            ->paginate($limit);
         return response()->json($devoluciones);
     }
 
     public function misHoy(Request $request)
     {
+        $limit = (int) $request->query('limit', 10);
         $devoluciones = Devolucion::with('venta')
             ->where('user_id', $request->user()->id)
             ->whereDate('fecha', today())
             ->orderBy('fecha', 'desc')
-            ->get();
+            ->paginate($limit);
         return response()->json($devoluciones);
     }
 

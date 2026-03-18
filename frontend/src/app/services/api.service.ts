@@ -150,8 +150,8 @@ export class ApiService {
   }
 
   // Ventas
-  getVentas(): Observable<Venta[]> {
-    return this.http.get<Venta[]>(`${this.baseUrl}/ventas`);
+  getVentas(page: number = 1, limit: number = 10): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/ventas?page=${page}&limit=${limit}`);
   }
   getVenta(id: number): Observable<Venta> {
     return this.http.get<Venta>(`${this.baseUrl}/ventas/${id}`);
@@ -159,7 +159,12 @@ export class ApiService {
   crearVentaPOS(data: NuevaVenta): Observable<Venta> {
     return this.http.post<Venta>(`${this.baseUrl}/ventas`, data);
   }
-  pagarProveedor(data: { proveedor_id?: number; importe: number; concepto: string; metodo_pago: string }): Observable<Venta> {
+  pagarProveedor(data: {
+    proveedor_id?: number;
+    importe: number;
+    concepto: string;
+    metodo_pago: string;
+  }): Observable<Venta> {
     return this.http.post<Venta>(`${this.baseUrl}/ventas/pago-proveedor`, data);
   }
   getVentasHoy(): Observable<Venta[]> {
@@ -173,19 +178,19 @@ export class ApiService {
   }
 
   // Devoluciones
-  getDevoluciones(): Observable<Devolucion[]> {
-    return this.http.get<Devolucion[]>(`${this.baseUrl}/devoluciones`);
+  getDevoluciones(page: number = 1, limit: number = 10): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/devoluciones?page=${page}&limit=${limit}`);
   }
-  getDevolucionesHoy(): Observable<Devolucion[]> {
-    return this.http.get<Devolucion[]>(`${this.baseUrl}/devoluciones/mis-hoy`);
+  getDevolucionesHoy(page: number = 1, limit: number = 10): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/devoluciones/mis-hoy?page=${page}&limit=${limit}`);
   }
   crearDevolucion(venta_id: number, password: string, motivo?: string): Observable<any> {
     return this.http.post(`${this.baseUrl}/devoluciones`, { venta_id, password, motivo });
   }
 
   // Cierre de caja
-  getCierresCaja(): Observable<CierreCaja[]> {
-    return this.http.get<CierreCaja[]>(`${this.baseUrl}/cierre-cajas`);
+  getCierresCaja(page: number = 1, limit: number = 10): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/cierre-cajas?page=${page}&limit=${limit}`);
   }
   getTotalVentasHoy(): Observable<{ total_ventas_hoy: number; fecha: string }> {
     return this.http.get<any>(`${this.baseUrl}/cierre-cajas/total-hoy`);
@@ -199,9 +204,9 @@ export class ApiService {
     return this.http.get<Jornada[]>(`${this.baseUrl}/jornadas`);
   }
   getJornadaActiva(): Observable<Jornada | null> {
-    return this.http.get<Jornada | null>(`${this.baseUrl}/jornadas/activa`).pipe(
-      map(j => (j != null && typeof j === 'object' && 'id' in j) ? j : null),
-    );
+    return this.http
+      .get<Jornada | null>(`${this.baseUrl}/jornadas/activa`)
+      .pipe(map((j) => (j != null && typeof j === 'object' && 'id' in j ? j : null)));
   }
   iniciarJornada(): Observable<Jornada> {
     return this.http.post<Jornada>(`${this.baseUrl}/jornadas`, {});
@@ -212,11 +217,16 @@ export class ApiService {
   getResumenJornadasHoy(): Observable<ResumenJornada[]> {
     return this.http.get<ResumenJornada[]>(`${this.baseUrl}/jornadas/resumen-hoy`);
   }
-  getResumenMensual(mes: number, ano: number): Observable<ResumenMensualUsuario | ResumenMensualAdmin[]> {
+  getResumenMensual(
+    mes: number,
+    ano: number,
+  ): Observable<ResumenMensualUsuario | ResumenMensualAdmin[]> {
     return this.http.get<any>(`${this.baseUrl}/jornadas/resumen-mensual?mes=${mes}&ano=${ano}`);
   }
   getJornadasUsuario(userId: number, mes: number, ano: number): Observable<Jornada[]> {
-    return this.http.get<Jornada[]>(`${this.baseUrl}/jornadas/usuario/${userId}?mes=${mes}&ano=${ano}`);
+    return this.http.get<Jornada[]>(
+      `${this.baseUrl}/jornadas/usuario/${userId}?mes=${mes}&ano=${ano}`,
+    );
   }
   createJornadaAdmin(data: { user_id: number; inicio: string; fin?: string }): Observable<Jornada> {
     return this.http.post<Jornada>(`${this.baseUrl}/jornadas/admin`, data);
@@ -260,6 +270,8 @@ export class ApiService {
 
   // Estadísticas
   getEstadisticas(desde: string, hasta: string): Observable<Estadisticas> {
-    return this.http.get<Estadisticas>(`${this.baseUrl}/estadisticas?desde=${desde}&hasta=${hasta}`);
+    return this.http.get<Estadisticas>(
+      `${this.baseUrl}/estadisticas?desde=${desde}&hasta=${hasta}`,
+    );
   }
 }
