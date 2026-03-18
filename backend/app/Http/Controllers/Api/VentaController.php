@@ -19,6 +19,7 @@ class VentaController extends Controller
 
     public function index(Request $request)
     {
+        $limit = (int) $request->query('limit', 10);
         $query = Venta::with('user', 'cliente', 'detalles.producto', 'devolucion')
             ->orderBy('fecha_venta', 'desc');
 
@@ -27,7 +28,11 @@ class VentaController extends Controller
             $query->where('tipo', 'venta');
         }
 
-        return VentaResource::collection($query->get());
+        $ventas = $query->paginate($limit);
+
+        // Devolver el paginador crudo para mantener la misma forma que otros índices
+        // (data, links, meta) y facilitar el parseo en el frontend.
+        return response()->json($ventas);
     }
 
     /**

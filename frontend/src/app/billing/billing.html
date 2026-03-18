@@ -1,90 +1,99 @@
 <div class="billing">
   <h2>Facturación</h2>
 
-  <div *ngIf="cargandoFacturas" class="loading">Cargando facturas...</div>
-  <div *ngIf="errorFacturas" class="error">{{ errorFacturas }}</div>
+  <div class="tabs">
+    <button class="active">🧾 Facturas</button>
+  </div>
 
-  <ng-container *ngIf="!cargandoFacturas && !errorFacturas">
-    <div class="summary-bar">
-      <span
-        >Total registros: <strong>{{ facturas.length }}</strong></span
-      >
-      <span
-        >Importe total:
-        <strong>{{ totalImporte | currency: 'EUR' : 'symbol' : '1.2-2' }}</strong></span
-      >
-    </div>
+  <!-- ── FACTURAS ── -->
+  <ng-container *ngIf="vistaActiva === 'facturas'">
+    <div *ngIf="cargandoFacturas" class="loading">Cargando facturas...</div>
+    <div *ngIf="errorFacturas" class="error">{{ errorFacturas }}</div>
 
-    <div class="table-wrapper">
-      <table *ngIf="facturas.length > 0; else sinFacturas">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Cliente</th>
-            <th>Importe</th>
-            <th>Estado</th>
-            <th>Fecha emisión</th>
-            <th>Vencimiento</th>
-            <th *ngIf="auth.isAdminOrGerente()">Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          <ng-container *ngFor="let f of facturas">
-            <tr *ngIf="editandoId !== f.id">
-              <td>{{ f.id }}</td>
-              <td>{{ f.cliente?.nombre ?? '—' }}</td>
-              <td>{{ f.total_amount | currency: 'EUR' : 'symbol' : '1.2-2' }}</td>
-              <td>
-                <span class="badge" [ngClass]="'badge--' + f.status">{{
-                  getStatusLabel(f.status)
-                }}</span>
-              </td>
-              <td>{{ f.invoice_date | date: 'dd/MM/yyyy' }}</td>
-              <td>{{ f.due_date ? (f.due_date | date: 'dd/MM/yyyy') : '—' }}</td>
-              <td *ngIf="auth.isAdminOrGerente()" class="acciones">
-                <button class="btn-edit" (click)="iniciarEdicion(f)" title="Editar">✏️</button>
-                <button
-                  class="btn-delete"
-                  (click)="eliminarFactura(f.id)"
-                  [disabled]="eliminandoId === f.id"
-                  title="Eliminar"
-                >
-                  🗑️
-                </button>
-              </td>
+    <ng-container *ngIf="!cargandoFacturas && !errorFacturas">
+      <div class="summary-bar">
+        <span
+          >Total registros: <strong>{{ facturas.length }}</strong></span
+        >
+        <span
+          >Importe total:
+          <strong>{{ totalImporte | currency: 'EUR' : 'symbol' : '1.2-2' }}</strong></span
+        >
+      </div>
+
+      <div class="table-wrapper">
+        <table *ngIf="facturas.length > 0; else sinFacturas">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Cliente</th>
+              <th>Importe</th>
+              <th>Estado</th>
+              <th>Fecha emisión</th>
+              <th>Vencimiento</th>
+              <th *ngIf="auth.isAdminOrGerente()">Acciones</th>
             </tr>
-            <tr *ngIf="editandoId === f.id" class="fila-edicion">
-              <td>{{ f.id }}</td>
-              <td>{{ f.cliente?.nombre ?? '—' }}</td>
-              <td>
-                <input
-                  type="number"
-                  [(ngModel)]="editForm.total_amount"
-                  class="input-edit"
-                  step="0.01"
-                  min="0"
-                />
-              </td>
-              <td>
-                <select [(ngModel)]="editForm.status" class="input-edit">
-                  <option value="pending">Pendiente</option>
-                  <option value="paid">Pagada</option>
-                  <option value="cancelled">Cancelada</option>
-                </select>
-              </td>
-              <td><input type="date" [(ngModel)]="editForm.invoice_date" class="input-edit" /></td>
-              <td><input type="date" [(ngModel)]="editForm.due_date" class="input-edit" /></td>
-              <td class="acciones">
-                <button class="btn-save" (click)="guardarEdicion()" [disabled]="guardando">
-                  {{ guardando ? '...' : '💾' }}
-                </button>
-                <button class="btn-cancel" (click)="cancelarEdicion()">✖</button>
-              </td>
-            </tr>
-          </ng-container>
-        </tbody>
-      </table>
-      <ng-template #sinFacturas><p class="empty">No hay facturas registradas.</p></ng-template>
-    </div>
+          </thead>
+          <tbody>
+            <ng-container *ngFor="let f of facturas">
+              <tr *ngIf="editandoId !== f.id">
+                <td>{{ f.id }}</td>
+                <td>{{ f.cliente?.nombre ?? '—' }}</td>
+                <td>{{ f.total_amount | currency: 'EUR' : 'symbol' : '1.2-2' }}</td>
+                <td>
+                  <span class="badge" [ngClass]="'badge--' + f.status">{{
+                    getStatusLabel(f.status)
+                  }}</span>
+                </td>
+                <td>{{ f.invoice_date | date: 'dd/MM/yyyy' }}</td>
+                <td>{{ f.due_date ? (f.due_date | date: 'dd/MM/yyyy') : '—' }}</td>
+                <td *ngIf="auth.isAdminOrGerente()" class="acciones">
+                  <button class="btn-edit" (click)="iniciarEdicion(f)" title="Editar">✏️</button>
+                  <button
+                    class="btn-delete"
+                    (click)="eliminarFactura(f.id)"
+                    [disabled]="eliminandoId === f.id"
+                    title="Eliminar"
+                  >
+                    🗑️
+                  </button>
+                </td>
+              </tr>
+              <tr *ngIf="editandoId === f.id" class="fila-edicion">
+                <td>{{ f.id }}</td>
+                <td>{{ f.cliente?.nombre ?? '—' }}</td>
+                <td>
+                  <input
+                    type="number"
+                    [(ngModel)]="editForm.total_amount"
+                    class="input-edit"
+                    step="0.01"
+                    min="0"
+                  />
+                </td>
+                <td>
+                  <select [(ngModel)]="editForm.status" class="input-edit">
+                    <option value="pending">Pendiente</option>
+                    <option value="paid">Pagada</option>
+                    <option value="cancelled">Cancelada</option>
+                  </select>
+                </td>
+                <td>
+                  <input type="date" [(ngModel)]="editForm.invoice_date" class="input-edit" />
+                </td>
+                <td><input type="date" [(ngModel)]="editForm.due_date" class="input-edit" /></td>
+                <td class="acciones">
+                  <button class="btn-save" (click)="guardarEdicion()" [disabled]="guardando">
+                    {{ guardando ? '...' : '💾' }}
+                  </button>
+                  <button class="btn-cancel" (click)="cancelarEdicion()">✖</button>
+                </td>
+              </tr>
+            </ng-container>
+          </tbody>
+        </table>
+        <ng-template #sinFacturas><p class="empty">No hay facturas registradas.</p></ng-template>
+      </div>
+    </ng-container>
   </ng-container>
 </div>
