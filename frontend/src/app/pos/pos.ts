@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
@@ -19,11 +19,12 @@ import {
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './pos.html',
-  styleUrl: './pos.css',
+  styleUrls: ['./pos.css'],
 })
 export class PosComponent implements OnInit {
   private api = inject(ApiService);
   public auth = inject(AuthService);
+  private cd = inject(ChangeDetectorRef);
 
   // Data
   productos: Producto[] = [];
@@ -87,6 +88,20 @@ export class PosComponent implements OnInit {
   ventasTotal = 0;
   ventasLastPage = 1;
 
+  // Productos pagination
+  pageSizeProductos = 12;
+  productosPage = 1;
+  productosTotal = 0;
+  productosLastPage = 1;
+
+  // UI toggles to show/hide lists
+  // show ventas list by default so edit buttons are visible in the summary
+  showVentasList = false;
+  // show/hide carrito and resizable width
+  showCarrito = true;
+  private resizing = false;
+  private lastCartWidth = 380;
+
   // Devoluciones
   devoluciones: any[] = [];
   cargandoDevoluciones = false;
@@ -94,6 +109,8 @@ export class PosComponent implements OnInit {
   devolucionesPage = 1;
   devolucionesTotal = 0;
   devolucionesLastPage = 1;
+
+  showDevolucionesList = true;
 
   // Cierres de caja
   cierres: CierreCaja[] = [];
@@ -103,12 +120,82 @@ export class PosComponent implements OnInit {
   cierresPage = 1;
   cierresTotal = 0;
   cierresLastPage = 1;
+  // flags: whether the backend returns paginated responses (server-side paging)
+  ventasServerPaged = false;
+  devolucionesServerPaged = false;
+  cierresServerPaged = false;
+  showCierresList = true;
 
-  // Vista activa para pestañas: facturas/ventas/devoluciones/cierres
-  vistaActiva: 'facturas' | 'ventas' | 'devoluciones' | 'cierres' = 'ventas';
+  // Vista activa para pestañas: venta/ventas/devoluciones/cierres
+  // Default to 'venta' so the Sale tab is loaded when entering the module
+  vistaActiva: 'venta' | 'ventas' | 'devoluciones' | 'cierres' = 'venta';
+
+  // Mostrar/ocultar catálogo en la pestaña 'venta'
+  showCatalog = true;
+
+  // Editar cliente de una venta
+  ventaEditId: number | null = null;
+  ventaEditClienteId: number | null = null;
+  guardandoCliente = false;
+  ventaEditOriginalClienteId: number | null = null;
+  ventaEditError = '';
+  ventaEditSuccess = '';
 
   get totalVentas(): number {
     return this.ventas.reduce((sum, v) => sum + Number(v.total ?? 0), 0);
+  }
+
+  // Helper to obtain a display name for the cliente of a venta.
+  ventaClienteNombre(v: any): string {
+    try {
+      if (!v) return '—';
+      if (v.tipo === 'pago_proveedor') return v.concepto ?? '—';
+      // prefer embedded cliente object
+      if (v.cliente && v.cliente.nombre) return v.cliente.nombre;
+      // try common id keys
+      const cid = v.cliente_id ?? v.clienteId ?? (v.cliente && v.cliente.id) ?? null;
+      if (cid != null && Array.isArray(this.clientes)) {
+        const c = this.clientes.find((x) => x.id === cid);
+        if (c && c.nombre) return c.nombre;
+      }
+      return '—';
+    } catch (e) {
+      return '—';
+    }
+  }
+
+  /* --- Productos pagination helpers --- */
+  get productosTotalPages(): number {
+    return Math.max(1, this.productosLastPage ?? 1);
+  }
+  get productosPaged(): Producto[] {
+    if (!Array.isArray(this.productosFiltrados)) return [];
+    // No server-side paging for productos currently
+    const start = (this.productosPage - 1) * this.pageSizeProductos;
+    return this.productosFiltrados.slice(start, start + this.pageSizeProductos);
+  }
+  get productosPages(): number[] {
+    return Array.from({ length: this.productosTotalPages }, (_, i) => i + 1);
+  }
+  get productosVisiblePages(): number[] {
+    return this.visiblePages(this.productosTotalPages, this.productosPage, 3);
+  }
+  goToProductosPage(n: number) {
+    if (n < 1 || n > this.productosTotalPages) return;
+    this.productosPage = n;
+    // no server call needed; slice will update automatically
+  }
+  prevProductos() {
+    if (this.productosPage > 1) this.productosPage--;
+  }
+  nextProductos() {
+    if (this.productosPage < this.productosTotalPages) this.productosPage++;
+  }
+  goToProductosFirst() {
+    this.goToProductosPage(1);
+  }
+  goToProductosLast() {
+    this.goToProductosPage(this.productosTotalPages);
   }
 
   /* --- Pagination helpers --- */
@@ -116,15 +203,51 @@ export class PosComponent implements OnInit {
     return Math.max(1, this.ventasLastPage ?? 1);
   }
   get ventasPaged(): Venta[] {
-    return this.ventas;
+    if (!Array.isArray(this.ventas)) return [];
+    if (this.ventasServerPaged) {
+      // backend already returns current page
+      return this.ventas;
+    }
+    const start = (this.ventasPage - 1) * this.pageSizeVentas;
+    return this.ventas.slice(start, start + this.pageSizeVentas);
   }
   get ventasPages(): number[] {
     return Array.from({ length: this.ventasTotalPages }, (_, i) => i + 1);
+  }
+
+  get devolucionesVisiblePages(): number[] {
+    return this.visiblePages(this.devolucionesTotalPages, this.devolucionesPage, 3);
+  }
+
+  // visible page window (max 3 pages)
+  private visiblePages(totalPages: number, currentPage: number, maxVisible = 3): number[] {
+    totalPages = Math.max(1, totalPages ?? 1);
+    if (totalPages <= maxVisible) return Array.from({ length: totalPages }, (_, i) => i + 1);
+    const half = Math.floor(maxVisible / 2);
+    let start = Math.max(1, currentPage - half);
+    let end = start + maxVisible - 1;
+    if (end > totalPages) {
+      end = totalPages;
+      start = end - maxVisible + 1;
+    }
+    const pages: number[] = [];
+    for (let i = start; i <= end; i++) pages.push(i);
+    return pages;
+  }
+
+  get ventasVisiblePages(): number[] {
+    return this.visiblePages(this.ventasTotalPages, this.ventasPage, 3);
   }
   goToVentasPage(n: number) {
     if (n < 1 || n > this.ventasTotalPages) return;
     this.ventasPage = n;
     this.cargarVentas();
+  }
+  goToVentasFirst() {
+    this.goToVentasPage(1);
+  }
+  goToVentasLast() {
+    this.goToVentasPage(this.ventasTotalPages);
   }
   prevVentas() {
     if (this.ventasPage > 1) {
@@ -143,7 +266,10 @@ export class PosComponent implements OnInit {
     return Math.max(1, this.devolucionesLastPage ?? 1);
   }
   get devolucionesPaged(): any[] {
-    return this.devoluciones;
+    if (!Array.isArray(this.devoluciones)) return [];
+    if (this.devolucionesServerPaged) return this.devoluciones;
+    const start = (this.devolucionesPage - 1) * this.pageSizeDevoluciones;
+    return this.devoluciones.slice(start, start + this.pageSizeDevoluciones);
   }
   get devolucionesPages(): number[] {
     return Array.from({ length: this.devolucionesTotalPages }, (_, i) => i + 1);
@@ -152,6 +278,12 @@ export class PosComponent implements OnInit {
     if (n < 1 || n > this.devolucionesTotalPages) return;
     this.devolucionesPage = n;
     this.cargarDevoluciones();
+  }
+  goToDevolucionesFirst() {
+    this.goToDevolucionesPage(1);
+  }
+  goToDevolucionesLast() {
+    this.goToDevolucionesPage(this.devolucionesTotalPages);
   }
   prevDevoluciones() {
     if (this.devolucionesPage > 1) {
@@ -170,15 +302,27 @@ export class PosComponent implements OnInit {
     return Math.max(1, this.cierresLastPage ?? 1);
   }
   get cierresPaged(): CierreCaja[] {
-    return this.cierres;
+    if (!Array.isArray(this.cierres)) return [];
+    if (this.cierresServerPaged) return this.cierres;
+    const start = (this.cierresPage - 1) * this.pageSizeCierres;
+    return this.cierres.slice(start, start + this.pageSizeCierres);
   }
   get cierresPages(): number[] {
     return Array.from({ length: this.cierresTotalPages }, (_, i) => i + 1);
+  }
+  get cierresVisiblePages(): number[] {
+    return this.visiblePages(this.cierresTotalPages, this.cierresPage, 3);
   }
   goToCierresPage(n: number) {
     if (n < 1 || n > this.cierresTotalPages) return;
     this.cierresPage = n;
     this.cargarCierres();
+  }
+  goToCierresFirst() {
+    this.goToCierresPage(1);
+  }
+  goToCierresLast() {
+    this.goToCierresPage(this.cierresTotalPages);
   }
   prevCierres() {
     if (this.cierresPage > 1) {
@@ -206,9 +350,62 @@ export class PosComponent implements OnInit {
       next: ({ productos, clientes, categorias, proveedores, ventas, devoluciones, cierres }) => {
         this.productos = productos;
         this.productosFiltrados = productos;
+        if (Array.isArray(this.productosFiltrados)) {
+          this.productosTotal = this.productosFiltrados.length;
+          this.productosLastPage = Math.max(
+            1,
+            Math.ceil(this.productosTotal / this.pageSizeProductos),
+          );
+          this.productosPage = 1;
+        }
         this.clientes = clientes;
         this.categorias = categorias;
         this.proveedores = proveedores;
+        // assign initial lists if returned in the forkJoin responses
+        try {
+          const vItems =
+            ventas && (ventas.data ?? ventas.items ?? (Array.isArray(ventas) ? ventas : null));
+          this.ventas = Array.isArray(vItems) ? this.normalizeListNumbers(vItems, ['total']) : [];
+          if (Array.isArray(this.ventas)) {
+            this.ventasTotal = this.ventas.length;
+            this.ventasLastPage = Math.max(1, Math.ceil(this.ventasTotal / this.pageSizeVentas));
+            this.ventasPage = 1;
+          }
+        } catch (e) {
+          this.ventas = [];
+        }
+        try {
+          const dItems =
+            devoluciones &&
+            (devoluciones.data ??
+              devoluciones.items ??
+              (Array.isArray(devoluciones) ? devoluciones : null));
+          this.devoluciones = Array.isArray(dItems)
+            ? this.normalizeListNumbers(dItems, ['importe'])
+            : [];
+          if (Array.isArray(this.devoluciones)) {
+            this.devolucionesTotal = this.devoluciones.length;
+            this.devolucionesLastPage = Math.max(
+              1,
+              Math.ceil(this.devolucionesTotal / this.pageSizeDevoluciones),
+            );
+            this.devolucionesPage = 1;
+          }
+        } catch (e) {
+          this.devoluciones = [];
+        }
+        try {
+          const cItems =
+            cierres && (cierres.data ?? cierres.items ?? (Array.isArray(cierres) ? cierres : null));
+          this.cierres = Array.isArray(cItems) ? this.normalizeCierres(cItems) : [];
+          if (Array.isArray(this.cierres)) {
+            this.cierresTotal = this.cierres.length;
+            this.cierresLastPage = Math.max(1, Math.ceil(this.cierresTotal / this.pageSizeCierres));
+            this.cierresPage = 1;
+          }
+        } catch (e) {
+          this.cierres = [];
+        }
         this.cargando = false;
       },
       error: () => {
@@ -216,6 +413,60 @@ export class PosComponent implements OnInit {
         this.cargando = false;
       },
     });
+  }
+
+  // Toggle helpers for template
+  toggleShowVentas(): void {
+    this.showVentasList = !this.showVentasList;
+  }
+
+  toggleShowDevoluciones(): void {
+    this.showDevolucionesList = !this.showDevolucionesList;
+  }
+
+  toggleShowCierres(): void {
+    this.showCierresList = !this.showCierresList;
+  }
+
+  toggleCarrito(): void {
+    this.showCarrito = !this.showCarrito;
+    if (!this.showCarrito) {
+      // collapse visually by setting CSS var to 0
+      try {
+        document.documentElement.style.setProperty('--cart-width', '0px');
+      } catch (e) {}
+    } else {
+      try {
+        document.documentElement.style.setProperty('--cart-width', this.lastCartWidth + 'px');
+      } catch (e) {}
+    }
+  }
+
+  startResizeCart(e: MouseEvent): void {
+    e.preventDefault();
+    this.resizing = true;
+    const onMove = (ev: MouseEvent) => this.onResizeCart(ev);
+    const onUp = () => {
+      this.resizing = false;
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }
+
+  private onResizeCart(ev: MouseEvent): void {
+    if (!this.resizing) return;
+    try {
+      const container = document.querySelector('.pos-container') as HTMLElement | null;
+      if (!container) return;
+      const rect = container.getBoundingClientRect();
+      const newWidth = Math.max(200, Math.min(800, rect.right - ev.clientX));
+      this.lastCartWidth = newWidth;
+      document.documentElement.style.setProperty('--cart-width', newWidth + 'px');
+    } catch (e) {
+      // ignore
+    }
   }
 
   filtrar(): void {
@@ -226,11 +477,19 @@ export class PosComponent implements OnInit {
       const matchCat = !this.categoriaFiltro || p.categoria_id === Number(this.categoriaFiltro);
       return matchBusqueda && matchCat;
     });
+    // reset productos pagination when filtering
+    if (Array.isArray(this.productosFiltrados)) {
+      this.productosTotal = this.productosFiltrados.length;
+      this.productosLastPage = Math.max(1, Math.ceil(this.productosTotal / this.pageSizeProductos));
+      this.productosPage = 1;
+    }
   }
 
   agregarAlCarrito(p: Producto): void {
     if (p.stock_quantity <= 0) return;
     const existing = this.carrito.find((i) => i.producto.id === p.id);
+    // ensure price fields are numeric to avoid string concatenation
+    const precioUnitario = this.parseNumber(p.precio);
     if (existing) {
       if (existing.cantidad < p.stock_quantity) {
         existing.cantidad++;
@@ -238,10 +497,11 @@ export class PosComponent implements OnInit {
       }
     } else {
       this.carrito.push({
-        producto: p,
+        // clone producto to avoid accidental external mutations
+        producto: { ...p },
         cantidad: 1,
-        precio_unitario: p.precio,
-        subtotal: p.precio,
+        precio_unitario: precioUnitario,
+        subtotal: precioUnitario,
       });
     }
   }
@@ -285,7 +545,7 @@ export class PosComponent implements OnInit {
   }
 
   get totalCarrito(): number {
-    return this.carrito.reduce((s, i) => s + i.subtotal, 0);
+    return this.carrito.reduce((s, i) => s + this.parseNumber(i.subtotal), 0);
   }
 
   get vuelta(): number {
@@ -419,7 +679,35 @@ export class PosComponent implements OnInit {
       next: (res) => {
         const items = res && (res.data ?? res.items ?? (Array.isArray(res) ? res : null));
         this.ventas = Array.isArray(items) ? items : [];
+        // If backend returns ventas without embedded `cliente` object, try to resolve it
+        // from the already-loaded `clientes` list using common keys like `cliente_id`.
+        try {
+          if (
+            Array.isArray(this.ventas) &&
+            Array.isArray(this.clientes) &&
+            this.clientes.length > 0
+          ) {
+            this.ventas = this.ventas.map((v: any) => {
+              // if there's already a cliente object, keep it
+              if (v && v.cliente && typeof v.cliente === 'object') return v;
+              // try common id keys
+              const cid = v && (v.cliente_id ?? v.clienteId ?? v.cliente?.id ?? null);
+              if (cid != null) {
+                const cobj = this.clientes.find((c) => c.id === cid) ?? null;
+                return { ...v, cliente: cobj };
+              }
+              return v;
+            });
+          }
+        } catch (e) {
+          // ignore mapping errors
+        }
         const meta = res && (res.meta ?? res);
+        // detect if backend returned pagination metadata
+        this.ventasServerPaged = !!(
+          meta &&
+          (meta.total !== undefined || meta.last_page !== undefined || meta.lastPage !== undefined)
+        );
         this.ventasTotal = (meta && (meta.total ?? meta.totalItems)) ?? this.ventas.length ?? 0;
         this.ventasLastPage =
           (meta && (meta.last_page ?? meta.lastPage)) ??
@@ -440,6 +728,12 @@ export class PosComponent implements OnInit {
         const items = res && (res.data ?? res.items ?? (Array.isArray(res) ? res : null));
         this.devoluciones = Array.isArray(items) ? items : [];
         const metaD = res && (res.meta ?? res);
+        this.devolucionesServerPaged = !!(
+          metaD &&
+          (metaD.total !== undefined ||
+            metaD.last_page !== undefined ||
+            metaD.lastPage !== undefined)
+        );
         this.devolucionesTotal =
           (metaD && (metaD.total ?? metaD.totalItems)) ?? this.devoluciones.length ?? 0;
         this.devolucionesLastPage =
@@ -453,35 +747,137 @@ export class PosComponent implements OnInit {
     });
   }
 
-  cambiarVista(v: 'facturas' | 'ventas' | 'devoluciones' | 'cierres'): void {
-    this.vistaActiva = v;
-    if (v === 'ventas') this.cargarVentas();
-    if (v === 'devoluciones') this.cargarDevoluciones();
-    if (v === 'cierres') this.cargarCierres();
+  cambiarVista(v: 'venta' | 'ventas' | 'devoluciones' | 'cierres'): void {
+    // If the same tab is clicked, toggle its expanded state. Otherwise activate and expand it.
+    if (this.vistaActiva === v) {
+      // toggle the currently active tab
+      if (v === 'ventas') {
+        this.showVentasList = !this.showVentasList;
+        if (this.showVentasList) this.cargarVentas();
+      }
+      if (v === 'devoluciones') {
+        this.showDevolucionesList = !this.showDevolucionesList;
+        if (this.showDevolucionesList) this.cargarDevoluciones();
+      }
+      if (v === 'cierres') {
+        this.showCierresList = !this.showCierresList;
+        if (this.showCierresList) this.cargarCierres();
+      }
+    } else {
+      this.vistaActiva = v;
+      // activate and expand the selected tab
+      if (v === 'venta') {
+        this.showCatalog = true;
+      }
+      if (v === 'ventas') {
+        this.showCatalog = false;
+      }
+      if (v === 'ventas') {
+        this.showVentasList = true;
+        this.cargarVentas();
+      }
+      if (v === 'devoluciones') {
+        this.showDevolucionesList = true;
+        this.cargarDevoluciones();
+      }
+      if (v === 'cierres') {
+        this.showCierresList = true;
+        this.cargarCierres();
+      }
+    }
   }
+
+  // (Removed global toggleActiveList and getActiveToggleIcon per request)
 
   cargarCierres(): void {
     this.cargandoCierres = true;
     this.api.getCierresCaja(this.cierresPage, this.pageSizeCierres).subscribe({
       next: (res) => {
         const items = res && (res.data ?? res.items ?? (Array.isArray(res) ? res : null));
-        this.cierres = Array.isArray(items) ? items : [];
+        this.cierres = Array.isArray(items) ? this.normalizeCierres(items) : [];
         const metaC = res && (res.meta ?? res);
+        this.cierresServerPaged = !!(
+          metaC &&
+          (metaC.total !== undefined ||
+            metaC.last_page !== undefined ||
+            metaC.lastPage !== undefined)
+        );
         this.cierresTotal =
           (metaC && (metaC.total ?? metaC.totalItems)) ?? this.cierres.length ?? 0;
         this.cierresLastPage =
           (metaC && (metaC.last_page ?? metaC.lastPage)) ??
           Math.max(1, Math.ceil(this.cierresTotal / this.pageSizeCierres));
+        // ensure change detection after loading
         this.cargandoCierres = false;
+        this.cd.detectChanges();
       },
       error: () => {
         this.cargandoCierres = false;
+        this.cd.detectChanges();
       },
     });
   }
 
   toggleCierre(id: number): void {
     this.expandedCierreId = this.expandedCierreId === id ? null : id;
+  }
+
+  private normalizeCierres(items: any[]): CierreCaja[] {
+    return items.map((c: any) => ({
+      ...c,
+      efectivo_retirado: this.parseNumber(c.efectivo_retirado),
+      importe_datafono: this.parseNumber(c.importe_datafono),
+      total_ventas: this.parseNumber(c.total_ventas),
+      diferencia: this.parseNumber(c.diferencia),
+      efectivo_esperado: this.parseNumber(c.efectivo_esperado),
+      tarjeta_esperada: this.parseNumber(c.tarjeta_esperada),
+    }));
+  }
+
+  private parseNumber(v: any): number {
+    // keep backward-safe behavior
+    if (v === null || v === undefined) return 0;
+    if (typeof v === 'number') return v;
+    try {
+      let s = String(v).trim();
+      if (!s) return 0;
+      // keep only digits, dot, comma and minus
+      s = s.replace(/[^0-9.,\-]/g, '');
+
+      // treat last '.' or ',' as decimal separator
+      const lastDot = s.lastIndexOf('.');
+      const lastComma = s.lastIndexOf(',');
+      const lastSep = Math.max(lastDot, lastComma);
+
+      if (lastSep > -1) {
+        const intPart = s.slice(0, lastSep).replace(/[.,]/g, '');
+        const decPart = s.slice(lastSep + 1).replace(/[.,]/g, '');
+        s = intPart + '.' + decPart;
+      } else {
+        s = s.replace(/[.,]/g, '');
+      }
+
+      const n = Number(s);
+      return Number.isFinite(n) ? n : 0;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  // helper to be used from templates to ensure numeric values
+  public money(v: any): number {
+    return this.parseNumber(v);
+  }
+
+  // Generic normalizer: given a list of objects and field names, parse those fields to numbers
+  private normalizeListNumbers<T extends Record<string, any>>(items: T[], fields: string[]): T[] {
+    return items.map((it) => {
+      const copy: any = { ...it };
+      for (const f of fields) {
+        if (f in copy) copy[f] = this.parseNumber(copy[f]);
+      }
+      return copy as T;
+    });
   }
 
   // ── Devoluciones ──
@@ -496,6 +892,108 @@ export class PosComponent implements OnInit {
     this.devolucionVentaId = null;
     this.motivoDevolucion = '';
     this.passwordDevolucion = '';
+  }
+
+  // --- Editar cliente de venta ---
+  seleccionarVentaParaEditar(venta: Venta): void {
+    this.ventaEditId = venta.id ?? null;
+    this.ventaEditClienteId = venta.cliente?.id ?? null;
+    this.ventaEditOriginalClienteId = venta.cliente?.id ?? null;
+    this.ventaEditError = '';
+    this.ventaEditSuccess = '';
+    // Ensure view updates immediately so the overlay/modal appears reliably
+    try {
+      this.cd.detectChanges();
+    } catch (e) {
+      // ignore detection errors
+    }
+  }
+
+  cancelarEditarCliente(): void {
+    this.ventaEditId = null;
+    this.ventaEditClienteId = null;
+  }
+
+  guardarClienteVenta(): void {
+    if (!this.ventaEditId) return;
+    // validation: ensure there's a change
+    const orig = this.ventaEditOriginalClienteId ?? null;
+    const current = this.ventaEditClienteId ?? null;
+    if (orig === current) {
+      this.ventaEditError = 'No hay cambios en el cliente seleccionado.';
+      this.ventaEditSuccess = '';
+      return;
+    }
+
+    this.guardandoCliente = true;
+    this.ventaEditError = '';
+    const payload: any = { cliente_id: this.ventaEditClienteId ?? null };
+    // force numeric id and log for debugging network issues
+    const ventaIdNum = Number(this.ventaEditId);
+    console.debug('[POS] actualizar venta payload', { ventaId: ventaIdNum, payload });
+    this.ventaEditSuccess = 'Enviando cambios...';
+    this.api.updateVenta(ventaIdNum, payload).subscribe({
+      next: (res) => {
+        this.guardandoCliente = false;
+        this.ventaEditSuccess = 'Cliente actualizado correctamente.';
+        // normalize ids and perform a robust optimistic update in local ventas list
+        const updatedVenta = res && ((res.data ?? res) as any);
+        try {
+          const ventaIdNumRes = Number(
+            updatedVenta && updatedVenta.id ? updatedVenta.id : ventaIdNum,
+          );
+          const clienteObj =
+            this.clientes.find((c) => Number(c.id) === Number(this.ventaEditClienteId)) ?? null;
+
+          const idx = this.ventas.findIndex((x) => Number(x.id) === ventaIdNumRes);
+          if (idx !== -1) {
+            // merge server response if present, otherwise apply optimistic cliente change
+            const merged = {
+              ...(this.ventas[idx] as any),
+              ...(updatedVenta && typeof updatedVenta === 'object' ? updatedVenta : {}),
+              cliente: updatedVenta && updatedVenta.cliente ? updatedVenta.cliente : clienteObj,
+              cliente_id:
+                (updatedVenta && updatedVenta.cliente_id) ?? this.ventaEditClienteId ?? null,
+            } as any;
+            this.ventas[idx] = merged;
+          } else {
+            // not found in current list — insert a minimal optimistic record
+            const toInsert = {
+              ...(updatedVenta && typeof updatedVenta === 'object'
+                ? updatedVenta
+                : { id: ventaIdNumRes }),
+              cliente: updatedVenta && updatedVenta.cliente ? updatedVenta.cliente : clienteObj,
+              cliente_id:
+                (updatedVenta && updatedVenta.cliente_id) ?? this.ventaEditClienteId ?? null,
+            } as any;
+            this.ventas.unshift(toInsert);
+          }
+        } catch (e) {
+          // ignore merge errors
+        }
+
+        // ensure view updates
+        try {
+          this.cd.detectChanges();
+        } catch (e) {
+          // ignore
+        }
+
+        // reset editor shortly after showing success
+        setTimeout(() => {
+          this.ventaEditId = null;
+          this.ventaEditClienteId = null;
+          this.ventaEditOriginalClienteId = null;
+          this.ventaEditSuccess = '';
+        }, 900);
+      },
+      error: (e) => {
+        this.guardandoCliente = false;
+        console.error('[POS] error updateVenta', e);
+        this.ventaEditError = e?.error?.message ?? 'Error al actualizar la venta.';
+        this.ventaEditSuccess = '';
+      },
+    });
   }
 
   confirmarDevolucion(): void {
