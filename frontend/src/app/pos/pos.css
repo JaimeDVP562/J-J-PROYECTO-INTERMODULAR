@@ -1,10 +1,28 @@
 .pos-container {
+  --cart-width: 380px;
   display: grid;
-  grid-template-columns: 1fr 380px;
+  grid-template-columns: 1fr 8px var(--cart-width);
   height: calc(100vh - 120px);
   gap: 0;
   position: relative;
   background: #f0f4f8;
+}
+
+/* When showing the Venta view, allow the catalog+cart container to occupy full width */
+.pos-container.full-width {
+  grid-template-columns: 1fr;
+  /* occupy available width within the main content area (not under the sidebar) */
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  box-sizing: border-box;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+/* When container is full-width, let the catalog span all internal grid columns */
+.pos-container.full-width .pos-catalogo {
+  grid-column: 1 / -1;
 }
 
 .loading-screen {
@@ -18,6 +36,7 @@
 
 /* ── Catálogo ── */
 .pos-catalogo {
+  grid-column: 1;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -120,12 +139,24 @@
 
 /* ── Carrito ── */
 .pos-carrito {
+  grid-column: 3;
   background: #fff;
   border-left: 1px solid #e2e8f0;
   display: flex;
   flex-direction: column;
   padding: 1rem;
   overflow-y: auto;
+}
+
+.splitter {
+  grid-column: 2;
+  width: 8px;
+  cursor: col-resize;
+  background: transparent;
+}
+
+.splitter:hover {
+  background: rgba(10, 35, 66, 0.04);
 }
 
 .carrito-titulo {
@@ -398,7 +429,9 @@ textarea.pos-input {
   margin-bottom: 0.5rem;
 }
 
-/* ── Paginación (botones más agradables) ── */
+/* Toggle styles removed (hide-list button removed) */
+
+/* Pagination container */
 .pagination {
   display: flex;
   gap: 0.35rem;
@@ -407,6 +440,8 @@ textarea.pos-input {
   padding: 0.5rem 0;
   margin-top: 0.5rem;
 }
+
+/* ── Paginación (botones más agradables) ── */
 
 .page-btn {
   min-width: 36px;
@@ -490,6 +525,91 @@ textarea.pos-input {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+}
+
+/* Make tables use fixed layout so columns respect widths and buttons stay visible */
+.table-wrapper {
+  overflow: auto;
+}
+
+.table-wrapper table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+.table-wrapper th,
+.table-wrapper td {
+  padding: 0.6rem 0.8rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+
+/* Column widths for Resumen de ventas (ensure edit button visible) */
+.ventas-wrapper table th:nth-child(1),
+.ventas-wrapper table td:nth-child(1) {
+  width: 30px;
+}
+
+.ventas-wrapper table th:nth-child(2),
+.ventas-wrapper table td:nth-child(2) {
+  width: 100px;
+}
+
+.ventas-wrapper table th:nth-child(3),
+.ventas-wrapper table td:nth-child(3) {
+  width: 100px;
+}
+
+.ventas-wrapper table th:nth-child(4),
+.ventas-wrapper table td:nth-child(4) {
+  width: 80px;
+}
+
+.ventas-wrapper table th:nth-child(5),
+.ventas-wrapper table td:nth-child(5) {
+  width: 80px;
+}
+
+.ventas-wrapper table th:nth-child(6),
+.ventas-wrapper table td:nth-child(6) {
+  width: 100px;
+}
+
+.ventas-wrapper table th:nth-child(7),
+.ventas-wrapper table td:nth-child(7) {
+  width: 80px;
+}
+
+.ventas-wrapper table th:nth-child(8),
+.ventas-wrapper table td:nth-child(8) {
+  width: 170px;
+}
+
+.ventas-wrapper .acciones {
+  display: flex;
+  /* apilar verticalmente para que ambos botones sean visibles */
+  flex-direction: column;
+  gap: 0.35rem;
+  align-items: flex-end;
+  justify-content: flex-start;
+}
+
+.ventas-wrapper .acciones button {
+  white-space: nowrap;
+}
+
+/* Ensure table wrappers expand to container width when container is full-bleed */
+.pos-container.full-width .ventas-wrapper,
+.pos-container.full-width .devoluciones-wrapper,
+.pos-container.full-width .cierres-wrapper {
+  width: 100%;
+  max-width: none;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  box-sizing: border-box;
 }
 
 .overlay-total {
@@ -710,6 +830,64 @@ textarea.pos-input {
   background: #fde68a;
 }
 
+/* Match edit/save buttons style to the rounded 'devolver' button */
+.btn-edit,
+.btn-save {
+  background: #fef3c7;
+  border: 1px solid #fbbf24;
+  color: #b45309;
+  padding: 0.2rem 0.6rem;
+  border-radius: 0.3rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.btn-edit:hover,
+.btn-save:hover {
+  background: #fde68a;
+}
+
+/* Cancel keeps a neutral appearance */
+.btn-cancel {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  padding: 0.2rem 0.5rem;
+  border-radius: 0.3rem;
+  cursor: pointer;
+}
+
+.btn-cancel:hover {
+  background: #f8fafc;
+}
+
+/* Toggle carrito button */
+.btn-toggle-carrito {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #0a2342;
+  padding: 0.45rem 0.8rem;
+  border-radius: 0.5rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.btn-toggle-carrito:hover {
+  background: #eef2ff;
+}
+
+.carrito-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.carrito-header .carrito-titulo {
+  margin: 0;
+}
+
 .btn-devolucion-confirm {
   background: #dc2626;
   color: #fff;
@@ -863,6 +1041,44 @@ textarea.pos-input {
 
 table {
   width: 100%;
+
+  /* Specific overrides to ensure pagination buttons keep intended styles */
+  .table-footer .pagination {
+    display: flex !important;
+    gap: 0.35rem !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0.4rem 0 !important;
+  }
+
+  .table-footer .pagination .page-btn {
+    min-width: 36px !important;
+    height: 36px !important;
+    padding: 0 0.6rem !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 0.5rem !important;
+    border: 1px solid transparent !important;
+    background: linear-gradient(180deg, #ffffff, #f8fafc) !important;
+    color: #0a2342 !important;
+    box-shadow: 0 1px 3px rgba(10, 35, 66, 0.06) !important;
+    cursor: pointer !important;
+    font-weight: 600 !important;
+    font-size: 0.9rem !important;
+  }
+
+  .table-footer .pagination .page-btn.icon {
+    width: 36px !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
+  }
+
+  .table-footer .pagination .page-btn.active {
+    background: linear-gradient(180deg, #0a2342, #07304a) !important;
+    color: #fff !important;
+  }
+
   border-collapse: collapse;
   font-size: 0.9rem;
 }
@@ -920,6 +1136,9 @@ tr:hover td {
 
 .acciones {
   white-space: nowrap;
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
 }
 
 /* Better table presentation for ventas/devoluciones/cierres */
@@ -974,8 +1193,10 @@ tr:hover td {
 /* Make actions column narrower */
 .ventas-wrapper th:last-child,
 .ventas-wrapper td:last-child {
-  width: 110px;
+  /* aumentar ancho y permitir overflow para mostrar botones apilados */
+  width: 220px;
   white-space: nowrap;
+  overflow: visible;
 }
 
 /* Slightly darker hover for rows in the scroll area */
