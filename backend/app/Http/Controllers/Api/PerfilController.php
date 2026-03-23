@@ -47,7 +47,7 @@ class PerfilController extends Controller
         $user = $request->user();
 
         $validated = $request->validate([
-            'nombre'   => 'sometimes|string|max:255',
+            'nombre'   => 'sometimes|string|max:255|unique:users,nombre,' . $user->id,
             'email'    => 'sometimes|email|unique:users,email,' . $user->id,
             'password' => 'nullable|string|min:6',
             'photo'    => 'nullable|image|max:4096',

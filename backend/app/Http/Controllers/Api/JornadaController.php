@@ -187,7 +187,8 @@ class JornadaController extends Controller
      */
     public function jornadasUsuario(Request $request, $userId)
     {
-        if (!$this->isPrivileged($request->user())) {
+        $currentUser = $request->user();
+        if (!$this->isPrivileged($currentUser) && $currentUser->id != $userId) {
             return response()->json(['error' => 'No autorizado'], 403);
         }
 

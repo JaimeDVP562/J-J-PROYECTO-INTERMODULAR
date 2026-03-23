@@ -11,7 +11,7 @@
     <ul class="menu">
       <li>
         <button (click)="navigateTo('/dashboard')">
-          <span class="icon">🏠</span> Panel de control
+          <span class="icon">🏠</span> Dashboard
         </button>
       </li>
       <li>
@@ -34,11 +34,13 @@
           <span class="icon">📦</span> Stock
         </button>
       </li>
-      <li *ngIf="auth.isAdminOrGerente()">
-        <button (click)="navigateTo('/usuarios')">
-          <span class="icon">👤</span> Usuarios
-        </button>
-      </li>
+      @if (auth.isAdminOrGerente()) {
+        <li>
+          <button (click)="navigateTo('/usuarios')">
+            <span class="icon">👤</span> Usuarios
+          </button>
+        </li>
+      }
       <li>
         <button (click)="navigateTo('/perfil')">
           <span class="icon">🪪</span> Mi perfil
@@ -49,7 +51,4 @@
       </li>
     </ul>
   </nav>
-  <div class="logout-section">
-    <button class="logout" (click)="logout()"><span class="icon">🚪</span> Cerrar sesión</button>
-  </div>
 </aside>

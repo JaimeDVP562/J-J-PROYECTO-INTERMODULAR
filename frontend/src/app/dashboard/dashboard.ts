@@ -1,8 +1,9 @@
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { forkJoin, interval, of, Subscription } from 'rxjs';
-import { catchError, startWith } from 'rxjs/operators';
+import { Router } from '@angular/router';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { ApiService } from '../services/api.service';
 import { AuthService } from '../auth/auth.service';
 import { Jornada, ResumenJornada, Estadisticas } from '../models/models';
@@ -14,17 +15,10 @@ import { Jornada, ResumenJornada, Estadisticas } from '../models/models';
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.css',
 })
-export class DashboardComponent implements OnInit, OnDestroy {
+export class DashboardComponent implements OnInit {
   private api = inject(ApiService);
+  private router = inject(Router);
   public auth = inject(AuthService);
-
-  // ── Jornada propia (todos los roles) ──
-  jornadaActiva: Jornada | null = null;
-  jornadaCargada = false;
-  accionJornada = false;
-  errorJornada = '';
-  tiempoTranscurrido = '00:00:00';
-  private timerSub?: Subscription;
 
   // ── Vista admin/gerente ──
   cargandoAdmin = false;
@@ -50,7 +44,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   readonly today = new Date();
 
   ngOnInit(): void {
-    this.cargarJornadaActiva();
     if (this.auth.isAdminOrGerente()) {
       this.cargarAdmin();
     } else {
@@ -58,8 +51,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
   }
 
-  ngOnDestroy(): void {
-    this.timerSub?.unsubscribe();
+  navigateToFichar(): void {
+    this.router.navigate(['/time-control']);
   }
 
   // ── Helpers de fecha ──
@@ -123,109 +116,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ── Jornada ──
-  cargarJornadaActiva(): void {
-    this.api.getJornadaActiva().subscribe({
-      next: (j) => {
-        this.jornadaActiva = j;
-        this.jornadaCargada = true;
-        if (j) this.iniciarTimer();
-      },
-      error: () => {
-        this.jornadaActiva = null;
-        this.jornadaCargada = true;
-      },
-    });
-  }
-
-  iniciarJornada(): void {
-    this.accionJornada = true;
-    this.errorJornada = '';
-    this.api.iniciarJornada().subscribe({
-      next: (j) => {
-        this.jornadaActiva = j;
-        this.accionJornada = false;
-        this.iniciarTimer();
-        if (this.auth.isAdminOrGerente()) {
-          this.api.getResumenJornadasHoy().subscribe((r) => (this.resumenJornadas = r));
-        } else {
-          this.api.getJornadas().subscribe((js) => (this.misJornadas = js));
-        }
-      },
-      error: (e) => {
-        this.errorJornada = e?.error?.error ?? 'Error al iniciar jornada.';
-        this.accionJornada = false;
-        // Re-sync with DB in case there's an open jornada we didn't know about
-        if (e?.status === 422) {
-          this.cargarJornadaActiva();
-        }
-      },
-    });
-  }
-
-  finalizarJornada(): void {
-    if (!this.jornadaActiva) return;
-    this.accionJornada = true;
-    this.errorJornada = '';
-    this.api.finalizarJornada(this.jornadaActiva.id).subscribe({
-      next: () => {
-        this.jornadaActiva = null;
-        this.timerSub?.unsubscribe();
-        this.tiempoTranscurrido = '00:00:00';
-        this.accionJornada = false;
-        if (this.auth.isAdminOrGerente()) {
-          this.api.getResumenJornadasHoy().subscribe((r) => (this.resumenJornadas = r));
-        } else {
-          this.api.getJornadas().subscribe((js) => (this.misJornadas = js));
-        }
-      },
-      error: () => {
-        this.errorJornada = 'Error al finalizar jornada.';
-        this.accionJornada = false;
-      },
-    });
-  }
-
-  private parseFecha(s: string | null | undefined): Date {
-    if (!s) return new Date(NaN);
-    return new Date(s.replace(' ', 'T'));
-  }
-
-  get jornadaInicioDate(): Date | null {
-    if (!this.jornadaActiva?.inicio) return null;
-    const d = this.parseFecha(this.jornadaActiva.inicio);
-    return isNaN(d.getTime()) ? null : d;
-  }
-
-  private iniciarTimer(): void {
-    this.timerSub?.unsubscribe();
-    this.timerSub = interval(1000)
-      .pipe(startWith(0))
-      .subscribe(() => {
-        if (!this.jornadaActiva) return;
-        const diff = Math.floor(
-          (Date.now() - this.parseFecha(this.jornadaActiva.inicio).getTime()) / 1000,
-        );
-        const h = Math.floor(diff / 3600);
-        const m = Math.floor((diff % 3600) / 60);
-        const s = diff % 60;
-        this.tiempoTranscurrido = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-      });
-  }
-
   // ── Getters usuario normal ──
   get diaSemana(): string {
     return this.DIAS[new Date().getDay()];
   }
 
+  get totalMinutosHoy(): number {
+    return this.misJornadas.reduce((s, j) => s + (j.duracion_minutos ?? 0), 0);
+  }
+
   get tiempoTrabajadoHoy(): string {
     const min = this.misJornadas.reduce((s, j) => s + (j.duracion_minutos ?? 0), 0);
-    if (this.jornadaActiva) {
-      const extra = Math.floor(
-        (Date.now() - this.parseFecha(this.jornadaActiva.inicio).getTime()) / 60000,
-      );
-      return this.formatMinutos(min + extra);
-    }
     return this.formatMinutos(min);
   }
 

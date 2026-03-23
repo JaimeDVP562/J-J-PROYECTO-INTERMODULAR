@@ -1,10 +1,10 @@
 <div class="stock">
   <h2>Stock</h2>
 
-  <div *ngIf="cargando" class="loading">Cargando stock...</div>
-  <div *ngIf="error" class="error">{{ error }}</div>
+  @if (cargando) { <div class="loading">Cargando stock...</div> }
+  @if (error) { <div class="error">{{ error }}</div> }
 
-  <ng-container *ngIf="!cargando && !error">
+  @if (!cargando && !error) {
 
     <!-- Tabs -->
     <div class="tabs">
@@ -14,209 +14,256 @@
     </div>
 
     <!-- ── INVENTARIO ──────────────────────────────────────── -->
-    <ng-container *ngIf="vistaActiva === 'inventario'">
+    @if (vistaActiva === 'inventario') {
       <div class="summary-bar">
         <span>Total: <strong>{{ inventarios.length }}</strong> registros</span>
-        <span *ngIf="stockBajo > 0" class="alerta">⚠️ {{ stockBajo }} con stock bajo</span>
+        @if (stockBajo > 0) { <span class="alerta">⚠️ {{ stockBajo }} con stock bajo</span> }
       </div>
       <div class="table-wrapper">
-        <table *ngIf="inventarios.length > 0; else sinInventario">
-          <thead>
-            <tr><th>Producto</th><th>SKU</th><th>Categoría</th><th>Disponible</th><th>Mínimo</th><th>Ubicación</th></tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let inv of inventarios" [class.stock-bajo]="inv.cantidad_disponible <= inv.cantidad_minima">
-              <td>{{ inv.producto?.nombre ?? '—' }}</td>
-              <td><span class="sku-badge">{{ inv.producto?.sku ?? '—' }}</span></td>
-              <td>{{ inv.producto?.categoria?.nombre ?? '—' }}</td>
-              <td><span [class.valor-bajo]="inv.cantidad_disponible <= inv.cantidad_minima">{{ inv.cantidad_disponible }}</span></td>
-              <td>{{ inv.cantidad_minima }}</td>
-              <td>{{ inv.ubicacion ?? '—' }}</td>
-            </tr>
-          </tbody>
-        </table>
-        <ng-template #sinInventario><p class="empty">No hay registros de inventario.</p></ng-template>
+        @if (inventarios.length > 0) {
+          <table>
+            <thead>
+              <tr><th>Producto</th><th>SKU</th><th>Categoría</th><th>Disponible</th><th>Ubicación</th></tr>
+            </thead>
+            <tbody>
+              @for (inv of inventariosPaginados; track inv.id) {
+                <tr [class.stock-alerta]="inv.cantidad_disponible < 10"
+                    [class.stock-bajo]="inv.cantidad_disponible >= 10 && inv.cantidad_disponible <= inv.cantidad_minima">
+                  <td>{{ inv.producto?.nombre ?? '—' }}</td>
+                  <td><span class="sku-badge">{{ inv.producto?.sku ?? '—' }}</span></td>
+                  <td>{{ inv.producto?.categoria?.nombre ?? '—' }}</td>
+                  <td><span [class.valor-bajo]="inv.cantidad_disponible <= inv.cantidad_minima">{{ inv.cantidad_disponible }}</span></td>
+                  <td>{{ inv.ubicacion ?? '—' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        } @else {
+          <p class="empty">No hay registros de inventario.</p>
+        }
+        <div class="pagination">
+          <button class="page-btn" (click)="irAPagina('inventario', paginaInventario - 1)" [disabled]="totalPaginasInventario <= 1 || paginaInventario === 1">‹</button>
+          <span class="page-info">Página {{ paginaInventario }} / {{ totalPaginasInventario || 1 }}</span>
+          <button class="page-btn" (click)="irAPagina('inventario', paginaInventario + 1)" [disabled]="totalPaginasInventario <= 1 || paginaInventario === totalPaginasInventario">›</button>
+        </div>
       </div>
-    </ng-container>
+    }
 
     <!-- ── PRODUCTOS ──────────────────────────────────────── -->
-    <ng-container *ngIf="vistaActiva === 'productos'">
-      <!-- Barra de búsqueda y filtros -->
+    @if (vistaActiva === 'productos') {
       <div class="filter-bar">
-        <input
-          type="text"
-          [(ngModel)]="busquedaProducto"
-          (input)="filtrarProductos()"
-          placeholder="🔍 Buscar por nombre, SKU o descripción..."
-          class="search-input"
-        />
+        <input type="text" [(ngModel)]="busquedaProducto" (input)="filtrarProductos()"
+          placeholder="🔍 Buscar por nombre, SKU o descripción..." class="search-input" />
         <select [(ngModel)]="categoriaFiltro" (change)="filtrarProductos()" class="cat-select">
           <option value="">Todas las categorías</option>
-          <option *ngFor="let c of categorias" [value]="c.id">{{ c.nombre }}</option>
+          @for (c of categorias; track c.id) {
+            <option [value]="c.id">{{ c.nombre }}</option>
+          }
         </select>
-        <button *ngIf="auth.isAdminOrGerente()" class="btn-add" (click)="abrirFormProducto()">+ Añadir producto</button>
+        @if (auth.isAdminOrGerente()) {
+          <button class="btn-add" (click)="abrirFormProducto()">+ Añadir producto</button>
+        }
       </div>
 
-      <div *ngIf="mostrarFormProducto && auth.isAdminOrGerente()" class="form-panel">
-        <h4>Nuevo producto</h4>
-        <div class="form-grid">
-          <div class="form-field">
-            <label>Nombre *</label>
-            <input type="text" [(ngModel)]="nuevoProducto.nombre" placeholder="Nombre del producto" />
+      @if (mostrarFormProducto && auth.isAdminOrGerente()) {
+        <div class="form-panel">
+          <h4>Nuevo producto</h4>
+          <div class="form-grid">
+            <div class="form-field">
+              <label>Nombre *</label>
+              <input type="text" [(ngModel)]="nuevoProducto.nombre" placeholder="Nombre del producto" />
+            </div>
+            <div class="form-field">
+              <label>SKU</label>
+              <input type="text" [(ngModel)]="nuevoProducto.sku" placeholder="Código SKU único" />
+            </div>
+            <div class="form-field">
+              <label>Descripción</label>
+              <input type="text" [(ngModel)]="nuevoProducto.descripcion" placeholder="Descripción" />
+            </div>
+            <div class="form-field">
+              <label>Precio (€) *</label>
+              <input type="number" [(ngModel)]="nuevoProducto.precio" min="0" step="0.01" />
+            </div>
+            <div class="form-field">
+              <label>Stock inicial</label>
+              <input type="number" [(ngModel)]="nuevoProducto.stock_quantity" min="0" />
+            </div>
+            <div class="form-field">
+              <label>Proveedor *</label>
+              <select [(ngModel)]="nuevoProducto.proveedor_id">
+                <option value="">— Seleccionar —</option>
+                @for (pv of proveedores; track pv.id) {
+                  <option [value]="pv.id">{{ pv.nombre }}</option>
+                }
+              </select>
+            </div>
+            <div class="form-field">
+              <label>Categoría</label>
+              <select [(ngModel)]="nuevoProducto.categoria_id">
+                <option value="">— Sin categoría —</option>
+                @for (c of categorias; track c.id) {
+                  <option [value]="c.id">{{ c.nombre }}</option>
+                }
+              </select>
+            </div>
           </div>
-          <div class="form-field">
-            <label>SKU</label>
-            <input type="text" [(ngModel)]="nuevoProducto.sku" placeholder="Código SKU único" />
-          </div>
-          <div class="form-field">
-            <label>Descripción</label>
-            <input type="text" [(ngModel)]="nuevoProducto.descripcion" placeholder="Descripción" />
-          </div>
-          <div class="form-field">
-            <label>Precio (€) *</label>
-            <input type="number" [(ngModel)]="nuevoProducto.precio" min="0" step="0.01" />
-          </div>
-          <div class="form-field">
-            <label>Stock inicial</label>
-            <input type="number" [(ngModel)]="nuevoProducto.stock_quantity" min="0" />
-          </div>
-          <div class="form-field">
-            <label>Proveedor *</label>
-            <select [(ngModel)]="nuevoProducto.proveedor_id">
-              <option value="">— Seleccionar —</option>
-              <option *ngFor="let pv of proveedores" [value]="pv.id">{{ pv.nombre }}</option>
-            </select>
-          </div>
-          <div class="form-field">
-            <label>Categoría</label>
-            <select [(ngModel)]="nuevoProducto.categoria_id">
-              <option value="">— Sin categoría —</option>
-              <option *ngFor="let c of categorias" [value]="c.id">{{ c.nombre }}</option>
-            </select>
+          @if (errorProducto) { <p class="error-inline">{{ errorProducto }}</p> }
+          <div class="form-actions">
+            <button class="btn-save-form" (click)="guardarProducto()" [disabled]="guardandoProducto">
+              {{ guardandoProducto ? 'Guardando...' : '💾 Guardar' }}
+            </button>
+            <button class="btn-cancel-form" (click)="mostrarFormProducto = false">Cancelar</button>
           </div>
         </div>
-        <p *ngIf="errorProducto" class="error-inline">{{ errorProducto }}</p>
-        <div class="form-actions">
-          <button class="btn-save-form" (click)="guardarProducto()" [disabled]="guardandoProducto">
-            {{ guardandoProducto ? 'Guardando...' : '💾 Guardar' }}
-          </button>
-          <button class="btn-cancel-form" (click)="mostrarFormProducto = false">Cancelar</button>
-        </div>
-      </div>
+      }
 
       <div class="summary-bar" style="margin-top:0">
         <span>Mostrando: <strong>{{ productosFiltrados.length }}</strong> de {{ productos.length }} productos</span>
       </div>
 
       <div class="table-wrapper">
-        <table *ngIf="productosFiltrados.length > 0; else sinProductos">
-          <thead>
-            <tr>
-              <th>Nombre</th><th>SKU</th><th>Categoría</th><th>Proveedor</th><th>Precio</th>
-              <th>Stock</th>
-              <th *ngIf="auth.isAdminOrGerente()">Ajustar stock</th>
-              <th *ngIf="auth.isAdminOrGerente()"></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let p of productosFiltrados">
-              <td>{{ p.nombre }}</td>
-              <td><span class="sku-badge">{{ p.sku ?? '—' }}</span></td>
-              <td>{{ p.categoria?.nombre ?? '—' }}</td>
-              <td>{{ p.proveedor?.nombre ?? '—' }}</td>
-              <td>{{ p.precio | currency:'EUR':'symbol':'1.2-2' }}</td>
-              <td><strong>{{ p.stock_quantity }}</strong></td>
-              <td *ngIf="auth.isAdminOrGerente()" class="stock-btns">
-                <button class="btn-menos" (click)="cambiarStock(p, -1)"
-                  [disabled]="p.stock_quantity === 0 || actualizandoStockId === p.id">−</button>
-                <span class="stock-num" [class.actualizando]="actualizandoStockId === p.id">{{ p.stock_quantity }}</span>
-                <button class="btn-mas" (click)="cambiarStock(p, 1)"
-                  [disabled]="actualizandoStockId === p.id">+</button>
-              </td>
-              <td *ngIf="auth.isAdminOrGerente()">
-                <button class="btn-del" (click)="eliminarProducto(p.id)" title="Eliminar">🗑️</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <ng-template #sinProductos><p class="empty">No se encontraron productos.</p></ng-template>
+        @if (productosFiltrados.length > 0) {
+          <table>
+            <thead>
+              <tr>
+                <th>Nombre</th><th>SKU</th><th>Categoría</th><th>Proveedor</th><th>Precio</th>
+                <th>Stock</th>
+                @if (auth.isAdminOrGerente()) { <th>Ajustar stock</th> }
+                @if (auth.isAdminOrGerente()) { <th></th> }
+              </tr>
+            </thead>
+            <tbody>
+              @for (p of productosPaginados; track p.id) {
+                <tr [class.stock-alerta]="p.stock_quantity < 10">
+                  <td>{{ p.nombre }}</td>
+                  <td><span class="sku-badge">{{ p.sku ?? '—' }}</span></td>
+                  <td>{{ p.categoria?.nombre ?? '—' }}</td>
+                  <td>{{ p.proveedor?.nombre ?? '—' }}</td>
+                  <td>{{ p.precio | currency:'EUR':'symbol':'1.2-2' }}</td>
+                  <td><strong>{{ p.stock_quantity }}</strong></td>
+                  @if (auth.isAdminOrGerente()) {
+                    <td class="stock-ajuste-cell">
+                      <input type="number" [(ngModel)]="stockAjuste[p.id]" min="0" step="1"
+                        class="stock-ajuste-input" [disabled]="actualizandoStockId === p.id" />
+                      <button class="btn-ajuste" (click)="establecerStock(p)"
+                        [disabled]="actualizandoStockId === p.id || stockAjuste[p.id] === p.stock_quantity">
+                        {{ actualizandoStockId === p.id ? '...' : '💾' }}
+                      </button>
+                    </td>
+                    <td>
+                      <button class="btn-del" (click)="eliminarProducto(p.id)" title="Eliminar">🗑️</button>
+                    </td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        } @else {
+          <p class="empty">No se encontraron productos.</p>
+        }
+        <div class="pagination">
+          <button class="page-btn" (click)="irAPagina('productos', paginaProductos - 1)" [disabled]="totalPaginasProductos <= 1 || paginaProductos === 1">‹</button>
+          <span class="page-info">Página {{ paginaProductos }} / {{ totalPaginasProductos || 1 }}</span>
+          <button class="page-btn" (click)="irAPagina('productos', paginaProductos + 1)" [disabled]="totalPaginasProductos <= 1 || paginaProductos === totalPaginasProductos">›</button>
+        </div>
       </div>
-    </ng-container>
+    }
 
     <!-- ── PROVEEDORES ────────────────────────────────────── -->
-    <ng-container *ngIf="vistaActiva === 'proveedores'">
+    @if (vistaActiva === 'proveedores') {
       <div class="summary-bar">
         <span>Total: <strong>{{ proveedores.length }}</strong> proveedores</span>
-        <button *ngIf="auth.isAdminOrGerente()" class="btn-add" (click)="abrirFormProveedor()">+ Añadir proveedor</button>
+        @if (auth.isAdminOrGerente()) {
+          <button class="btn-add" (click)="abrirFormProveedor()">+ Añadir proveedor</button>
+        }
       </div>
 
-      <div *ngIf="mostrarFormProveedor && auth.isAdminOrGerente()" class="form-panel">
-        <h4>Nuevo proveedor</h4>
-        <div class="form-grid">
-          <div class="form-field">
-            <label>Nombre *</label>
-            <input type="text" [(ngModel)]="nuevoProveedor.nombre" placeholder="Nombre" />
+      @if (mostrarFormProveedor && auth.isAdminOrGerente()) {
+        <div class="form-panel">
+          <h4>Nuevo proveedor</h4>
+          <div class="form-grid">
+            <div class="form-field">
+              <label>Nombre *</label>
+              <input type="text" [(ngModel)]="nuevoProveedor.nombre" placeholder="Nombre" />
+            </div>
+            <div class="form-field">
+              <label>Email</label>
+              <input type="email" [(ngModel)]="nuevoProveedor.contact_email" placeholder="Email" />
+            </div>
+            <div class="form-field">
+              <label>Teléfono</label>
+              <input type="text" [(ngModel)]="nuevoProveedor.phone" placeholder="Teléfono" />
+            </div>
+            <div class="form-field">
+              <label>Dirección</label>
+              <input type="text" [(ngModel)]="nuevoProveedor.address" placeholder="Dirección" />
+            </div>
           </div>
-          <div class="form-field">
-            <label>Email</label>
-            <input type="email" [(ngModel)]="nuevoProveedor.contact_email" placeholder="Email" />
-          </div>
-          <div class="form-field">
-            <label>Teléfono</label>
-            <input type="text" [(ngModel)]="nuevoProveedor.phone" placeholder="Teléfono" />
-          </div>
-          <div class="form-field">
-            <label>Dirección</label>
-            <input type="text" [(ngModel)]="nuevoProveedor.address" placeholder="Dirección" />
+          @if (errorProveedor) { <p class="error-inline">{{ errorProveedor }}</p> }
+          <div class="form-actions">
+            <button class="btn-save-form" (click)="crearProveedor()" [disabled]="guardandoProveedor">
+              {{ guardandoProveedor ? 'Guardando...' : '💾 Guardar' }}
+            </button>
+            <button class="btn-cancel-form" (click)="mostrarFormProveedor = false">Cancelar</button>
           </div>
         </div>
-        <p *ngIf="errorProveedor" class="error-inline">{{ errorProveedor }}</p>
-        <div class="form-actions">
-          <button class="btn-save-form" (click)="crearProveedor()" [disabled]="guardandoProveedor">
-            {{ guardandoProveedor ? 'Guardando...' : '💾 Guardar' }}
-          </button>
-          <button class="btn-cancel-form" (click)="mostrarFormProveedor = false">Cancelar</button>
-        </div>
-      </div>
+      }
 
       <div class="table-wrapper">
-        <table *ngIf="proveedores.length > 0; else sinProveedores">
-          <thead>
-            <tr>
-              <th>Nombre</th><th>Email</th><th>Teléfono</th><th>Dirección</th>
-              <th *ngIf="auth.isAdminOrGerente()">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            <ng-container *ngFor="let pv of proveedores">
-              <tr *ngIf="editandoProveedorId !== pv.id">
-                <td>{{ pv.nombre }}</td>
-                <td>{{ pv.contact_email ?? '—' }}</td>
-                <td>{{ pv.phone ?? '—' }}</td>
-                <td>{{ pv.address ?? '—' }}</td>
-                <td *ngIf="auth.isAdminOrGerente()" class="acciones">
-                  <button class="btn-edit" (click)="iniciarEditProveedor(pv)">✏️</button>
-                  <button class="btn-del" (click)="eliminarProveedor(pv.id)" title="Eliminar">🗑️</button>
-                </td>
+        @if (proveedores.length > 0) {
+          <table>
+            <thead>
+              <tr>
+                <th>Nombre</th><th>Email</th><th>Teléfono</th><th>Dirección</th>
+                @if (auth.isAdminOrGerente()) { <th>Acciones</th> }
               </tr>
-              <tr *ngIf="editandoProveedorId === pv.id" class="fila-edicion">
-                <td><input type="text" [(ngModel)]="editProvForm.nombre" class="input-edit" /></td>
-                <td><input type="email" [(ngModel)]="editProvForm.contact_email" class="input-edit" /></td>
-                <td><input type="text" [(ngModel)]="editProvForm.phone" class="input-edit" /></td>
-                <td><input type="text" [(ngModel)]="editProvForm.address" class="input-edit" /></td>
-                <td class="acciones">
-                  <button class="btn-save" (click)="guardarProveedor()" [disabled]="guardandoProveedor">
-                    {{ guardandoProveedor ? '...' : '💾' }}
-                  </button>
-                  <button class="btn-cancel" (click)="cancelarEditProveedor()">✖</button>
-                </td>
-              </tr>
-            </ng-container>
-          </tbody>
-        </table>
-        <ng-template #sinProveedores><p class="empty">No hay proveedores.</p></ng-template>
+            </thead>
+            <tbody>
+              @for (pv of proveedoresPaginados; track pv.id) {
+                @if (editandoProveedorId !== pv.id) {
+                  <tr>
+                    <td>{{ pv.nombre }}</td>
+                    <td>{{ pv.contact_email ?? '—' }}</td>
+                    <td>{{ pv.phone ?? '—' }}</td>
+                    <td>{{ pv.address ?? '—' }}</td>
+                    @if (auth.isAdminOrGerente()) {
+                      <td class="acciones">
+                        <button class="btn-edit" (click)="iniciarEditProveedor(pv)">✏️</button>
+                        <button class="btn-del" (click)="eliminarProveedor(pv.id)" title="Eliminar">🗑️</button>
+                      </td>
+                    }
+                  </tr>
+                } @else {
+                  <tr class="fila-edicion">
+                    <td>
+                      <input type="text" [(ngModel)]="editProvForm.nombre" class="input-edit" />
+                      @if (editProvError) { <span class="error-inline">{{ editProvError }}</span> }
+                    </td>
+                    <td><input type="email" [(ngModel)]="editProvForm.contact_email" class="input-edit" /></td>
+                    <td><input type="text" [(ngModel)]="editProvForm.phone" class="input-edit" /></td>
+                    <td><input type="text" [(ngModel)]="editProvForm.address" class="input-edit" /></td>
+                    <td class="acciones">
+                      <button class="btn-save" (click)="guardarProveedor()" [disabled]="guardandoProveedor">
+                        {{ guardandoProveedor ? '...' : '💾' }}
+                      </button>
+                      <button class="btn-cancel" (click)="cancelarEditProveedor()">✖</button>
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        } @else {
+          <p class="empty">No hay proveedores.</p>
+        }
+        <div class="pagination">
+          <button class="page-btn" (click)="irAPagina('proveedores', paginaProveedores - 1)" [disabled]="totalPaginasProveedores <= 1 || paginaProveedores === 1">‹</button>
+          <span class="page-info">Página {{ paginaProveedores }} / {{ totalPaginasProveedores || 1 }}</span>
+          <button class="page-btn" (click)="irAPagina('proveedores', paginaProveedores + 1)" [disabled]="totalPaginasProveedores <= 1 || paginaProveedores === totalPaginasProveedores">›</button>
+        </div>
       </div>
-    </ng-container>
+    }
 
-  </ng-container>
+  }
 </div>

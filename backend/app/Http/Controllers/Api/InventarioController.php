@@ -11,7 +11,7 @@ class InventarioController extends Controller
 {
     public function index()
     {
-        $inventarios = Inventario::with('producto')->get();
+        $inventarios = Inventario::with('producto.categoria', 'producto.proveedor')->get();
         return InventarioResource::collection($inventarios);
     }
 
@@ -34,7 +34,7 @@ class InventarioController extends Controller
 
     public function show($id)
     {
-        $inventario = Inventario::with('producto')->find($id);
+        $inventario = Inventario::with('producto.categoria', 'producto.proveedor')->find($id);
         if (!$inventario) {
             return response()->json(['error' => 'No encontrado'], 404);
         }

@@ -1,7 +1,8 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { forkJoin } from 'rxjs';
+import { forkJoin, interval, Subscription } from 'rxjs';
+import { startWith } from 'rxjs/operators';
 import { ApiService } from '../services/api.service';
 import { AuthService } from '../auth/auth.service';
 import { Jornada, ResumenJornada, ResumenMensualUsuario, ResumenMensualAdmin } from '../models/models';
@@ -13,11 +14,11 @@ import { Jornada, ResumenJornada, ResumenMensualUsuario, ResumenMensualAdmin } f
   templateUrl: './time-control.html',
   styleUrl: './time-control.css',
 })
-export class TimeControlComponent implements OnInit {
+export class TimeControlComponent implements OnInit, OnDestroy {
   private api = inject(ApiService);
   public auth = inject(AuthService);
 
-  vistaActiva: 'hoy' | 'mensual' = 'hoy';
+  vistaActiva: 'hoy' | 'mensual' = this.auth.isAdminOrGerente() ? 'hoy' : 'mensual';
 
   // Admin/Gerente - equipo
   resumen: ResumenJornada[] = [];
@@ -32,9 +33,13 @@ export class TimeControlComponent implements OnInit {
   resumenMensualAdmin: ResumenMensualAdmin[] = [];
   cargandoMensual = false;
 
-  // Detalle jornadas de un empleado (mensual)
+  // Detalle jornadas de un empleado (mensual) — admin/gerente
   expandedUserId: number | null = null;
   jornadasDetalle: Jornada[] = [];
+
+  // Detalle jornadas propias por día — empleado normal
+  expandedDia: string | null = null;
+  jornadasMensualesEmpleado: Jornada[] = [];
   cargandoDetalle = false;
   editandoJornadaId: number | null = null;
   editJornadaForm = { inicio: '', fin: '' };
@@ -46,6 +51,13 @@ export class TimeControlComponent implements OnInit {
   cargando = true;
   error = '';
 
+  // ── Jornada propia (fichar) ──
+  jornadaActiva: Jornada | null = null;
+  jornadaCargada = false;
+  accionJornada = false;
+  tiempoTranscurrido = '00:00:00';
+  private timerSub?: Subscription;
+
   meses = [
     { n: 1, label: 'Enero' }, { n: 2, label: 'Febrero' }, { n: 3, label: 'Marzo' },
     { n: 4, label: 'Abril' }, { n: 5, label: 'Mayo' }, { n: 6, label: 'Junio' },
@@ -54,6 +66,8 @@ export class TimeControlComponent implements OnInit {
   ];
 
   ngOnInit(): void {
+    this.cargarJornadaActiva();
+    this.cargarMensual();
     if (this.auth.isAdminOrGerente()) {
       forkJoin({
         resumen: this.api.getResumenJornadasHoy(),
@@ -74,9 +88,123 @@ export class TimeControlComponent implements OnInit {
     }
   }
 
+  ngOnDestroy(): void {
+    this.timerSub?.unsubscribe();
+  }
+
+  // ── Fichar ──
+  cargarJornadaActiva(): void {
+    this.api.getJornadaActiva().subscribe({
+      next: (j) => {
+        this.jornadaActiva = j;
+        this.jornadaCargada = true;
+        if (j) this.iniciarTimer();
+      },
+      error: () => {
+        this.jornadaActiva = null;
+        this.jornadaCargada = true;
+      },
+    });
+  }
+
+  iniciarJornada(): void {
+    this.accionJornada = true;
+    this.errorJornada = '';
+    this.api.iniciarJornada().subscribe({
+      next: (j) => {
+        this.jornadaActiva = j;
+        this.accionJornada = false;
+        this.iniciarTimer();
+        this.recargarJornadas();
+      },
+      error: (e) => {
+        this.errorJornada = e?.error?.error ?? 'Error al iniciar jornada.';
+        this.accionJornada = false;
+        if (e?.status === 422) this.cargarJornadaActiva();
+      },
+    });
+  }
+
+  finalizarJornada(): void {
+    if (!this.jornadaActiva) return;
+    this.accionJornada = true;
+    this.errorJornada = '';
+    this.api.finalizarJornada(this.jornadaActiva.id).subscribe({
+      next: () => {
+        this.jornadaActiva = null;
+        this.timerSub?.unsubscribe();
+        this.tiempoTranscurrido = '00:00:00';
+        this.accionJornada = false;
+        this.recargarJornadas();
+      },
+      error: () => {
+        this.errorJornada = 'Error al pausar el turno.';
+        this.accionJornada = false;
+      },
+    });
+  }
+
+  private recargarJornadas(): void {
+    if (this.auth.isAdminOrGerente()) {
+      this.api.getResumenJornadasHoy().subscribe((r) => (this.resumen = r));
+    }
+    this.api.getJornadas().subscribe((js) => (this.misJornadas = js));
+  }
+
+  private parseFecha(s: string | null | undefined): Date {
+    if (!s) return new Date(NaN);
+    return new Date(s.replace(' ', 'T'));
+  }
+
+  get jornadaInicioDate(): Date | null {
+    if (!this.jornadaActiva?.inicio) return null;
+    const d = this.parseFecha(this.jornadaActiva.inicio);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  private iniciarTimer(): void {
+    this.timerSub?.unsubscribe();
+    this.timerSub = interval(1000)
+      .pipe(startWith(0))
+      .subscribe(() => {
+        if (!this.jornadaActiva) return;
+        const minutosCompletados = this.jornadasPropias
+          .filter(j => j.fin != null)
+          .reduce((sum, j) => sum + (j.duracion_minutos ?? 0), 0);
+        const segundosActivos = Math.max(0, Math.floor(
+          (Date.now() - this.parseFecha(this.jornadaActiva.inicio).getTime()) / 1000,
+        ));
+        const total = minutosCompletados * 60 + segundosActivos;
+        const h = Math.floor(total / 3600);
+        const m = Math.floor((total % 3600) / 60);
+        const s = total % 60;
+        this.tiempoTranscurrido = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+      });
+  }
+
+  private get jornadasPropias(): Jornada[] {
+    const uid = this.auth.getCurrentUser()?.id;
+    return this.misJornadas.filter(j => j.user_id === uid);
+  }
+
+  get tramosCompletadosHoy(): number {
+    return this.jornadasPropias.filter(j => j.fin != null).length;
+  }
+
+  get totalMinutosHoy(): number {
+    return this.jornadasPropias.reduce((sum, j) => sum + (j.duracion_minutos ?? 0), 0);
+  }
+
+  get tiempoTotal(): string {
+    if (!this.jornadaActiva) return this.formatMin(this.totalMinutosHoy);
+    return this.tiempoTranscurrido;
+  }
+
+  // ── Mensual ──
   cargarMensual(): void {
     this.cargandoMensual = true;
     this.expandedUserId = null;
+    this.expandedDia = null;
     this.jornadasDetalle = [];
     this.api.getResumenMensual(this.mesSeleccionado, this.anoSeleccionado).subscribe({
       next: (data: any) => {
@@ -84,6 +212,11 @@ export class TimeControlComponent implements OnInit {
           this.resumenMensualAdmin = data;
         } else {
           this.resumenMensualUsuario = data;
+          const uid = this.auth.getCurrentUser()?.id;
+          if (uid) {
+            this.api.getJornadasUsuario(uid, this.mesSeleccionado, this.anoSeleccionado)
+              .subscribe({ next: (js) => { this.jornadasMensualesEmpleado = js; } });
+          }
         }
         this.cargandoMensual = false;
       },
@@ -91,10 +224,23 @@ export class TimeControlComponent implements OnInit {
     });
   }
 
+  toggleDia(fecha: string): void {
+    this.expandedDia = this.expandedDia === fecha ? null : fecha;
+  }
+
+  jornadasDelDia(fecha: string): Jornada[] {
+    return this.jornadasMensualesEmpleado.filter(j => j.inicio.slice(0, 10) === fecha);
+  }
+
   get miResumenMensual(): ResumenMensualAdmin | null {
     const user = this.auth.getCurrentUser();
     if (!user) return null;
     return this.resumenMensualAdmin.find(r => r.user_id === user.id) ?? null;
+  }
+
+  get miResumen(): { dias_trabajados: number; total_minutos: number } | null {
+    if (this.auth.isAdminOrGerente()) return this.miResumenMensual;
+    return this.resumenMensualUsuario;
   }
 
   get equipoResumenMensual(): ResumenMensualAdmin[] {

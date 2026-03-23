@@ -5,31 +5,22 @@
   <div class="help-card">
     <h3>📩 Enviar incidencia</h3>
 
-    <div *ngIf="exito" class="exito-msg">
-      <span>✅</span> {{ exito }}
-    </div>
-    <div *ngIf="error && !exito" class="error-msg">
-      {{ error }}
-    </div>
+    @if (exito) {
+      <div class="exito-msg"><span>✅</span> {{ exito }}</div>
+    }
+    @if (error && !exito) {
+      <div class="error-msg">{{ error }}</div>
+    }
 
     <div class="form-grid">
       <div class="form-field">
         <label>Nombre de la empresa *</label>
-        <input
-          type="text"
-          [(ngModel)]="form.empresa"
-          placeholder="Nombre de tu empresa"
-          [disabled]="enviando"
-        />
+        <input type="text" [(ngModel)]="form.empresa" placeholder="Nombre de tu empresa" [disabled]="enviando" />
       </div>
       <div class="form-field full">
         <label>Descripción de la incidencia *</label>
-        <textarea
-          [(ngModel)]="form.descripcion"
-          placeholder="Describe detalladamente el problema o consulta..."
-          rows="6"
-          [disabled]="enviando"
-        ></textarea>
+        <textarea [(ngModel)]="form.descripcion" placeholder="Describe detalladamente el problema o consulta..."
+          rows="6" [disabled]="enviando"></textarea>
       </div>
     </div>
 

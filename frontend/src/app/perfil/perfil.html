@@ -1,17 +1,17 @@
 <div class="perfil">
   <h2>Mi Perfil</h2>
 
-  <div *ngIf="cargando" class="loading">Cargando perfil...</div>
-  <div *ngIf="error" class="error">{{ error }}</div>
+  @if (cargando) { <div class="loading">Cargando perfil...</div> }
+  @if (error) { <div class="error">{{ error }}</div> }
 
-  <ng-container *ngIf="!cargando && !error">
+  @if (!cargando && !error) {
     <div class="perfil-layout">
 
       <!-- Avatar -->
       <div class="avatar-section">
         <div class="avatar-wrap">
-          <img *ngIf="fotoPreview" [src]="fotoPreview" alt="Foto de perfil" class="avatar-img" />
-          <div *ngIf="!fotoPreview" class="avatar-placeholder">{{ inicialNombre }}</div>
+          @if (fotoPreview) { <img [src]="fotoPreview" alt="Foto de perfil" class="avatar-img" /> }
+          @else { <div class="avatar-placeholder">{{ inicialNombre }}</div> }
         </div>
         <label class="btn-cambiar-foto">
           📷 Cambiar foto
@@ -41,8 +41,8 @@
           </div>
         </div>
 
-        <div *ngIf="exito" class="exito">{{ exito }}</div>
-        <div *ngIf="errorForm" class="error-inline">{{ errorForm }}</div>
+        @if (exito) { <div class="exito">{{ exito }}</div> }
+        @if (errorForm) { <div class="error-inline">{{ errorForm }}</div> }
 
         <div class="form-actions">
           <button class="btn-guardar" (click)="guardar()" [disabled]="guardando">
@@ -52,5 +52,5 @@
       </div>
 
     </div>
-  </ng-container>
+  }
 </div>

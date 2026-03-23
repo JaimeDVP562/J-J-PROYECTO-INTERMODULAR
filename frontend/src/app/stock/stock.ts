@@ -40,6 +40,7 @@ export class StockComponent implements OnInit {
   // Editar proveedor
   editandoProveedorId: number | null = null;
   editProvForm: Partial<Proveedor> = {};
+  editProvError = '';
   mostrarFormProveedor = false;
   nuevoProveedor: Partial<Proveedor> = {};
   guardandoProveedor = false;
@@ -47,6 +48,41 @@ export class StockComponent implements OnInit {
 
   // Stock en edición
   actualizandoStockId: number | null = null;
+  stockAjuste: { [id: number]: number } = {};
+
+  // Paginación
+  readonly porPagina = 10;
+  paginaInventario = 1;
+  paginaProductos = 1;
+  paginaProveedores = 1;
+
+  get inventariosPaginados(): Inventario[] {
+    const i = (this.paginaInventario - 1) * this.porPagina;
+    return this.inventarios.slice(i, i + this.porPagina);
+  }
+  get totalPaginasInventario(): number { return Math.ceil(this.inventarios.length / this.porPagina); }
+
+  get productosPaginados(): Producto[] {
+    const i = (this.paginaProductos - 1) * this.porPagina;
+    return this.productosFiltrados.slice(i, i + this.porPagina);
+  }
+  get totalPaginasProductos(): number { return Math.ceil(this.productosFiltrados.length / this.porPagina); }
+
+  get proveedoresPaginados(): Proveedor[] {
+    const i = (this.paginaProveedores - 1) * this.porPagina;
+    return this.proveedores.slice(i, i + this.porPagina);
+  }
+  get totalPaginasProveedores(): number { return Math.ceil(this.proveedores.length / this.porPagina); }
+
+  irAPagina(pagina: 'inventario' | 'productos' | 'proveedores', p: number): void {
+    if (pagina === 'inventario') {
+      if (p >= 1 && p <= this.totalPaginasInventario) this.paginaInventario = p;
+    } else if (pagina === 'productos') {
+      if (p >= 1 && p <= this.totalPaginasProductos) this.paginaProductos = p;
+    } else {
+      if (p >= 1 && p <= this.totalPaginasProveedores) this.paginaProveedores = p;
+    }
+  }
 
   ngOnInit(): void {
     this.cargar();
@@ -65,6 +101,7 @@ export class StockComponent implements OnInit {
         this.productosFiltrados = productos;
         this.proveedores = proveedores;
         this.categorias = categorias;
+        this.inicializarAjustes(productos);
         this.cargando = false;
       },
       error: () => { this.error = 'Error al cargar el stock.'; this.cargando = false; },
@@ -81,19 +118,31 @@ export class StockComponent implements OnInit {
       const matchCat = !this.categoriaFiltro || p.categoria_id === Number(this.categoriaFiltro);
       return matchQ && matchCat;
     });
+    this.paginaProductos = 1;
   }
 
-  // ── Stock +/- ──────────────────────────────────────────────────────
-  cambiarStock(p: Producto, delta: number): void {
-    const nuevo = Math.max(0, p.stock_quantity + delta);
+  // ── Inicializar mapa de ajuste ─────────────────────────────────────
+  inicializarAjustes(productos: Producto[]): void {
+    for (const p of productos) {
+      this.stockAjuste[p.id] = p.stock_quantity;
+    }
+  }
+
+  // ── Establecer stock directo ────────────────────────────────────────
+  establecerStock(p: Producto): void {
+    const nuevo = Math.max(0, Math.round(this.stockAjuste[p.id] ?? p.stock_quantity));
     if (nuevo === p.stock_quantity) return;
     this.actualizandoStockId = p.id;
     this.api.updateProducto(p.id, { stock_quantity: nuevo }).subscribe({
       next: () => {
         p.stock_quantity = nuevo;
+        this.stockAjuste[p.id] = nuevo;
         this.actualizandoStockId = null;
       },
-      error: () => { this.actualizandoStockId = null; },
+      error: () => {
+        this.stockAjuste[p.id] = p.stock_quantity;
+        this.actualizandoStockId = null;
+      },
     });
   }
 
@@ -121,6 +170,13 @@ export class StockComponent implements OnInit {
       this.errorProducto = 'Nombre y proveedor son obligatorios.';
       return;
     }
+    const nombreDup = this.productos.some(
+      p => p.nombre.trim().toLowerCase() === this.nuevoProducto.nombre!.trim().toLowerCase()
+    );
+    if (nombreDup) {
+      this.errorProducto = 'Ya existe un producto con ese nombre.';
+      return;
+    }
     this.guardandoProducto = true;
     this.api.createProducto(this.nuevoProducto).subscribe({
       next: () => {
@@ -128,6 +184,7 @@ export class StockComponent implements OnInit {
         this.mostrarFormProducto = false;
         this.api.getProductos().subscribe(p => {
           this.productos = p;
+          this.inicializarAjustes(p);
           this.filtrarProductos();
         });
       },
@@ -142,15 +199,28 @@ export class StockComponent implements OnInit {
   iniciarEditProveedor(p: Proveedor): void {
     this.editandoProveedorId = p.id;
     this.editProvForm = { nombre: p.nombre, contact_email: p.contact_email, phone: p.phone, address: p.address };
+    this.editProvError = '';
   }
 
   cancelarEditProveedor(): void {
     this.editandoProveedorId = null;
     this.editProvForm = {};
+    this.editProvError = '';
   }
 
   guardarProveedor(): void {
     if (!this.editandoProveedorId) return;
+    const nombreDup = this.editProvForm.nombre && this.proveedores.some(
+      p => p.id !== this.editandoProveedorId &&
+           p.nombre.trim().toLowerCase() === this.editProvForm.nombre!.trim().toLowerCase()
+    );
+    if (nombreDup) { this.editProvError = 'Ya existe un proveedor con ese nombre.'; return; }
+    const emailDup = this.editProvForm.contact_email && this.proveedores.some(
+      p => p.id !== this.editandoProveedorId &&
+           p.contact_email && p.contact_email.trim().toLowerCase() === this.editProvForm.contact_email!.trim().toLowerCase()
+    );
+    if (emailDup) { this.editProvError = 'Ya existe un proveedor con ese email.'; return; }
+    this.editProvError = '';
     this.guardandoProveedor = true;
     this.api.updateProveedor(this.editandoProveedorId, this.editProvForm).subscribe({
       next: () => {
@@ -177,6 +247,14 @@ export class StockComponent implements OnInit {
 
   crearProveedor(): void {
     if (!this.nuevoProveedor.nombre) { this.errorProveedor = 'El nombre es obligatorio.'; return; }
+    const nombreDup = this.proveedores.some(
+      p => p.nombre.trim().toLowerCase() === this.nuevoProveedor.nombre!.trim().toLowerCase()
+    );
+    if (nombreDup) { this.errorProveedor = 'Ya existe un proveedor con ese nombre.'; return; }
+    const emailDup = this.nuevoProveedor.contact_email && this.proveedores.some(
+      p => p.contact_email && p.contact_email.trim().toLowerCase() === this.nuevoProveedor.contact_email!.trim().toLowerCase()
+    );
+    if (emailDup) { this.errorProveedor = 'Ya existe un proveedor con ese email.'; return; }
     this.guardandoProveedor = true;
     this.api.createProveedor(this.nuevoProveedor).subscribe({
       next: () => {

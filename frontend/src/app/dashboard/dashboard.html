@@ -1,33 +1,14 @@
 <div class="dashboard">
-  <h2>Panel de Control</h2>
+  <h2>Dashboard</h2>
 
-  <!-- ── JORNADA: siempre visible para todos los roles ──────────── -->
-  <section class="jornada-section" *ngIf="jornadaCargada">
-    <div class="jornada-card" [class.activa]="jornadaActiva">
-      <button class="btn-iniciar" (click)="iniciarJornada()" [disabled]="accionJornada || !!jornadaActiva">
-        {{ accionJornada && !jornadaActiva ? 'Iniciando...' : '▶ Iniciar jornada' }}
-      </button>
-
-      <div class="jornada-center">
-        <span class="jornada-icon">{{ jornadaActiva ? '🟢' : '⚪' }}</span>
-        <div>
-          <p class="jornada-estado">{{ jornadaActiva ? 'Jornada en curso' : 'Sin jornada activa' }}</p>
-          <p *ngIf="jornadaActiva" class="jornada-timer">{{ tiempoTranscurrido }}</p>
-          <p *ngIf="jornadaActiva" class="jornada-inicio">Inicio: {{ jornadaInicioDate | date:'HH:mm' }}</p>
-        </div>
-      </div>
-
-      <button class="btn-finalizar" (click)="finalizarJornada()" [disabled]="accionJornada || !jornadaActiva">
-        {{ accionJornada && jornadaActiva ? 'Finalizando...' : '⏹ Finalizar jornada' }}
-      </button>
-    </div>
-    <p *ngIf="errorJornada" class="error-inline">{{ errorJornada }}</p>
-  </section>
+  <div class="fichar-banner">
+    <button class="btn-fichar" (click)="navigateToFichar()">⏱ Ir a fichar</button>
+  </div>
 
   <!-- ════════════════════════════════════════════════════════════ -->
   <!-- ── VISTA ADMIN / GERENTE ─────────────────────────────────── -->
   <!-- ════════════════════════════════════════════════════════════ -->
-  <ng-container *ngIf="auth.isAdminOrGerente()">
+  @if (auth.isAdminOrGerente()) {
 
     <!-- 1 ── Balance por rango de fechas ──────────────────────── -->
     <section class="balance-section">
@@ -44,9 +25,9 @@
         </div>
       </div>
 
-      <div *ngIf="errorStats" class="error">{{ errorStats }}</div>
+      @if (errorStats) { <div class="error">{{ errorStats }}</div> }
 
-      <ng-container *ngIf="stats && !cargandoStats">
+      @if (stats && !cargandoStats) {
         <div class="balance-grid">
           <div class="balance-card ingresos">
             <span class="balance-icon">📈</span>
@@ -123,151 +104,177 @@
         <!-- 3 ── Ventas por usuario hoy ───────────────────────── -->
         <section class="table-section">
           <h3>👤 Ventas por usuario hoy</h3>
-          <table *ngIf="stats.usuarios_hoy.length > 0; else sinUsuariosHoy">
-            <thead>
-              <tr>
-                <th>Empleado</th>
-                <th>Nº operaciones</th>
-                <th>Facturación total</th>
-                <th>Promedio / venta</th>
-                <th>Devoluciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let u of stats.usuarios_hoy">
-                <td>{{ u.nombre }}</td>
-                <td>{{ u.num_ventas }}</td>
-                <td>{{ u.total | currency:'EUR':'symbol':'1.2-2' }}</td>
-                <td>{{ u.promedio | currency:'EUR':'symbol':'1.2-2' }}</td>
-                <td>{{ u.num_devoluciones > 0 ? (u.num_devoluciones + ' — ' + (u.importe_devoluciones | currency:'EUR':'symbol':'1.2-2')) : '—' }}</td>
-              </tr>
-            </tbody>
-          </table>
-          <ng-template #sinUsuariosHoy>
+          @if (stats.usuarios_hoy.length > 0) {
+            <table>
+              <thead>
+                <tr>
+                  <th>Empleado</th>
+                  <th>Nº operaciones</th>
+                  <th>Facturación total</th>
+                  <th>Promedio / venta</th>
+                  <th>Devoluciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (u of stats.usuarios_hoy; track u.nombre) {
+                  <tr>
+                    <td>{{ u.nombre }}</td>
+                    <td>{{ u.num_ventas }}</td>
+                    <td>{{ u.total | currency:'EUR':'symbol':'1.2-2' }}</td>
+                    <td>{{ u.promedio | currency:'EUR':'symbol':'1.2-2' }}</td>
+                    <td>{{ u.num_devoluciones > 0 ? (u.num_devoluciones + ' — ' + (u.importe_devoluciones | currency:'EUR':'symbol':'1.2-2')) : '—' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          } @else {
             <p class="empty">Ningún usuario ha registrado ventas hoy.</p>
-          </ng-template>
+          }
         </section>
-
-      </ng-container>
+      }
     </section>
 
     <!-- 4 ── Actividad de empleados hoy ──────────────────────── -->
-    <div *ngIf="cargandoAdmin" class="loading">Cargando datos...</div>
-    <div *ngIf="errorAdmin" class="error">{{ errorAdmin }}</div>
+    @if (cargandoAdmin) { <div class="loading">Cargando datos...</div> }
+    @if (errorAdmin) { <div class="error">{{ errorAdmin }}</div> }
 
-    <section class="table-section" *ngIf="!cargandoAdmin && !errorAdmin">
-      <h3>⏱ Actividad de empleados hoy</h3>
-      <table *ngIf="resumenJornadas.length > 0; else sinJornadas">
-        <thead>
-          <tr>
-            <th>Empleado</th><th>Rol</th><th>Jornadas</th><th>Tiempo total</th><th>Estado</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let r of resumenJornadas">
-            <td>{{ r.nombre }}</td>
-            <td>{{ r.rol }}</td>
-            <td>{{ r.num_jornadas }}</td>
-            <td>{{ formatMinutos(r.total_minutos) }}</td>
-            <td>
-              <span *ngIf="r.jornada_activa" class="badge-activa">🟢 En curso</span>
-              <span *ngIf="!r.jornada_activa" class="badge-inactiva">⚪ Sin jornada</span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      <ng-template #sinJornadas><p class="empty">Ningún empleado ha registrado jornada hoy.</p></ng-template>
-    </section>
+    @if (!cargandoAdmin && !errorAdmin) {
+      <section class="table-section">
+        <h3>⏱ Actividad de empleados hoy</h3>
+        @if (resumenJornadas.length > 0) {
+          <table>
+            <thead>
+              <tr>
+                <th>Empleado</th><th>Rol</th><th>Jornadas</th><th>Tiempo total</th><th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (r of resumenJornadas; track r.nombre) {
+                <tr>
+                  <td>{{ r.nombre }}</td>
+                  <td>{{ r.rol }}</td>
+                  <td>{{ r.num_jornadas }}</td>
+                  <td>{{ formatMinutos(r.total_minutos) }}</td>
+                  <td>
+                    @if (r.jornada_activa) { <span class="badge-activa">🟢 En curso</span> }
+                    @else { <span class="badge-inactiva">⚪ Sin jornada</span> }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        } @else {
+          <p class="empty">Ningún empleado ha registrado jornada hoy.</p>
+        }
+      </section>
+    }
 
-  </ng-container>
+  }
 
   <!-- ════════════════════════════════════════════════════════════ -->
   <!-- ── VISTA USUARIO NORMAL ─────────────────────────────────── -->
   <!-- ════════════════════════════════════════════════════════════ -->
-  <ng-container *ngIf="!auth.isAdminOrGerente()">
+  @if (!auth.isAdminOrGerente()) {
 
-    <div *ngIf="cargandoUsuario" class="loading">Cargando actividad...</div>
+    @if (cargandoUsuario) { <div class="loading">Cargando actividad...</div> }
 
-    <ng-container *ngIf="!cargandoUsuario">
+    @if (!cargandoUsuario) {
 
       <div class="dia-header">
         <span class="dia-nombre">{{ diaSemana }}</span>
         <span class="dia-fecha">{{ today | date:'dd/MM/yyyy' }}</span>
       </div>
 
-      <div class="stats-grid">
-        <div class="stat-card">
-          <span class="stat-icon">⏱</span>
-          <div class="stat-info">
-            <span class="stat-value">{{ tiempoTrabajadoHoy }}</span>
-            <span class="stat-label">Tiempo trabajado hoy</span>
+      <!-- Balance propio hoy -->
+      <section class="balance-section">
+        <div class="balance-header">
+          <h3>📊 Mi balance hoy</h3>
+        </div>
+        <div class="balance-grid">
+          <div class="balance-card ingresos">
+            <span class="balance-icon">🛒</span>
+            <div>
+              <span class="balance-valor">{{ ventasHoyCount }}</span>
+              <span class="balance-label">Ventas realizadas hoy</span>
+            </div>
+          </div>
+          <div class="balance-card ingresos">
+            <span class="balance-icon">💰</span>
+            <div>
+              <span class="balance-valor">{{ importeTotalHoy | currency:'EUR':'symbol':'1.2-2' }}</span>
+              <span class="balance-label">Importe total hoy</span>
+            </div>
+          </div>
+          <div class="balance-card diferencia positivo">
+            <span class="balance-icon">📊</span>
+            <div>
+              <span class="balance-valor">{{ promedioVentaHoy | currency:'EUR':'symbol':'1.2-2' }}</span>
+              <span class="balance-label">Ticket medio por venta</span>
+            </div>
+          </div>
+          <div class="balance-card gastos">
+            <span class="balance-icon">↩️</span>
+            <div>
+              <span class="balance-valor">{{ devolucionesHoyCount }} — {{ importeDevolucionesHoy | currency:'EUR':'symbol':'1.2-2' }}</span>
+              <span class="balance-label">Devoluciones hoy</span>
+            </div>
           </div>
         </div>
-        <div class="stat-card">
-          <span class="stat-icon">🛒</span>
-          <div class="stat-info">
-            <span class="stat-value">{{ ventasHoyCount }}</span>
-            <span class="stat-label">Ventas realizadas hoy</span>
-          </div>
-        </div>
-        <div class="stat-card">
-          <span class="stat-icon">💰</span>
-          <div class="stat-info">
-            <span class="stat-value">{{ importeTotalHoy | currency:'EUR':'symbol':'1.2-2' }}</span>
-            <span class="stat-label">Importe total hoy</span>
-          </div>
-        </div>
-        <div class="stat-card">
-          <span class="stat-icon">📊</span>
-          <div class="stat-info">
-            <span class="stat-value">{{ promedioVentaHoy | currency:'EUR':'symbol':'1.2-2' }}</span>
-            <span class="stat-label">Ticket medio por venta</span>
-          </div>
-        </div>
-        <div class="stat-card">
-          <span class="stat-icon">↩️</span>
-          <div class="stat-info">
-            <span class="stat-value">{{ devolucionesHoyCount }} — {{ importeDevolucionesHoy | currency:'EUR':'symbol':'1.2-2' }}</span>
-            <span class="stat-label">Devoluciones hoy</span>
-          </div>
-        </div>
-      </div>
+      </section>
 
       <section class="table-section">
         <h3>⏰ Mis jornadas hoy</h3>
-        <table *ngIf="misJornadas.length > 0; else sinMisJornadas">
-          <thead><tr><th>Inicio</th><th>Fin</th><th>Duración</th></tr></thead>
-          <tbody>
-            <tr *ngFor="let j of misJornadas">
-              <td>{{ j.inicio | date:'HH:mm' }}</td>
-              <td>{{ j.fin ? (j.fin | date:'HH:mm') : '—' }}</td>
-              <td>
-                <span *ngIf="j.duracion_minutos != null">{{ formatMinutos(j.duracion_minutos) }}</span>
-                <span *ngIf="j.duracion_minutos == null" class="badge-activa">🟢 En curso</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <ng-template #sinMisJornadas><p class="empty">No has registrado jornadas hoy.</p></ng-template>
+        @if (misJornadas.length > 0) {
+          <table>
+            <thead><tr><th>Inicio</th><th>Fin</th><th>Duración</th></tr></thead>
+            <tbody>
+              @for (j of misJornadas; track j.id) {
+                <tr>
+                  <td>{{ j.inicio | date:'HH:mm' }}</td>
+                  <td>{{ j.fin ? (j.fin | date:'HH:mm') : '—' }}</td>
+                  <td>
+                    @if (j.duracion_minutos != null) { <span>{{ formatMinutos(j.duracion_minutos) }}</span> }
+                    @else { <span class="badge-activa">🟢 En curso</span> }
+                  </td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              @if (misJornadas.length > 1) {
+                <tr class="fila-total">
+                  <td colspan="2">Total del día</td>
+                  <td>{{ formatMinutos(totalMinutosHoy) }}</td>
+                </tr>
+              }
+            </tfoot>
+          </table>
+        } @else {
+          <p class="empty">No has registrado jornadas hoy.</p>
+        }
       </section>
 
       <section class="table-section">
         <h3>🛒 Mis ventas hoy</h3>
-        <table *ngIf="misVentasHoy.length > 0; else sinVentasHoy">
-          <thead><tr><th>#</th><th>Total</th><th>Método</th><th>Hora</th></tr></thead>
-          <tbody>
-            <tr *ngFor="let v of misVentasHoy">
-              <td>{{ v.id }}</td>
-              <td>{{ v.total | currency:'EUR':'symbol':'1.2-2' }}</td>
-              <td>{{ v.metodo_pago }}</td>
-              <td>{{ v.fecha_venta | date:'HH:mm' }}</td>
-            </tr>
-          </tbody>
-        </table>
-        <ng-template #sinVentasHoy><p class="empty">No has realizado ventas hoy.</p></ng-template>
+        @if (misVentasHoy.length > 0) {
+          <table>
+            <thead><tr><th>#</th><th>Total</th><th>Método</th><th>Hora</th></tr></thead>
+            <tbody>
+              @for (v of misVentasHoy; track v.id) {
+                <tr>
+                  <td>{{ v.id }}</td>
+                  <td>{{ v.total | currency:'EUR':'symbol':'1.2-2' }}</td>
+                  <td>{{ v.metodo_pago }}</td>
+                  <td>{{ v.fecha_venta | date:'HH:mm' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        } @else {
+          <p class="empty">No has realizado ventas hoy.</p>
+        }
       </section>
 
-    </ng-container>
-  </ng-container>
+    }
+  }
 
 </div>

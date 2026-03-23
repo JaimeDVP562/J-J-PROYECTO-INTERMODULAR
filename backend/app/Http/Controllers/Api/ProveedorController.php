@@ -20,8 +20,8 @@ class ProveedorController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'nombre' => 'required|string|max:255',
-            'contact_email' => 'nullable|email|max:255',
+            'nombre' => 'required|string|max:255|unique:proveedores,nombre',
+            'contact_email' => 'nullable|email|max:255|unique:proveedores,contact_email',
             'phone' => 'nullable|string|max:20',
             'address' => 'nullable|string',
         ]);
@@ -52,8 +52,8 @@ class ProveedorController extends Controller
             return response()->json(['error' => 'No encontrado'], 404);
         }
         $validated = $request->validate([
-            'nombre' => 'sometimes|string|max:255',
-            'contact_email' => 'nullable|email|max:255',
+            'nombre' => 'sometimes|string|max:255|unique:proveedores,nombre,' . $id,
+            'contact_email' => 'nullable|email|max:255|unique:proveedores,contact_email,' . $id,
             'phone' => 'nullable|string|max:20',
             'address' => 'nullable|string',
         ]);
