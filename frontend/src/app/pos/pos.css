@@ -2,7 +2,8 @@
   --cart-width: 380px;
   display: grid;
   grid-template-columns: 1fr 8px var(--cart-width);
-  height: calc(100vh - 120px);
+  min-height: calc(100vh - 120px);
+  height: auto;
   gap: 0;
   position: relative;
   background: #f0f4f8;
@@ -39,7 +40,7 @@
   grid-column: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: visible;
   padding: 1rem;
 }
 
@@ -527,6 +528,17 @@ textarea.pos-input {
   gap: 0.5rem;
 }
 
+/* Allow resumen tables to expand and show all rows (no internal scrollbar) */
+.ventas-wrapper .table-wrapper,
+.devoluciones-wrapper .table-wrapper,
+.cierres-wrapper .table-wrapper {
+  max-height: none;
+  /* allow table to expand to show all rows */
+  overflow: visible !important;
+  /* show all rows without internal scrollbar */
+  height: auto !important;
+}
+
 /* Make tables use fixed layout so columns respect widths and buttons stay visible */
 .table-wrapper {
   overflow: auto;
@@ -808,6 +820,37 @@ textarea.pos-input {
   background: #0a2342;
   color: #fff;
   border-color: #0a2342;
+}
+
+/* Reusable tab-like control for selects and buttons in filter bars */
+.tab-like {
+  padding: 0.5rem 1.2rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  background: #f8fafc;
+  color: #475569;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.tab-like:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(10, 35, 66, 0.06);
+}
+
+.tab-like.active {
+  background: #0a2342;
+  color: #fff;
+  border-color: #0a2342;
+}
+
+/* Ensure selects styled as .tab-like keep native dropdown arrow appearance */
+.tab-like.select {
+  appearance: menulist;
 }
 
 /* Devolucion (moved from billing) */
@@ -1145,8 +1188,10 @@ tr:hover td {
 .ventas-wrapper,
 .devoluciones-wrapper,
 .cierres-wrapper {
-  max-height: 360px;
-  overflow: auto;
+  max-height: none;
+  /* allow wrapper to grow/shrink with content */
+  overflow: visible;
+  /* show all rows without internal scrollbar */
 }
 
 .ventas-wrapper table,

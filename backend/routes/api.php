@@ -23,7 +23,12 @@ Route::middleware('auth.apitoken')->group(function () {
     Route::apiResource('productos', ProductoController::class);
     Route::apiResource('proveedores', ProveedorController::class);
     Route::apiResource('clientes', \App\Http\Controllers\Api\ClienteController::class);
+    // Colocar la ruta específica antes del resource para evitar que
+    // 'next-number' sea interpretado como {factura} por la ruta 'show'
+    Route::get('facturas/next-number', [\App\Http\Controllers\Api\FacturaController::class, 'nextNumber']);
     Route::apiResource('facturas', \App\Http\Controllers\Api\FacturaController::class);
+    // Re-send factura to Verifactu (mock/service)
+    Route::post('facturas/{id}/resend-verifactu', [\App\Http\Controllers\Api\FacturaController::class, 'resendVerifactu']);
     Route::apiResource('detalle-facturas', \App\Http\Controllers\Api\DetalleFacturaController::class);
     Route::apiResource('empleados', \App\Http\Controllers\Api\EmpleadoController::class);
     Route::apiResource('inventarios', \App\Http\Controllers\Api\InventarioController::class);
@@ -61,6 +66,9 @@ Route::middleware('auth.apitoken')->group(function () {
     Route::get('devoluciones/mis-hoy', [DevolucionController::class, 'misHoy']);
     Route::get('devoluciones', [DevolucionController::class, 'index']);
     Route::post('devoluciones', [DevolucionController::class, 'store']);
+
+    // Empresa emisora
+    Route::get('empresa', [\App\Http\Controllers\Api\EmpresaController::class, 'show']);
 
     // Perfil
     Route::get('perfil', [PerfilController::class, 'show']);

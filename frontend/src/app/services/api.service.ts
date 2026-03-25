@@ -102,6 +102,13 @@ export class ApiService {
   getFacturas(): Observable<Factura[]> {
     return this.http.get<Factura[]>(`${this.baseUrl}/facturas`);
   }
+  getNextFacturaNumber(series?: string): Observable<{ series: string; next: number }> {
+    const q = series ? `?series=${encodeURIComponent(series)}` : '';
+    return this.http.get<{ series: string; next: number }>(`${this.baseUrl}/facturas/next-number${q}`);
+  }
+  getEmpresa(): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/empresa`);
+  }
   getFactura(id: number): Observable<Factura> {
     return this.http.get<Factura>(`${this.baseUrl}/facturas/${id}`);
   }
@@ -113,6 +120,9 @@ export class ApiService {
   }
   deleteFactura(id: number): Observable<any> {
     return this.http.delete(`${this.baseUrl}/facturas/${id}`);
+  }
+  resendVerifactu(id: number): Observable<Factura> {
+    return this.http.post<Factura>(`${this.baseUrl}/facturas/${id}/resend-verifactu`, {});
   }
 
   // Empleados
