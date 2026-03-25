@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use App\Http\Resources\DetalleFacturaResource;
 
 class FacturaResource extends JsonResource
 {
@@ -27,7 +28,7 @@ class FacturaResource extends JsonResource
             'status' => $this->status,
             'invoice_date' => $this->invoice_date,
             'due_date' => $this->due_date,
-            'detalles' => $this->detalles,
+            'detalles' => DetalleFacturaResource::collection($this->whenLoaded('detalles')),
             'proveedor' => $this->proveedor,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

@@ -630,6 +630,13 @@ tr:hover td {
   color: #334155;
 }
 
+/* Ensure detalle-items header text is visible on dark background */
+.detalle-items thead th {
+  background: #0a2342;
+  color: #ffffff;
+  font-weight: 700;
+}
+
 .tax-row {
   display: flex;
   justify-content: space-between;

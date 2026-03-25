@@ -40,22 +40,28 @@ export class BillingComponent implements OnInit {
   // Expanded factura for details panel (similar to POS cierres)
   expandedFacturaId: number | null = null;
   // Control de pestañas/vistas (la plantilla usa `vistaActiva`)
-  vistaActiva: 'facturas' | 'factura' = 'facturas';
+  vistaActiva: 'facturas' | 'factura' | 'clientes' = 'facturas';
   editandoId: number | null = null;
   editForm: Partial<Factura> = {};
   guardando = false;
   eliminandoId: number | null = null;
   editError = '';
+  // Clientes CRUD UI state
+  clienteForm: Partial<Cliente> = {};
+  editingClienteId: number | null = null;
+  clienteSaving = false;
+  clienteFormError = '';
   // Crear factura
   createForm: Partial<Factura> & {
     proveedor_id?: number | null;
     payment_method?: string;
     iban?: string;
     detalles?: {
-      producto_id: number;
+      producto_id?: number | null;
       cantidad: number;
       precio_unitario: number;
       descripcion?: string;
+      nombre?: string;
     }[];
   } = { detalles: [] };
   // productos disponibles para añadir a la factura
@@ -65,6 +71,12 @@ export class BillingComponent implements OnInit {
   newItemDescripcion = '';
   newItemCantidad = 1;
   newItemPrecio = 0;
+  newItemLoadingProducto = false;
+  // manual item inputs
+  newItemManualNombre = '';
+  newItemManualCantidad = 1;
+  newItemManualPrecio = 0;
+  newItemManualDescripcion = '';
   creando = false;
   createError = '';
 
@@ -115,6 +127,11 @@ export class BillingComponent implements OnInit {
     });
   }
 
+  private parsePrecio(v: any): number {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  }
+
   cargarClientes(): void {
     this.api.getClientes().subscribe({
       next: (data) => (this.clientes = data),
@@ -147,7 +164,12 @@ export class BillingComponent implements OnInit {
             }
             dedup.push(f);
           }
-          this.facturas = dedup;
+          // Order by invoice number descending so latest appear first in resumen
+          this.facturas = dedup.sort((a, b) => {
+            const an = Number(a?.number ?? 0);
+            const bn = Number(b?.number ?? 0);
+            return bn - an;
+          });
         } else {
           this.facturas = data as any;
         }
@@ -254,9 +276,137 @@ export class BillingComponent implements OnInit {
     this.vistaActiva = 'facturas';
   }
 
+  showFacturas(): void {
+    this.vistaActiva = 'facturas';
+  }
+
+  showCrearFactura(): void {
+    // prepare form and fetch fresh next-number from server so it's always up-to-date
+    this.createForm = this.createForm ?? { detalles: [] };
+    // ensure series is set (may have been set in cargarEmpresa earlier)
+    const seriesToQuery = this.createForm.series || undefined;
+    this.api.getNextFacturaNumber(seriesToQuery).subscribe({
+      next: (resp) => {
+        if (resp && typeof resp.next === 'number') {
+          this.createForm.number = resp.next;
+        }
+      },
+      error: () => {
+        // ignore; backend will assign number on create
+      },
+    });
+    this.vistaActiva = 'factura';
+  }
+
+  // ── Clientes (CRUD) ──
+  showClientes(): void {
+    this.vistaActiva = 'clientes';
+    // ensure fresh list
+    this.cargarClientes();
+    this.clienteForm = {};
+    this.editingClienteId = null;
+  }
+
+  startEditCliente(c: Cliente): void {
+    this.editingClienteId = c.id;
+    this.clienteForm = { nombre: c.nombre, email: c.email, phone: c.phone, address: c.address };
+  }
+
+  cancelEditCliente(): void {
+    this.editingClienteId = null;
+    this.clienteForm = {};
+    // Return to main facturas view like cancelarNuevaFactura
+    this.vistaActiva = 'facturas';
+  }
+
+  saveCliente(): void {
+    this.clienteFormError = '';
+    if (!this.clienteForm || !this.clienteForm.nombre) {
+      this.clienteFormError = 'El nombre es obligatorio.';
+      return;
+    }
+
+    const name = String(this.clienteForm.nombre || '').trim();
+    const email = String(this.clienteForm.email || '')
+      .trim()
+      .toLowerCase();
+    const phone = String(this.clienteForm.phone || '').trim();
+    const address = String(this.clienteForm.address || '').trim();
+
+    // Check duplicate name (case-insensitive), excluding currently editing client
+    const dupName = (this.clientes || []).some(
+      (c) =>
+        c.id !== this.editingClienteId &&
+        String(c.nombre || '')
+          .trim()
+          .toLowerCase() === name.toLowerCase(),
+    );
+    if (dupName) {
+      this.clienteFormError = 'Ya existe un cliente con ese nombre.';
+      return;
+    }
+
+    // If email, phone and address are all provided, ensure no existing client has the same triple
+    if (email && phone && address) {
+      const dupContact = (this.clientes || []).some((c) => {
+        if (c.id === this.editingClienteId) return false;
+        const ce = String(c.email || '')
+          .trim()
+          .toLowerCase();
+        const cp = String(c.phone || '').trim();
+        const ca = String(c.address || '').trim();
+        return ce === email && cp === phone && ca === address;
+      });
+      if (dupContact) {
+        this.clienteFormError = 'Ya existe un cliente con el mismo email, teléfono y dirección.';
+        return;
+      }
+    }
+
+    this.clienteSaving = true;
+    const payload: Partial<Cliente> = {
+      nombre: name,
+      email: email || undefined,
+      phone: phone || undefined,
+      address: address || undefined,
+    };
+    if (this.editingClienteId) {
+      this.api.updateCliente(this.editingClienteId, payload).subscribe({
+        next: () => {
+          this.clienteSaving = false;
+          this.cargarClientes();
+          this.cancelEditCliente();
+        },
+        error: () => {
+          this.clienteSaving = false;
+        },
+      });
+    } else {
+      this.api.createCliente(payload).subscribe({
+        next: () => {
+          this.clienteSaving = false;
+          this.cargarClientes();
+          this.clienteForm = {};
+        },
+        error: () => {
+          this.clienteSaving = false;
+        },
+      });
+    }
+  }
+
+  deleteCliente(id: number): void {
+    if (!confirm('¿Eliminar este cliente?')) return;
+    this.api.deleteCliente(id).subscribe({
+      next: () => this.cargarClientes(),
+      error: () => {},
+    });
+  }
+
   // ── Items para nueva factura ──
   addItemToCreate(): void {
     if (!this.newItemProductoId) return;
+    if (this.newItemLoadingProducto) return; // avoid adding while price is loading
     const pid = Number(this.newItemProductoId);
     const cantidad = Number(this.newItemCantidad) || 0;
     const precio = Number(this.newItemPrecio) || 0;
@@ -276,17 +426,64 @@ export class BillingComponent implements OnInit {
     this.newItemPrecio = 0;
   }
 
+  addManualItemToCreate(): void {
+    const nombre = String(this.newItemManualNombre || '').trim();
+    const cantidad = Number(this.newItemManualCantidad) || 0;
+    const precio = Number(this.newItemManualPrecio) || 0;
+    if (!nombre) return;
+    if (cantidad <= 0 || precio < 0) return;
+    if (!this.createForm.detalles) this.createForm.detalles = [];
+    const detalleItem = {
+      producto_id: null,
+      cantidad,
+      precio_unitario: precio,
+      // keep descripcion as entered; if nombre was left empty, use descripcion as fallback for display
+      descripcion: this.newItemManualDescripcion || '',
+      nombre: nombre || this.newItemManualDescripcion || '',
+    };
+    this.createForm.detalles.push(detalleItem as any);
+    // reset manual inputs
+    this.newItemManualNombre = '';
+    this.newItemManualCantidad = 1;
+    this.newItemManualPrecio = 0;
+    this.newItemManualDescripcion = '';
+  }
+
   onSelectProducto(productId: number | null): void {
     if (productId === null || productId === undefined) {
       this.newItemPrecio = 0;
       return;
     }
-    const p = (this.productos || []).find((x) => x.id === Number(productId));
-    if (p && typeof p.precio === 'number') {
-      this.newItemPrecio = p.precio;
-    } else {
-      this.newItemPrecio = 0;
+    const pid = Number(productId);
+    const p = (this.productos || []).find((x) => x.id === pid);
+    if (p) {
+      this.newItemPrecio = this.parsePrecio((p as any).precio);
+      // auto-fill description if product provides one
+      if ((p as any).descripcion) this.newItemDescripcion = (p as any).descripcion;
+      return;
     }
+
+    // If product not present in local cache, fetch from API and cache it
+    this.newItemLoadingProducto = true;
+    this.newItemPrecio = 0;
+    this.api.getProducto(pid).subscribe({
+      next: (prod) => {
+        this.newItemPrecio = this.parsePrecio((prod as any).precio);
+        if ((prod as any).descripcion) this.newItemDescripcion = (prod as any).descripcion;
+        // cache fetched product for future selections
+        if (prod && typeof (prod as any).id === 'number') {
+          this.productos = Array.isArray(this.productos) ? this.productos : [];
+          const exists = this.productos.find((x) => x.id === (prod as any).id);
+          if (!exists) this.productos.push(prod as any);
+        }
+        this.newItemLoadingProducto = false;
+      },
+      error: (err) => {
+        console.error('[billing] getProducto error:', err);
+        this.newItemPrecio = 0;
+        this.newItemLoadingProducto = false;
+      },
+    });
   }
 
   removeCreateItem(index: number): void {
@@ -301,6 +498,48 @@ export class BillingComponent implements OnInit {
       (s, it) => s + Number(it.cantidad) * Number(it.precio_unitario),
       0,
     );
+  }
+
+  // IVA configuration (frontend visual only). Backend will perform its own tax calculations.
+  readonly IVA_PERCENT = 21;
+  readonly EXAMPLE_IBAN = 'ES00 0000 0000 0000 0000';
+
+  computeCreateIvaAmount(): number {
+    const subtotal = this.computeCreateTotal();
+    // round to 2 decimals
+    return Math.round(subtotal * (this.IVA_PERCENT / 100) * 100) / 100;
+  }
+
+  computeCreateDisplayedTotal(): number {
+    const subtotal = this.computeCreateTotal();
+    const iva = this.computeCreateIvaAmount();
+    return Math.round((subtotal + iva) * 100) / 100;
+  }
+
+  formatEUR(value: number): string {
+    const n = Number.isFinite(Number(value)) ? Number(value) : 0;
+    return n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '€';
+  }
+
+  // Helpers to compute totals for an existing factura (used in detail view)
+  computeFacturaSubtotal(f: Factura): number {
+    if (!f || !f.detalles || f.detalles.length === 0) return 0;
+    return f.detalles.reduce((s, d) => s + Number(d.cantidad) * Number(d.precio_unitario), 0);
+  }
+
+  computeFacturaIvaAmount(f: Factura): number {
+    const subtotal = this.computeFacturaSubtotal(f);
+    return Math.round(subtotal * (this.IVA_PERCENT / 100) * 100) / 100;
+  }
+
+  computeFacturaDisplayedTotal(f: Factura): number {
+    const subtotal = this.computeFacturaSubtotal(f);
+    const iva = this.computeFacturaIvaAmount(f);
+    return Math.round((subtotal + iva) * 100) / 100;
+  }
+
+  getFacturaIban(f: Factura): string {
+    return (f && f.iban) || this.EXAMPLE_IBAN;
   }
 
   getProductoNombre(producto_id?: number | null): string | number {
@@ -342,8 +581,15 @@ export class BillingComponent implements OnInit {
       this.createForm.user_id = current.id;
     }
 
-    this.api.createFactura(this.createForm).subscribe({
-      next: () => {
+    // Do not send the pre-fetched `number` to the API so the backend
+    // can assign the canonical sequential number atomically.
+    const payload: any = { ...this.createForm };
+    if (Object.prototype.hasOwnProperty.call(payload, 'number')) delete payload.number;
+
+    // debug logs removed
+
+    this.api.createFactura(payload).subscribe({
+      next: (resp) => {
         this.creando = false;
         this.createForm = {};
         this.vistaActiva = 'facturas';
@@ -498,6 +744,13 @@ export class BillingComponent implements OnInit {
           seen2.add(f.id);
         }
         return true;
+      });
+
+      // ensure filtered list keeps the same ordering (number desc)
+      this.facturasFiltradas.sort((a, b) => {
+        const an = Number(a?.number ?? 0);
+        const bn = Number(b?.number ?? 0);
+        return bn - an;
       });
 
       this.facturasTotal = this.facturasFiltradas.length;
