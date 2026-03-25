@@ -10,6 +10,7 @@ class DetalleFactura extends Model
     protected $fillable = [
         'factura_id',
         'producto_id',
+        'producto_random_id',
         'cantidad',
         'precio_unitario',
         'subtotal',
@@ -23,5 +24,10 @@ class DetalleFactura extends Model
     public function producto()
     {
         return $this->belongsTo(Producto::class);
+    }
+
+    public function producto_random()
+    {
+        return $this->belongsTo(ProductoRandom::class, 'producto_random_id');
     }
 }

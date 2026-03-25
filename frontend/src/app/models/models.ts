@@ -77,6 +77,9 @@ export interface DetalleFactura {
   factura_id: number;
   producto_id: number;
   producto?: Producto;
+  producto_random_id?: number;
+  producto_random?: { id: number; nombre?: string; descripcion?: string; precio?: number };
+  descripcion?: string;
   cantidad: number;
   precio_unitario: number;
   created_at?: string;
