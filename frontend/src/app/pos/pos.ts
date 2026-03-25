@@ -76,6 +76,15 @@ export class PosComponent implements OnInit {
   ventas: Venta[] = [];
   cargandoVentas = false;
   errorVentas = '';
+  // Ventas - filtrado
+  ventasFiltradas: Venta[] = [];
+  ventasBusqueda = '';
+  ventasFiltroUsuario: number | '' = '';
+  ventasFiltroCliente: number | '' = '';
+  ventasFiltroMetodo: string | '' = '';
+  ventasFiltroEstado: 'todos' | 'devuelta' | 'normal' = 'todos';
+  ventasFechaDesde: string = '';
+  ventasFechaHasta: string = '';
   devolucionVentaId: number | null = null;
   motivoDevolucion = '';
   passwordDevolucion = '';
@@ -104,16 +113,23 @@ export class PosComponent implements OnInit {
 
   // Devoluciones
   devoluciones: any[] = [];
+  devolucionesFiltradas: any[] = [];
   cargandoDevoluciones = false;
   pageSizeDevoluciones = 10;
   devolucionesPage = 1;
   devolucionesTotal = 0;
   devolucionesLastPage = 1;
 
+  // Devoluciones - filtros
+  devolucionesFiltroUsuario: number | '' = '';
+  devolucionesFiltroMotivo: string = '';
+  devolucionesFiltroFecha: string = '';
+
   showDevolucionesList = true;
 
   // Cierres de caja
   cierres: CierreCaja[] = [];
+  cierresFiltrados: CierreCaja[] = [];
   cargandoCierres = false;
   expandedCierreId: number | null = null;
   pageSizeCierres = 10;
@@ -125,6 +141,10 @@ export class PosComponent implements OnInit {
   devolucionesServerPaged = false;
   cierresServerPaged = false;
   showCierresList = true;
+
+  // Cierres - filtros
+  cierresFiltroUsuario: number | '' = '';
+  cierresFiltroFecha: string = '';
 
   // Vista activa para pestañas: venta/ventas/devoluciones/cierres
   // Default to 'venta' so the Sale tab is loaded when entering the module
@@ -142,7 +162,8 @@ export class PosComponent implements OnInit {
   ventaEditSuccess = '';
 
   get totalVentas(): number {
-    return this.ventas.reduce((sum, v) => sum + Number(v.total ?? 0), 0);
+    const list = this.ventasServerPaged ? this.ventas : this.ventasFiltradas;
+    return (list || []).reduce((sum, v) => sum + Number(v.total ?? 0), 0);
   }
 
   // Helper to obtain a display name for the cliente of a venta.
@@ -203,13 +224,14 @@ export class PosComponent implements OnInit {
     return Math.max(1, this.ventasLastPage ?? 1);
   }
   get ventasPaged(): Venta[] {
-    if (!Array.isArray(this.ventas)) return [];
+    const source = this.ventasServerPaged ? this.ventas : this.ventasFiltradas;
+    if (!Array.isArray(source)) return [];
     if (this.ventasServerPaged) {
       // backend already returns current page
-      return this.ventas;
+      return source;
     }
     const start = (this.ventasPage - 1) * this.pageSizeVentas;
-    return this.ventas.slice(start, start + this.pageSizeVentas);
+    return source.slice(start, start + this.pageSizeVentas);
   }
   get ventasPages(): number[] {
     return Array.from({ length: this.ventasTotalPages }, (_, i) => i + 1);
@@ -266,10 +288,11 @@ export class PosComponent implements OnInit {
     return Math.max(1, this.devolucionesLastPage ?? 1);
   }
   get devolucionesPaged(): any[] {
-    if (!Array.isArray(this.devoluciones)) return [];
-    if (this.devolucionesServerPaged) return this.devoluciones;
+    const source = this.devolucionesServerPaged ? this.devoluciones : this.devolucionesFiltradas;
+    if (!Array.isArray(source)) return [];
+    if (this.devolucionesServerPaged) return source;
     const start = (this.devolucionesPage - 1) * this.pageSizeDevoluciones;
-    return this.devoluciones.slice(start, start + this.pageSizeDevoluciones);
+    return source.slice(start, start + this.pageSizeDevoluciones);
   }
   get devolucionesPages(): number[] {
     return Array.from({ length: this.devolucionesTotalPages }, (_, i) => i + 1);
@@ -302,10 +325,11 @@ export class PosComponent implements OnInit {
     return Math.max(1, this.cierresLastPage ?? 1);
   }
   get cierresPaged(): CierreCaja[] {
-    if (!Array.isArray(this.cierres)) return [];
-    if (this.cierresServerPaged) return this.cierres;
+    const source = this.cierresServerPaged ? this.cierres : this.cierresFiltrados;
+    if (!Array.isArray(source)) return [];
+    if (this.cierresServerPaged) return source;
     const start = (this.cierresPage - 1) * this.pageSizeCierres;
-    return this.cierres.slice(start, start + this.pageSizeCierres);
+    return source.slice(start, start + this.pageSizeCierres);
   }
   get cierresPages(): number[] {
     return Array.from({ length: this.cierresTotalPages }, (_, i) => i + 1);
@@ -370,6 +394,7 @@ export class PosComponent implements OnInit {
             this.ventasTotal = this.ventas.length;
             this.ventasLastPage = Math.max(1, Math.ceil(this.ventasTotal / this.pageSizeVentas));
             this.ventasPage = 1;
+            this.ventasFiltradas = this.ventas;
           }
         } catch (e) {
           this.ventas = [];
@@ -390,6 +415,7 @@ export class PosComponent implements OnInit {
               Math.ceil(this.devolucionesTotal / this.pageSizeDevoluciones),
             );
             this.devolucionesPage = 1;
+            this.devolucionesFiltradas = this.devoluciones;
           }
         } catch (e) {
           this.devoluciones = [];
@@ -402,6 +428,7 @@ export class PosComponent implements OnInit {
             this.cierresTotal = this.cierres.length;
             this.cierresLastPage = Math.max(1, Math.ceil(this.cierresTotal / this.pageSizeCierres));
             this.cierresPage = 1;
+            this.cierresFiltrados = this.cierres;
           }
         } catch (e) {
           this.cierres = [];
@@ -483,6 +510,183 @@ export class PosComponent implements OnInit {
       this.productosLastPage = Math.max(1, Math.ceil(this.productosTotal / this.pageSizeProductos));
       this.productosPage = 1;
     }
+  }
+
+  // Filtrado para el resumen de ventas
+  get ventasMetodosDisponibles(): string[] {
+    if (!Array.isArray(this.ventas)) return [];
+    return Array.from(new Set(this.ventas.map((v) => v.metodo_pago))).filter(Boolean);
+  }
+
+  get ventasUsuariosDisponibles(): Array<{ id: number; nombre: string }> {
+    if (!Array.isArray(this.ventas)) return [];
+    const map = new Map<number, string>();
+    for (const v of this.ventas) {
+      const u = v.user;
+      if (u && (u.id !== undefined || u.nombre)) {
+        const id = Number(u.id ?? -1);
+        if (!Number.isNaN(id) && id > -1) map.set(id, u.nombre ?? String(id));
+      }
+    }
+    return Array.from(map.entries()).map(([id, nombre]) => ({ id, nombre }));
+  }
+
+  filtrarVentas(): void {
+    // Nuevo filtrado: únicamente por Usuario, Cliente y Método de pago
+    this.ventasFiltradas = (this.ventas || []).filter((v) => {
+      const matchUsuario =
+        !this.ventasFiltroUsuario ||
+        Number(v.user?.id ?? v.user?.id ?? v.user?.id) === Number(this.ventasFiltroUsuario);
+
+      const matchCliente =
+        !this.ventasFiltroCliente ||
+        Number(v.cliente?.id ?? v.cliente?.id ?? v.cliente?.id) ===
+          Number(this.ventasFiltroCliente);
+
+      const matchMetodo = !this.ventasFiltroMetodo || v.metodo_pago === this.ventasFiltroMetodo;
+
+      return matchUsuario && matchCliente && matchMetodo;
+    });
+
+    // Ensure the UI uses the filtered list (client-side) after an explicit search.
+    // This overrides server-paged mode so the template reads from `ventasFiltradas`.
+    this.ventasServerPaged = false;
+
+    if (Array.isArray(this.ventasFiltradas)) {
+      this.ventasTotal = this.ventasFiltradas.length;
+      this.ventasLastPage = Math.max(1, Math.ceil(this.ventasTotal / this.pageSizeVentas));
+      this.ventasPage = 1;
+    }
+  }
+
+  // Devoluciones: usuarios disponibles (from loaded devoluciones)
+  get devolucionesUsuariosDisponibles(): Array<{ id: number; nombre: string }> {
+    if (!Array.isArray(this.devoluciones)) return [];
+    const map = new Map<number, string>();
+    for (const d of this.devoluciones) {
+      const u = d.user;
+      if (u && (u.id !== undefined || u.nombre)) {
+        const id = Number(u.id ?? -1);
+        if (!Number.isNaN(id) && id > -1) map.set(id, u.nombre ?? String(id));
+      }
+    }
+    return Array.from(map.entries()).map(([id, nombre]) => ({ id, nombre }));
+  }
+
+  filtrarDevoluciones(): void {
+    this.devolucionesFiltradas = (this.devoluciones || []).filter((d) => {
+      const matchUsuario =
+        !this.devolucionesFiltroUsuario ||
+        Number(d.user?.id ?? d.user?.ID) === Number(this.devolucionesFiltroUsuario);
+
+      const matchMotivo =
+        !this.devolucionesFiltroMotivo ||
+        String(d.motivo || '')
+          .toLowerCase()
+          .includes(this.devolucionesFiltroMotivo.toLowerCase());
+
+      let matchFecha = true;
+      try {
+        if (this.devolucionesFiltroFecha) {
+          const target = new Date(this.devolucionesFiltroFecha).setHours(0, 0, 0, 0);
+          const fechaD = new Date(d.fecha).setHours(0, 0, 0, 0);
+          if (fechaD !== target) matchFecha = false;
+        }
+      } catch (e) {
+        matchFecha = true;
+      }
+
+      return matchUsuario && matchMotivo && matchFecha;
+    });
+
+    if (Array.isArray(this.devolucionesFiltradas)) {
+      this.devolucionesTotal = this.devolucionesFiltradas.length;
+      this.devolucionesLastPage = Math.max(
+        1,
+        Math.ceil(this.devolucionesTotal / this.pageSizeDevoluciones),
+      );
+      this.devolucionesPage = 1;
+    }
+
+    this.devolucionesServerPaged = false;
+  }
+
+  limpiarFiltrosDevoluciones(): void {
+    this.devolucionesFiltroUsuario = '';
+    this.devolucionesFiltroMotivo = '';
+    this.devolucionesFiltroFecha = '';
+    this.devolucionesFiltradas = Array.isArray(this.devoluciones) ? [...this.devoluciones] : [];
+    this.devolucionesTotal = this.devolucionesFiltradas.length;
+    this.devolucionesLastPage = Math.max(
+      1,
+      Math.ceil(this.devolucionesTotal / this.pageSizeDevoluciones),
+    );
+    this.devolucionesPage = 1;
+    this.devolucionesServerPaged = false;
+  }
+
+  // Cierres: usuarios disponibles (from loaded cierres)
+  get cierresUsuariosDisponibles(): Array<{ id: number; nombre: string }> {
+    if (!Array.isArray(this.cierres)) return [];
+    const map = new Map<number, string>();
+    for (const c of this.cierres) {
+      const u = c.user;
+      if (u && (u.id !== undefined || u.nombre)) {
+        const id = Number(u.id ?? -1);
+        if (!Number.isNaN(id) && id > -1) map.set(id, u.nombre ?? String(id));
+      }
+    }
+    return Array.from(map.entries()).map(([id, nombre]) => ({ id, nombre }));
+  }
+
+  filtrarCierres(): void {
+    this.cierresFiltrados = (this.cierres || []).filter((c) => {
+      const userId = Number(c.user?.id ?? c.user?.id ?? -1);
+      const matchUsuario =
+        !this.cierresFiltroUsuario || userId === Number(this.cierresFiltroUsuario);
+      let matchFecha = true;
+      try {
+        if (this.cierresFiltroFecha) {
+          const target = new Date(this.cierresFiltroFecha).setHours(0, 0, 0, 0);
+          const fechaC = new Date(c.fecha).setHours(0, 0, 0, 0);
+          if (fechaC !== target) matchFecha = false;
+        }
+      } catch (e) {
+        matchFecha = true;
+      }
+      return matchUsuario && matchFecha;
+    });
+
+    if (Array.isArray(this.cierresFiltrados)) {
+      this.cierresTotal = this.cierresFiltrados.length;
+      this.cierresLastPage = Math.max(1, Math.ceil(this.cierresTotal / this.pageSizeCierres));
+      this.cierresPage = 1;
+    }
+
+    this.cierresServerPaged = false;
+  }
+
+  limpiarFiltrosCierres(): void {
+    this.cierresFiltroUsuario = '';
+    this.cierresFiltroFecha = '';
+    this.cierresFiltrados = Array.isArray(this.cierres) ? [...this.cierres] : [];
+    this.cierresTotal = this.cierresFiltrados.length;
+    this.cierresLastPage = Math.max(1, Math.ceil(this.cierresTotal / this.pageSizeCierres));
+    this.cierresPage = 1;
+    this.cierresServerPaged = false;
+  }
+
+  limpiarFiltrosVentas(): void {
+    this.ventasFiltroUsuario = '';
+    this.ventasFiltroCliente = '';
+    this.ventasFiltroMetodo = '';
+    // Reset filtered list to the full loaded ventas (client-side)
+    this.ventasFiltradas = Array.isArray(this.ventas) ? [...this.ventas] : [];
+    this.ventasTotal = this.ventasFiltradas.length;
+    this.ventasLastPage = Math.max(1, Math.ceil(this.ventasTotal / this.pageSizeVentas));
+    this.ventasPage = 1;
+    // Keep client-side mode after clearing (consistent with filtrarVentas behavior)
+    this.ventasServerPaged = false;
   }
 
   agregarAlCarrito(p: Producto): void {
@@ -626,8 +830,8 @@ export class PosComponent implements OnInit {
         this.mostrarPagoProveedor = false;
         alert('Pago a proveedor registrado correctamente.');
       },
-      error: (e) => {
-        this.errorPago = e?.error?.message ?? 'Error al registrar el pago.';
+      error: () => {
+        this.errorPago = 'Error al registrar el pago.';
         this.procesandoPago = false;
       },
     });
@@ -667,8 +871,8 @@ export class PosComponent implements OnInit {
           this.mostrarCierreCaja = false;
           alert('Cierre de caja guardado correctamente.');
         },
-        error: (e) => {
-          this.errorCierre = e?.error?.message ?? 'Error al guardar el cierre.';
+        error: () => {
+          this.errorCierre = 'Error al guardar el cierre.';
           this.guardandoCierre = false;
         },
       });

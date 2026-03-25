@@ -2,15 +2,19 @@
   <h2>Facturación</h2>
 
   <div class="tabs">
-    <button class="active">🧾 Facturas</button>
+    <button [class.active]="vistaActiva === 'facturas'" (click)="vistaActiva = 'facturas'">
+      🧾 Resumen de facturas
+    </button>
+    <button [class.active]="vistaActiva === 'factura'" (click)="vistaActiva = 'factura'">
+      ➕ Factura
+    </button>
   </div>
 
   <!-- ── FACTURAS ── -->
   <ng-container *ngIf="vistaActiva === 'facturas'">
     <div *ngIf="cargandoFacturas" class="loading">Cargando facturas...</div>
     <div *ngIf="errorFacturas" class="error">{{ errorFacturas }}</div>
-
-    <ng-container *ngIf="!cargandoFacturas && !errorFacturas">
+    <!--
       <div class="summary-bar">
         <span
           >Total registros: <strong>{{ facturas.length }}</strong></span
@@ -19,39 +23,121 @@
           >Importe total:
           <strong>{{ totalImporte | currency: 'EUR' : 'symbol' : '1.2-2' }}</strong></span
         >
+      </div>    
+-->
+    <ng-container *ngIf="!cargandoFacturas && !errorFacturas">
+      <!-- Filter bar: Cliente, Estado, Fecha emisión, Fecha vencimiento -->
+      <div
+        class="facturas-filter-bar"
+        style="display: flex; gap: 0.5rem; flex-wrap: nowrap; overflow-x: auto; margin: 0.75rem 0"
+      >
+        <select
+          [(ngModel)]="facturasFiltroCliente"
+          (change)="filtrarFacturas()"
+          class="tab-like select"
+        >
+          <option value="">Seleccione cliente</option>
+          <option *ngFor="let c of clientes" [ngValue]="c.id">{{ c.nombre }}</option>
+        </select>
+
+        <div style="min-width: 8px"></div>
+        <select
+          [(ngModel)]="facturasFiltroEstado"
+          (change)="filtrarFacturas()"
+          class="tab-like select"
+        >
+          <option value="">Todos los estados</option>
+          <option value="pending">Pendiente</option>
+          <option value="paid">Pagada</option>
+          <option value="cancelled">Cancelada</option>
+        </select>
+
+        <input
+          type="date"
+          [(ngModel)]="facturasFiltroFechaEmision"
+          (change)="filtrarFacturas()"
+          class="tab-like input"
+        />
+        <input
+          type="date"
+          [(ngModel)]="facturasFiltroFechaVencimiento"
+          (change)="filtrarFacturas()"
+          class="tab-like input"
+        />
+        <button class="btn-clear" (click)="limpiarFiltrosFacturas()">Limpiar filtros</button>
       </div>
 
       <div class="table-wrapper">
-        <table *ngIf="facturas.length > 0; else sinFacturas">
+        <ng-template #dash>—</ng-template>
+        <table class="table">
           <thead>
             <tr>
-              <th>#</th>
               <th>Cliente</th>
-              <th>Importe</th>
+              <th>Serie / Nº</th>
+              <th>Bruto</th>
+              <th>Impuesto</th>
+              <th>Total</th>
               <th>Estado</th>
-              <th>Fecha emisión</th>
+              <th>Método</th>
+              <th>Verifactu</th>
+              <th>Emisión</th>
               <th>Vencimiento</th>
               <th *ngIf="auth.isAdminOrGerente()">Acciones</th>
             </tr>
           </thead>
           <tbody>
-            <ng-container *ngFor="let f of facturas">
-              <tr *ngIf="editandoId !== f.id">
-                <td>{{ f.id }}</td>
-                <td>{{ f.cliente?.nombre ?? '—' }}</td>
+            <ng-container *ngFor="let f of facturasPaged; trackBy: trackByFacturaId">
+              <tr *ngIf="editandoId !== f.id" (click)="toggleFactura(f.id)" class="fila-resumen">
+                <td>{{ f.cliente?.nombre || '—' }}</td>
+
+                <td>
+                  <ng-container *ngIf="f.series != null; else dash">
+                    {{ f.series
+                    }}<ng-container *ngIf="f.number != null">/{{ f.number }}</ng-container>
+                  </ng-container>
+                </td>
+
+                <td>
+                  <ng-container *ngIf="f.gross_amount != null; else dash">
+                    {{ f.gross_amount | currency: 'EUR' : 'symbol' : '1.2-2' }}
+                  </ng-container>
+                </td>
+                <td>
+                  <ng-container *ngIf="f.tax_amount != null; else dash">
+                    {{ f.tax_amount | currency: 'EUR' : 'symbol' : '1.2-2' }}
+                  </ng-container>
+                </td>
                 <td>{{ f.total_amount | currency: 'EUR' : 'symbol' : '1.2-2' }}</td>
                 <td>
                   <span class="badge" [ngClass]="'badge--' + f.status">{{
                     getStatusLabel(f.status)
                   }}</span>
                 </td>
+                <td>
+                  <ng-container *ngIf="f.payment_method != null; else dash">{{
+                    f.payment_method
+                  }}</ng-container>
+                </td>
+                <td>
+                  <span *ngIf="f.verifactu && f.verifactu.status" class="badge badge--small">{{
+                    f.verifactu.status
+                  }}</span>
+                  <span *ngIf="!f.verifactu">—</span>
+                </td>
                 <td>{{ f.invoice_date | date: 'dd/MM/yyyy' }}</td>
                 <td>{{ f.due_date ? (f.due_date | date: 'dd/MM/yyyy') : '—' }}</td>
+
                 <td *ngIf="auth.isAdminOrGerente()" class="acciones">
-                  <button class="btn-edit" (click)="iniciarEdicion(f)" title="Editar">✏️</button>
+                  <button
+                    class="btn-edit"
+                    (click)="$event.stopPropagation(); iniciarEdicion(f)"
+                    title="Editar"
+                  >
+                    ✏️
+                  </button>
                   <button
                     class="btn-delete"
-                    (click)="eliminarFactura(f.id)"
+                    (click)="$event.stopPropagation(); eliminarFactura(f.id)"
                     [disabled]="eliminandoId === f.id"
                     title="Eliminar"
                   >
@@ -59,9 +145,41 @@
                   </button>
                 </td>
               </tr>
+
               <tr *ngIf="editandoId === f.id" class="fila-edicion">
-                <td>{{ f.id }}</td>
-                <td>{{ f.cliente?.nombre ?? '—' }}</td>
+                <td>
+                  <select [(ngModel)]="editForm.cliente_id" class="input-edit">
+                    <option [ngValue]="null">-- Seleccionar cliente --</option>
+                    <option *ngFor="let c of clientes" [ngValue]="c.id">{{ c.nombre }}</option>
+                  </select>
+                </td>
+
+                <td>
+                  <!-- Serie / Número (no editable) -->
+                  <div class="input-edit" style="background: transparent; border: none; padding: 0">
+                    {{ f.series ? f.series + (f.number != null ? '/' + f.number : '') : '—' }}
+                  </div>
+                </td>
+                <td>
+                  <!-- Bruto (no editable) -->
+                  <div class="input-edit" style="background: transparent; border: none; padding: 0">
+                    {{
+                      f.gross_amount != null
+                        ? (f.gross_amount | currency: 'EUR' : 'symbol' : '1.2-2')
+                        : '—'
+                    }}
+                  </div>
+                </td>
+                <td>
+                  <!-- Impuesto (no editable) -->
+                  <div class="input-edit" style="background: transparent; border: none; padding: 0">
+                    {{
+                      f.tax_amount != null
+                        ? (f.tax_amount | currency: 'EUR' : 'symbol' : '1.2-2')
+                        : '—'
+                    }}
+                  </div>
+                </td>
                 <td>
                   <input
                     type="number"
@@ -79,21 +197,356 @@
                   </select>
                 </td>
                 <td>
+                  <input
+                    type="text"
+                    [(ngModel)]="editForm.payment_method"
+                    class="input-edit"
+                    placeholder="Método"
+                  />
+                </td>
+                <td>
+                  <!-- Verifactu (read-only) -->
+                  <div class="input-edit" style="background: transparent; border: none; padding: 0">
+                    {{ f.verifactu?.status ? f.verifactu.status : '—' }}
+                  </div>
+                </td>
+                <td>
                   <input type="date" [(ngModel)]="editForm.invoice_date" class="input-edit" />
                 </td>
-                <td><input type="date" [(ngModel)]="editForm.due_date" class="input-edit" /></td>
-                <td class="acciones">
-                  <button class="btn-save" (click)="guardarEdicion()" [disabled]="guardando">
+                <td>
+                  <input type="date" [(ngModel)]="editForm.due_date" class="input-edit" />
+                </td>
+                <td *ngIf="auth.isAdminOrGerente()" class="acciones">
+                  <button
+                    class="btn-save"
+                    (click)="$event.stopPropagation(); guardarEdicion()"
+                    [disabled]="guardando"
+                  >
                     {{ guardando ? '...' : '💾' }}
                   </button>
-                  <button class="btn-cancel" (click)="cancelarEdicion()">✖</button>
+                  <button class="btn-cancel" (click)="$event.stopPropagation(); cancelarEdicion()">
+                    ✖
+                  </button>
+                </td>
+              </tr>
+
+              <tr
+                *ngIf="expandedFacturaId === f.id && !(editandoId === f.id)"
+                class="fila-detalle-factura"
+              >
+                <td [attr.colspan]="auth.isAdminOrGerente() ? 11 : 10">
+                  <div class="factura-detalle-panel" (click)="$event.stopPropagation()">
+                    <div class="factura-detalle-grid factura-detalle-column">
+                      <div class="factura-detalle-bloque">
+                        <h5>📝 Datos de la factura</h5>
+                        <div class="cierre-row">
+                          <span class="cierre-row-label">Cliente</span
+                          ><span>{{ f.cliente?.nombre || '—' }}</span>
+                        </div>
+                        <div class="cierre-row">
+                          <span class="cierre-row-label">Serie / Nº</span
+                          ><span>{{
+                            f.series ? f.series + (f.number != null ? '/' + f.number : '') : '—'
+                          }}</span>
+                        </div>
+                        <div class="cierre-row">
+                          <span class="cierre-row-label">Fecha emisión</span
+                          ><span>{{
+                            f.invoice_date ? (f.invoice_date | date: 'dd/MM/yyyy') : '—'
+                          }}</span>
+                        </div>
+                        <div class="cierre-row">
+                          <span class="cierre-row-label">Vencimiento</span
+                          ><span>{{ f.due_date ? (f.due_date | date: 'dd/MM/yyyy') : '—' }}</span>
+                        </div>
+                        <div class="cierre-row">
+                          <span class="cierre-row-label">Estado</span
+                          ><span>{{ getStatusLabel(f.status) }}</span>
+                        </div>
+                        <div class="cierre-row">
+                          <span class="cierre-row-label">Importe</span
+                          ><span>{{ f.total_amount | currency: 'EUR' : 'symbol' : '1.2-2' }}</span>
+                        </div>
+                        <div class="cierre-row">
+                          <span class="cierre-row-label">Método</span
+                          ><span>{{ f.payment_method || '—' }}</span>
+                        </div>
+                        <div class="cierre-row">
+                          <span class="cierre-row-label">IBAN</span><span>{{ f.iban || '—' }}</span>
+                        </div>
+                        <div class="cierre-row">
+                          <span class="cierre-row-label">Verifactu</span>
+                          <span
+                            *ngIf="f.verifactu && f.verifactu.status"
+                            class="badge badge--small"
+                            >{{ f.verifactu.status }}</span
+                          >
+                          <span *ngIf="f.verifactu && f.verifactu.message">
+                            - {{ f.verifactu.message }}</span
+                          >
+                        </div>
+                        <div style="margin-top: 0.6rem">
+                          <button
+                            class="btn-resend"
+                            (click)="reenviarVerifactu(f, $event)"
+                            [disabled]="resendingFacturaId === f.id"
+                          >
+                            {{
+                              resendingFacturaId === f.id ? 'Enviando...' : 'Reenviar a Verifactu'
+                            }}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div class="factura-detalle-bloque">
+                        <h5>🧾 Detalle factura</h5>
+                        <div *ngIf="f.detalles && f.detalles.length > 0">
+                          <table class="detalle-items">
+                            <thead>
+                              <tr>
+                                <th>Producto</th>
+                                <th>Cantidad</th>
+                                <th>Precio</th>
+                                <th>Subtotal</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr *ngFor="let d of f.detalles">
+                                <td>{{ d.producto?.nombre ?? d.producto_id }}</td>
+                                <td>{{ d.cantidad }}</td>
+                                <td>
+                                  {{ d.precio_unitario | currency: 'EUR' : 'symbol' : '1.2-2' }}
+                                </td>
+                                <td>
+                                  {{
+                                    d.cantidad * d.precio_unitario
+                                      | currency: 'EUR' : 'symbol' : '1.2-2'
+                                  }}
+                                </td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                        <div *ngIf="!f.detalles || f.detalles.length === 0">
+                          No hay items detallados.
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </td>
               </tr>
             </ng-container>
           </tbody>
         </table>
         <ng-template #sinFacturas><p class="empty">No hay facturas registradas.</p></ng-template>
+
+        <div class="table-footer" *ngIf="facturas.length > 0">
+          <div class="pagination">
+            <button
+              class="page-btn icon"
+              (click)="goToFacturasFirst()"
+              [disabled]="facturasPage === 1"
+            >
+              ⏮
+            </button>
+            <button class="page-btn icon" (click)="prevFacturas()" [disabled]="facturasPage === 1">
+              ◀
+            </button>
+            <button
+              class="page-btn"
+              *ngFor="let p of facturasVisiblePages"
+              (click)="goToFacturasPage(p)"
+              [class.active]="facturasPage === p"
+            >
+              {{ p }}
+            </button>
+            <button
+              class="page-btn icon"
+              (click)="nextFacturas()"
+              [disabled]="facturasPage === facturasTotalPages"
+            >
+              ▶
+            </button>
+            <button
+              class="page-btn icon"
+              (click)="goToFacturasLast()"
+              [disabled]="facturasPage === facturasTotalPages"
+            >
+              ⏭
+            </button>
+          </div>
+        </div>
       </div>
     </ng-container>
+  </ng-container>
+
+  <!-- ── CREAR FACTURA (vista separada) ── -->
+  <ng-container *ngIf="vistaActiva === 'factura'">
+    <div class="form-panel">
+      <h4>Crear factura</h4>
+      <div *ngIf="createError" class="error">{{ createError }}</div>
+
+      <div
+        class="form-field"
+        style="
+          display: flex;
+          flex-direction: row;
+          gap: 0.5rem;
+          align-items: flex-end;
+          flex-wrap: wrap;
+        "
+      >
+        <div style="flex: 1; min-width: 200px">
+          <label>Cliente</label>
+          <select [(ngModel)]="createForm.cliente_id" class="input-edit" style="width: 100%">
+            <option [ngValue]="null">-- Seleccionar cliente --</option>
+            <option *ngFor="let c of clientes" [ngValue]="c.id">{{ c.nombre }}</option>
+          </select>
+        </div>
+        <div style="width: 220px; min-width: 140px">
+          <label>Serie</label>
+          <input
+            type="text"
+            [(ngModel)]="createForm.series"
+            class="input-edit"
+            readonly
+            title="Serie por defecto de la empresa (no editable)"
+            placeholder="Serie establecida por la empresa emisora"
+          />
+        </div>
+        <div style="width: 140px; min-width: 100px">
+          <label>Número</label>
+          <input type="number" [(ngModel)]="createForm.number" class="input-edit" />
+        </div>
+      </div>
+
+      <!-- Proveedor removed: not required by Verifactu -->
+
+      <div class="form-field">
+        <label>Detalle factura</label>
+        <div
+          style="
+            display: flex;
+            flex-direction: row;
+            gap: 0.5rem;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            flex-wrap: wrap;
+          "
+        >
+          <select
+            [(ngModel)]="newItemProductoId"
+            (ngModelChange)="onSelectProducto($event)"
+            class="input-edit"
+            style="width: 220px; min-width: 140px"
+          >
+            <option [ngValue]="null">-- Seleccionar producto --</option>
+            <option *ngFor="let p of productos" [ngValue]="p.id">{{ p.nombre }}</option>
+          </select>
+
+          <input
+            type="text"
+            [(ngModel)]="newItemDescripcion"
+            class="input-edit"
+            placeholder="Descripción (opcional)"
+            style="flex: 1; min-width: 160px"
+          />
+
+          <input
+            type="number"
+            min="1"
+            [(ngModel)]="newItemCantidad"
+            class="input-edit"
+            style="width: 90px"
+            placeholder="Cant"
+          />
+
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            [(ngModel)]="newItemPrecio"
+            class="input-edit"
+            style="width: 120px"
+            placeholder="Precio"
+          />
+
+          <button class="btn-save" (click)="addItemToCreate()">Añadir</button>
+        </div>
+
+        <div
+          *ngIf="createForm.detalles && createForm.detalles.length > 0"
+          style="margin-bottom: 0.75rem"
+        >
+          <table class="detalle-items" style="width: 100%">
+            <thead>
+              <tr>
+                <th style="text-align: left">Producto</th>
+                <th style="width: 90px">Cantidad</th>
+                <th style="width: 120px">Precio</th>
+                <th style="width: 120px">Subtotal</th>
+                <th style="width: 60px"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let it of createForm.detalles; let i = index">
+                <td>
+                  {{ getProductoNombre(it.producto_id) }}
+                </td>
+                <td>{{ it.cantidad }}</td>
+                <td>{{ it.precio_unitario | currency: 'EUR' : 'symbol' : '1.2-2' }}</td>
+                <td>
+                  {{ it.cantidad * it.precio_unitario | currency: 'EUR' : 'symbol' : '1.2-2' }}
+                </td>
+                <td><button class="btn-delete" (click)="removeCreateItem(i)">✖</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <label style="display: block; margin-top: 0.25rem">Importe</label>
+        <input
+          type="number"
+          step="0.01"
+          min="0"
+          [(ngModel)]="createForm.total_amount"
+          class="input-edit"
+        />
+      </div>
+
+      <!-- Estado removed: will default to 'pending' on server -->
+
+      <div class="form-field">
+        <label>Fecha emisión</label>
+        <div class="date-input-wrapper input-edit" [class.has-value]="createForm.invoice_date">
+          <input #ci type="date" [(ngModel)]="createForm.invoice_date" class="date-input" />
+          <span
+            class="date-placeholder"
+            (click)="ci.focus()"
+            [class.hidden]="createForm.invoice_date"
+            >Fecha emisión</span
+          >
+        </div>
+      </div>
+
+      <div class="form-field">
+        <label>Vencimiento</label>
+        <div class="date-input-wrapper input-edit" [class.has-value]="createForm.due_date">
+          <input #cd type="date" [(ngModel)]="createForm.due_date" class="date-input" />
+          <span class="date-placeholder" (click)="cd.focus()" [class.hidden]="createForm.due_date"
+            >Fecha vencimiento</span
+          >
+        </div>
+      </div>
+
+      <!-- Payment method / IBAN removed: not required by Verifactu -->
+
+      <div class="form-actions">
+        <button class="btn-save" (click)="crearFactura()" [disabled]="creando">
+          {{ creando ? '...' : 'Crear' }}
+        </button>
+        <button class="btn-cancel-form" (click)="cancelarNuevaFactura()">Cancelar</button>
+      </div>
+    </div>
   </ng-container>
 </div>

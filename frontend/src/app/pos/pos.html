@@ -67,6 +67,58 @@
             <!-- (Client editor moved to modal to avoid template nesting issues) -->
           </div>
 
+          <div
+            class="ventas-filter-bar"
+            *ngIf="showVentasList"
+            style="
+              display: flex;
+              gap: 0.5rem;
+              flex-wrap: nowrap;
+              align-items: center;
+              margin: 0.5rem 0;
+              overflow-x: auto;
+            "
+          >
+            <select
+              [(ngModel)]="ventasFiltroUsuario"
+              (change)="filtrarVentas()"
+              class="pos-select tab-like"
+              style="min-width: 180px"
+            >
+              <option value="">Seleccione usuario</option>
+              <option *ngFor="let u of ventasUsuariosDisponibles" [ngValue]="u.id">
+                {{ u.nombre }}
+              </option>
+            </select>
+
+            <select
+              [(ngModel)]="ventasFiltroCliente"
+              (change)="filtrarVentas()"
+              class="pos-select tab-like"
+              style="min-width: 220px"
+            >
+              <option value="">Seleccione el cliente</option>
+              <option *ngFor="let c of clientes" [ngValue]="c.id">{{ c.nombre }}</option>
+            </select>
+
+            <select
+              [(ngModel)]="ventasFiltroMetodo"
+              (change)="filtrarVentas()"
+              class="pos-select tab-like"
+              style="min-width: 160px"
+            >
+              <option value="">Seleccione el metodo de pago</option>
+              <option *ngFor="let m of ventasMetodosDisponibles" [value]="m">{{ m }}</option>
+            </select>
+            <button
+              class="btn-clear tab-like"
+              (click)="limpiarFiltrosVentas()"
+              style="min-width: 120px"
+            >
+              ♻️ Limpiar
+            </button>
+          </div>
+
           <div *ngIf="devolucionVentaId" class="form-panel devolucion-panel">
             <h4>↩️ Devolución de venta #{{ devolucionVentaId }}</h4>
             <div class="form-field">
@@ -106,7 +158,12 @@
           </div>
 
           <div class="table-wrapper ventas-wrapper" *ngIf="showVentasList">
-            <table *ngIf="ventas.length > 0; else sinVentas">
+            <table
+              *ngIf="
+                ventasServerPaged ? ventas.length > 0 : ventasFiltradas.length > 0;
+                else sinVentas
+              "
+            >
               <thead>
                 <tr>
                   <th>#</th>
@@ -229,6 +286,55 @@
       <ng-container *ngIf="vistaActiva === 'devoluciones'">
         <div *ngIf="cargandoDevoluciones" class="loading">Cargando devoluciones...</div>
         <ng-container *ngIf="showDevolucionesList">
+          <div
+            class="devoluciones-filter-bar"
+            *ngIf="showDevolucionesList"
+            style="
+              display: flex;
+              gap: 0.5rem;
+              flex-wrap: nowrap;
+              align-items: center;
+              margin: 0.5rem 0;
+              overflow-x: auto;
+            "
+          >
+            <select
+              [(ngModel)]="devolucionesFiltroUsuario"
+              (change)="filtrarDevoluciones()"
+              class="pos-select tab-like"
+              style="min-width: 180px"
+            >
+              <option value="">Seleccione usuario</option>
+              <option *ngFor="let u of devolucionesUsuariosDisponibles" [ngValue]="u.id">
+                {{ u.nombre }}
+              </option>
+            </select>
+
+            <input
+              type="text"
+              [(ngModel)]="devolucionesFiltroMotivo"
+              (input)="filtrarDevoluciones()"
+              placeholder="Motivo"
+              class="pos-input tab-like"
+              style="min-width: 220px"
+            />
+
+            <input
+              type="date"
+              [(ngModel)]="devolucionesFiltroFecha"
+              (change)="filtrarDevoluciones()"
+              class="pos-input tab-like"
+              style="min-width: 160px"
+            />
+
+            <button
+              class="btn-clear tab-like"
+              (click)="limpiarFiltrosDevoluciones()"
+              style="min-width: 120px"
+            >
+              ♻️ Limpiar
+            </button>
+          </div>
           <div class="table-wrapper devoluciones-wrapper" *ngIf="!cargandoDevoluciones">
             <table *ngIf="devoluciones.length > 0; else sinDevoluciones">
               <thead>
@@ -308,6 +414,47 @@
             <span
               >Total cierres registrados: <strong>{{ cierres.length }}</strong></span
             >
+          </div>
+
+          <div
+            class="cierres-filter-bar"
+            *ngIf="showCierresList"
+            style="
+              display: flex;
+              gap: 0.5rem;
+              flex-wrap: nowrap;
+              align-items: center;
+              margin: 0.5rem 0;
+              overflow-x: auto;
+            "
+          >
+            <input
+              type="date"
+              [(ngModel)]="cierresFiltroFecha"
+              (change)="filtrarCierres()"
+              class="pos-input tab-like"
+              style="min-width: 160px"
+            />
+
+            <select
+              [(ngModel)]="cierresFiltroUsuario"
+              (change)="filtrarCierres()"
+              class="pos-select tab-like"
+              style="min-width: 220px"
+            >
+              <option value="">Seleccione usuario</option>
+              <option *ngFor="let u of cierresUsuariosDisponibles" [ngValue]="u.id">
+                {{ u.nombre }}
+              </option>
+            </select>
+
+            <button
+              class="btn-clear tab-like"
+              (click)="limpiarFiltrosCierres()"
+              style="min-width: 120px"
+            >
+              ♻️ Limpiar
+            </button>
           </div>
 
           <div

@@ -19,7 +19,7 @@ return new class extends Migration
                 $table->decimal('precio', 10, 2);
                 $table->integer('stock_quantity')->default(0);
                 $table->foreignId('categoria_id')->nullable()->constrained('categorias')->onDelete('set null');
-                $table->foreignId('proveedor_id')->constrained('proveedores')->onDelete('cascade');
+                $table->unsignedBigInteger('proveedor_id')->nullable();
                 $table->timestamps();
             });
         }
