@@ -1,0 +1,47 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.5rem;
+  height: 60px;
+  background: #0a2342;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.header-left { display: flex; align-items: center; }
+.brand { font-size: 1.2rem; font-weight: 700; letter-spacing: 0.05em; color: #fff; }
+
+.header-center {}
+.header-title { font-size: 0.85rem; color: #94a3b8; }
+
+.header-right { display: flex; align-items: center; }
+
+.avatar-btn {
+  display: flex; align-items: center; gap: 0.6rem;
+  background: none; border: none; cursor: pointer;
+  padding: 0.3rem 0.6rem; border-radius: 2rem;
+  transition: background 0.15s; color: #fff;
+}
+.avatar-btn:hover { background: rgba(255,255,255,0.1); }
+
+.avatar-img {
+  width: 36px; height: 36px;
+  border-radius: 50%; object-fit: cover;
+  border: 2px solid rgba(255,255,255,0.3);
+}
+
+.avatar-inicial {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.2);
+  color: #fff;
+  font-weight: 700; font-size: 1rem;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid rgba(255,255,255,0.3);
+}
+
+.avatar-nombre { font-size: 0.88rem; font-weight: 500; }

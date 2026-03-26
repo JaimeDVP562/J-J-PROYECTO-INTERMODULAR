@@ -1,0 +1,15 @@
+<header class="header">
+  <div class="header-left">
+    <span class="brand">J-J-PROYECT</span>
+  </div>
+  <div class="header-center">
+    <span class="header-title">ERP · Panel de gestión</span>
+  </div>
+  <div class="header-right">
+    <button class="avatar-btn" (click)="navigateToPerfil()" title="Mi perfil">
+      <img *ngIf="fotoUsuario" [src]="fotoUsuario" [alt]="nombreUsuario" class="avatar-img" />
+      <div *ngIf="!fotoUsuario" class="avatar-inicial">{{ inicialNombre }}</div>
+      <span class="avatar-nombre">{{ nombreUsuario }}</span>
+    </button>
+  </div>
+</header>

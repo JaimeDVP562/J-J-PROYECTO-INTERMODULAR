@@ -1,7 +1,0 @@
-version: '3.8'
-
-services:
-  web:
-    volumes:
-      - ./frontend:/var/www/html/frontend:cached
-      - ./backend:/var/www/html/backend:cached
