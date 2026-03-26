@@ -2,7 +2,259 @@
   padding: 2rem;
 }
 
-.required { color: #c0392b; }
+/* Tabs (usar mismos estilos que componente pos) */
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.tabs button {
+  padding: 0.5rem 1.2rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  background: #f8fafc;
+  color: #475569;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.15s;
+}
+
+.tabs button.active {
+  background: #0a2342;
+  color: #fff;
+  border-color: #0a2342;
+}
+
+/* Reusable tab-like control for selects and buttons in filter bars (copied from pos) */
+.tab-like {
+  padding: 0.5rem 1.2rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  background: #f8fafc;
+  color: #475569;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.tab-like:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(10, 35, 66, 0.06);
+}
+
+.tab-like.active {
+  background: #0a2342;
+  color: #fff;
+  border-color: #0a2342;
+}
+
+/* Ensure selects styled as .tab-like keep native dropdown arrow appearance */
+.tab-like.select {
+  appearance: menulist;
+}
+
+/* Clear filters button in filter bar */
+.btn-clear {
+  padding: 0.45rem 0.9rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  background: #fff;
+  color: #0a2342;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.12s ease;
+  box-shadow: 0 1px 2px rgba(10, 34, 66, 0.04);
+}
+
+.btn-clear:hover {
+  transform: translateY(-1px);
+  background: #eef2ff;
+}
+
+.btn-clear:active {
+  transform: translateY(0);
+}
+
+/* Date placeholder overlay for inputs (shows label when empty) */
+.date-input-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.date-input-wrapper .date-input {
+  background: transparent;
+  border: none;
+  padding: 0;
+  /* inherit from .tab-like wrapper */
+  min-width: 160px;
+  height: 100%;
+  z-index: 1;
+}
+
+.date-input-wrapper .date-input:focus {
+  outline: none;
+}
+
+/* Hide native date-format text until value is set or input focused */
+.date-input {
+  color: transparent;
+  z-index: 1;
+}
+
+/* keep native hint hidden on focus when empty; reveal value color only when wrapper has-value */
+.date-input:focus {
+  color: transparent;
+}
+
+.date-input-wrapper.has-value .date-input,
+.date-input-wrapper.has-value .date-input:focus {
+  color: #0a2342;
+}
+
+/* WebKit-specific: hide native date edit fields (Chrome, Edge) until value present */
+.date-input::-webkit-datetime-edit,
+.date-input::-webkit-datetime-edit-fields-wrapper,
+.date-input::-webkit-datetime-edit-month-field,
+.date-input::-webkit-datetime-edit-day-field,
+.date-input::-webkit-datetime-edit-year-field,
+.date-input::-webkit-datetime-edit-text {
+  color: transparent;
+}
+
+.date-input-wrapper.has-value .date-input::-webkit-datetime-edit,
+.date-input-wrapper.has-value .date-input::-webkit-datetime-edit-fields-wrapper,
+.date-input-wrapper.has-value .date-input::-webkit-datetime-edit-month-field,
+.date-input-wrapper.has-value .date-input::-webkit-datetime-edit-day-field,
+.date-input-wrapper.has-value .date-input::-webkit-datetime-edit-year-field,
+.date-input-wrapper.has-value .date-input::-webkit-datetime-edit-text {
+  color: #0a2342;
+}
+
+.date-placeholder {
+  position: absolute;
+  left: 1.05rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #64748b;
+  pointer-events: auto;
+  z-index: 3;
+  font-size: 0.9rem;
+}
+
+.date-placeholder.hidden {
+  display: none;
+}
+
+/* Paginación: usar mismos estilos que pos */
+.page-btn {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 0.6rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  border: 1px solid transparent;
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  color: #0a2342;
+  box-shadow: 0 1px 3px rgba(10, 35, 66, 0.06);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s;
+}
+
+.page-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(10, 35, 66, 0.12);
+  background: linear-gradient(180deg, #ffffff, #eef2ff);
+}
+
+.page-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.page-btn[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.page-btn.small {
+  min-width: 32px;
+  height: 32px;
+  font-size: 0.85rem;
+}
+
+.page-btn.icon {
+  width: 36px;
+  padding: 0;
+  border-radius: 50%;
+}
+
+.page-btn.active {
+  background: linear-gradient(180deg, #0a2342, #07304a);
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(10, 35, 66, 0.18);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.page-dots {
+  padding: 0 0.35rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+@media (max-width: 720px) {
+  .pagination {
+    gap: 0.25rem;
+  }
+
+  .page-btn {
+    min-width: 30px;
+    height: 30px;
+    font-size: 0.82rem;
+  }
+
+  .page-btn.icon {
+    width: 30px;
+  }
+}
+
+/* Table footer pagination alignment (match pos) */
+.table-wrapper .table-footer .pagination {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0.4rem 0;
+}
+
+.table-wrapper .table-footer .pagination .page-btn {
+  /* ensure consistent sizing inside table footer */
+  min-width: 36px;
+  height: 36px;
+}
+
+.table-wrapper .table-footer .pagination .page-btn.icon {
+  width: 36px;
+  padding: 0;
+  border-radius: 50%;
+}
+
+.table-wrapper .table-footer .pagination .page-btn.active {
+  background: linear-gradient(180deg, #0a2342, #07304a);
+  color: #fff;
+}
+
+.required {
+  color: #c0392b;
+}
 
 .billing h2 {
   font-size: 1.6rem;
@@ -10,7 +262,8 @@
   margin-bottom: 1.5rem;
 }
 
-.loading, .error {
+.loading,
+.error {
   padding: 1rem;
   border-radius: 0.5rem;
   margin-bottom: 1rem;
@@ -41,13 +294,25 @@
   border: 1px solid #e2e8f0;
   border-radius: 0.75rem;
   overflow: hidden;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.9rem;
+}
+
+/* Keep table layout stable when editing rows */
+.table-wrapper table {
+  table-layout: fixed;
+}
+
+th,
+td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 th {
@@ -80,9 +345,20 @@ tr:hover td {
   font-weight: 600;
 }
 
-.badge--pending { background: #fef3c7; color: #b45309; }
-.badge--paid { background: #d1fae5; color: #065f46; }
-.badge--cancelled { background: #fee2e2; color: #991b1b; }
+.badge--pending {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.badge--paid {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.badge--cancelled {
+  background: #fee2e2;
+  color: #991b1b;
+}
 
 .empty {
   color: #94a3b8;
@@ -91,8 +367,14 @@ tr:hover td {
 }
 
 /* Acciones */
-.acciones { white-space: nowrap; }
-.btn-edit, .btn-delete, .btn-save, .btn-cancel {
+.acciones {
+  white-space: nowrap;
+}
+
+.btn-edit,
+.btn-delete,
+.btn-save,
+.btn-cancel {
   background: none;
   border: none;
   font-size: 1rem;
@@ -101,14 +383,52 @@ tr:hover td {
   border-radius: 0.3rem;
   transition: background 0.15s;
 }
-.btn-edit:hover { background: #e0f2fe; }
-.btn-delete:hover { background: #fee2e2; }
-.btn-save:hover { background: #d1fae5; }
-.btn-cancel:hover { background: #f1f5f9; }
-.btn-delete:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-edit:hover {
+  background: #e0f2fe;
+}
+
+.btn-delete:hover {
+  background: #fee2e2;
+}
+
+.btn-save:hover {
+  background: #d1fae5;
+}
+
+.btn-cancel:hover {
+  background: #f1f5f9;
+}
+
+.btn-delete:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
 /* Fila edición */
-.fila-edicion td { background: #fffbeb !important; }
+.fila-edicion td {
+  background: #fffbeb !important;
+}
+
+/* Inputs/selects inside the inline edit row should not expand table width */
+.fila-edicion .input-edit,
+.fila-edicion select.input-edit,
+.fila-edicion input.input-edit {
+  width: 100%;
+  max-width: 160px;
+  box-sizing: border-box;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid #e6eef8;
+  border-radius: 0.35rem;
+  font-size: 0.9rem;
+  background: #fff;
+}
+
+/* Make action column narrow and stable */
+.table-wrapper td.acciones {
+  width: 72px;
+}
+
 .input-edit {
   width: 100%;
   padding: 0.3rem 0.5rem;
@@ -117,45 +437,46 @@ tr:hover td {
   font-size: 0.85rem;
 }
 
-/* Tabs */
-.tabs {
-  display: flex; gap: 0.5rem; margin-bottom: 1rem;
-}
-.tabs button {
-  padding: 0.5rem 1.2rem; border: 1px solid #e2e8f0;
-  border-radius: 0.5rem; background: #f8fafc; color: #475569;
-  cursor: pointer; font-size: 0.9rem; transition: all 0.15s;
-}
-.tabs button.active { background: #0a2342; color: #fff; border-color: #0a2342; }
-
-/* Devolucion */
-.devuelta td { background: #fff1f2 !important; color: #9ca3af; }
-.btn-devolucion {
-  background: #fef3c7; border: 1px solid #fbbf24; color: #b45309;
-  padding: 0.2rem 0.5rem; border-radius: 0.3rem; font-size: 0.8rem; cursor: pointer;
-}
-.btn-devolucion:hover { background: #fde68a; }
-.btn-devolucion-confirm {
-  background: #dc2626; color: #fff; border: none;
-  padding: 0.5rem 1.2rem; border-radius: 0.4rem; font-size: 0.9rem; cursor: pointer;
-}
-.btn-devolucion-confirm:disabled { opacity: 0.6; cursor: not-allowed; }
-.devolucion-panel { background: #fff7ed; border-color: #fbbf24; }
-.text-muted { color: #94a3b8; font-size: 0.85rem; }
-.error-inline { color: #dc2626; font-size: 0.83rem; margin-top: 0.3rem; }
-
-/* form-panel for billing */
 .form-panel {
-  background: #f8fafc; border: 1px solid #e2e8f0;
-  border-radius: 0.75rem; padding: 1.2rem; margin-bottom: 1rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  padding: 1.2rem;
+  margin-bottom: 1rem;
 }
-.form-panel h4 { margin: 0 0 0.75rem; color: #0a2342; font-size: 1rem; }
-.form-field { display: flex; flex-direction: column; gap: 0.3rem; margin-bottom: 0.5rem; }
-.form-field label { font-size: 0.8rem; color: #475569; font-weight: 600; }
-.form-actions { display: flex; gap: 0.5rem; }
+
+.form-panel h4 {
+  margin: 0 0 0.75rem;
+  color: #0a2342;
+  font-size: 1rem;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 0.5rem;
+}
+
+.form-field label {
+  font-size: 0.8rem;
+  color: #475569;
+  font-weight: 600;
+}
+
+.form-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
 .btn-cancel-form {
-  background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0;
-  padding: 0.5rem 1.2rem; border-radius: 0.4rem; font-size: 0.9rem; cursor: pointer;
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  padding: 0.5rem 1.2rem;
+  border-radius: 0.4rem;
+  font-size: 0.9rem;
+  cursor: pointer;
 }
 
 /* ── Cierres de caja ── */
@@ -164,15 +485,27 @@ tr:hover td {
   user-select: none;
   transition: background 0.12s;
 }
-.fila-cierre:hover td { background: #f8fafc; }
-.fila-expandida td { background: #e8f0fe !important; font-weight: 600; }
 
-.expand-icon {
-  display: inline-block; width: 1rem;
-  font-size: 0.7rem; color: #64748b; margin-right: 0.25rem;
+.fila-cierre:hover td {
+  background: #f8fafc;
 }
 
-.fila-detalle-cierre td { padding: 0 !important; }
+.fila-expandida td {
+  background: #e8f0fe !important;
+  font-weight: 600;
+}
+
+.expand-icon {
+  display: inline-block;
+  width: 1rem;
+  font-size: 0.7rem;
+  color: #64748b;
+  margin-right: 0.25rem;
+}
+
+.fila-detalle-cierre td {
+  padding: 0 !important;
+}
 
 .cierre-detalle-panel {
   background: #f8fafc;
@@ -210,7 +543,9 @@ tr:hover td {
   color: #475569;
 }
 
-.cierre-row-label { color: #94a3b8; }
+.cierre-row-label {
+  color: #94a3b8;
+}
 
 .cierre-row-diff {
   border-top: 1px dashed #e2e8f0;
@@ -231,6 +566,102 @@ tr:hover td {
 }
 
 /* Diferencia positiva (declaró más = sobrante) → verde */
-.diff-pos { color: #16a34a; }
+.diff-pos {
+  color: #16a34a;
+}
+
 /* Diferencia negativa (declaró menos = faltante) → rojo */
-.diff-neg { color: #dc2626; }
+.diff-neg {
+  color: #dc2626;
+}
+
+/* Detalle expandible para facturas (estilos alineados con POS cierres) */
+.fila-detalle-factura td {
+  padding: 0 !important;
+}
+
+.factura-detalle-panel {
+  background: #f8fafc;
+  border-left: 3px solid #0a2342;
+  padding: 1rem 1.25rem;
+}
+
+.factura-detalle-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+/* For billing detail we want blocks stacked vertically */
+.factura-detalle-column {
+  display: block;
+}
+
+.factura-detalle-column .factura-detalle-bloque {
+  margin-bottom: 0.75rem;
+}
+
+.factura-detalle-bloque {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+}
+
+.factura-detalle-bloque h5 {
+  margin: 0 0 0.6rem;
+  font-size: 0.85rem;
+  color: #0a2342;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 0.35rem;
+}
+
+.detalle-items {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.detalle-items thead th,
+.detalle-items td {
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 0.85rem;
+  color: #334155;
+}
+
+/* Ensure detalle-items header text is visible on dark background */
+.detalle-items thead th {
+  background: #0a2342;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.tax-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.2rem 0;
+  color: #475569;
+}
+
+.badge--small {
+  padding: 0.15rem 0.5rem;
+  font-size: 0.75rem;
+  border-radius: 0.5rem;
+}
+
+.btn-resend {
+  background: linear-gradient(180deg, #0a2342, #07304a);
+  color: #fff;
+  border: none;
+  padding: 0.4rem 0.7rem;
+  border-radius: 0.4rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.btn-resend[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

@@ -27,6 +27,7 @@ class DatabaseSeeder extends Seeder
         // Core seeders for a minimal realistic dataset
         $this->call(UserSeeder::class);
         $this->call(ProveedorSeeder::class);
+        $this->call(\Database\Seeders\EmpresaSeeder::class);
         $this->call(CategoriaSeeder::class);
         $this->call(ProductoSeeder::class);
         $this->call(ClienteSeeder::class);

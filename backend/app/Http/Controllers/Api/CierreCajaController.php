@@ -17,16 +17,17 @@ class CierreCajaController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
+        $limit = (int) $request->query('limit', 10);
         $query = CierreCaja::with('user')->orderBy('fecha', 'desc');
 
         if (!$this->isPrivileged($user)) {
             $query->where('user_id', $user->id);
         }
 
-        $cierres = $query->get();
+        $cierres = $query->paginate($limit);
 
         if ($this->isPrivileged($user)) {
-            $cierres = $cierres->map(function ($cierre) {
+            $cierres->getCollection()->transform(function ($cierre) {
                 $cierre->efectivo_esperado = (float) Venta::whereDate('fecha_venta', $cierre->fecha)
                     ->where('metodo_pago', 'efectivo')->sum('total');
                 $cierre->tarjeta_esperada = (float) Venta::whereDate('fecha_venta', $cierre->fecha)

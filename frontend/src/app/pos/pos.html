@@ -1,274 +1,1212 @@
-<div class="pos-container" [class.cargando]="cargando">
+<div
+  class="pos-container"
+  [class.cargando]="cargando"
+  [class.full-width]="
+    vistaActiva === 'venta' ||
+    vistaActiva === 'ventas' ||
+    vistaActiva === 'devoluciones' ||
+    vistaActiva === 'cierres'
+  "
+>
+  <div *ngIf="cargando" class="loading-screen">Cargando TPV...</div>
 
-  @if (cargando) { <div class="loading-screen">Cargando TPV...</div> }
-
-  @if (!cargando) {
+  <div *ngIf="!cargando">
+    <!-- Tabs: Ventas / Devoluciones / Cierres -->
+    <!-- (moved into catálogo column so grid layout stays intact) -->
 
     <!-- ── Panel izquierdo: Catálogo ─── -->
     <div class="pos-catalogo">
-      <div class="pos-search-bar">
-        <input type="text" [(ngModel)]="busqueda" (input)="filtrar()"
-          placeholder="🔍 Buscar por nombre o SKU..." class="pos-search-input" />
-        <select [(ngModel)]="categoriaFiltro" (change)="filtrar()" class="pos-cat-select">
-          <option value="">Todas las categorías</option>
-          @for (c of categorias; track c.id) {
-            <option [value]="c.id">{{ c.nombre }}</option>
-          }
-        </select>
-      </div>
-
-      <div class="productos-grid">
-        @for (p of productosFiltrados; track p.id) {
-          <div class="producto-card" [class.sin-stock]="p.stock_quantity === 0"
-            (click)="agregarAlCarrito(p)"
-            title="{{ p.stock_quantity === 0 ? 'Sin stock' : 'Añadir al carrito' }}">
-            <div class="prod-nombre">{{ p.nombre }}</div>
-            @if (p.sku) { <div class="prod-sku">SKU: {{ p.sku }}</div> }
-            <div class="prod-precio">{{ p.precio | currency:'EUR':'symbol':'1.2-2' }}</div>
-            <div class="prod-stock" [class.stock-agotado]="p.stock_quantity === 0">
-              {{ p.stock_quantity === 0 ? 'Sin stock' : 'Stock: ' + p.stock_quantity }}
-            </div>
-          </div>
-        }
-        @if (productosFiltrados.length === 0) {
-          <p class="empty">No se encontraron productos.</p>
-        }
-      </div>
-    </div>
-
-    <!-- ── Panel derecho: Carrito ─── -->
-    <div class="pos-carrito">
-      <h3 class="carrito-titulo">🛒 Carrito</h3>
-
-      <div class="carrito-lista" [class.vacio]="carrito.length === 0">
-        @if (carrito.length === 0) {
-          <p class="carrito-vacio">Sin productos en el carrito</p>
-        }
-
-        @for (item of carrito; track item.producto.id) {
-          <div class="carrito-item">
-            <div class="item-info">
-              <span class="item-nombre">{{ item.producto.nombre }}</span>
-              <span class="item-precio-unit">{{ item.precio_unitario | currency:'EUR':'symbol':'1.2-2' }} / ud.</span>
-            </div>
-            <div class="item-controls">
-              <button class="btn-qty" (click)="decrementarCantidad(item)">−</button>
-              <span class="item-qty">{{ item.cantidad }}</span>
-              <button class="btn-qty" (click)="incrementarCantidad(item)">+</button>
-            </div>
-            <span class="item-subtotal">{{ item.subtotal | currency:'EUR':'symbol':'1.2-2' }}</span>
-            <button class="btn-remove-item" (click)="eliminarItem(item)" title="Eliminar">✕</button>
-          </div>
-        }
-      </div>
-
-      <!-- Total -->
-      <div class="carrito-total">
-        <span>TOTAL</span>
-        <span class="total-importe">{{ totalCarrito | currency:'EUR':'symbol':'1.2-2' }}</span>
-      </div>
-
-      <!-- Cliente -->
-      <div class="field-group">
-        <label>Cliente (opcional)</label>
-        <select [(ngModel)]="clienteId" class="pos-select">
-          <option [ngValue]="null">— Sin cliente —</option>
-          @for (c of clientes; track c.id) {
-            <option [ngValue]="c.id">{{ c.nombre }}</option>
-          }
-        </select>
-      </div>
-
-      <!-- Método de pago -->
-      <div class="field-group">
-        <label>Método de pago</label>
-        <div class="metodo-btns">
-          <button [class.active]="metodoPago === 'efectivo'" (click)="setMetodoPago('efectivo')">💵 Efectivo</button>
-          <button [class.active]="metodoPago === 'tarjeta'" (click)="setMetodoPago('tarjeta')">💳 Tarjeta</button>
-          <button [class.active]="metodoPago === 'mixto'" (click)="setMetodoPago('mixto')">🔀 Mixto</button>
-        </div>
-      </div>
-
-      <!-- Desglose pago mixto -->
-      @if (metodoPago === 'mixto') {
-        <div class="field-group">
-          <label>Desglose efectivo / tarjeta</label>
-          <div class="mixto-row">
-            <div class="mixto-col">
-              <span class="mixto-label">💵 Efectivo</span>
-              <input type="number" [(ngModel)]="mixtoEfectivo" min="0" step="0.01" class="pos-input" placeholder="0,00" />
-            </div>
-            <div class="mixto-col">
-              <span class="mixto-label">💳 Tarjeta</span>
-              <input type="number" [(ngModel)]="mixtoTarjeta" min="0" step="0.01" class="pos-input" placeholder="0,00" />
-            </div>
-          </div>
-          @if (mixtoEfectivo + mixtoTarjeta > 0 && (mixtoEfectivo + mixtoTarjeta) !== totalCarrito) {
-            <p class="mixto-aviso">
-              Suma: {{ (mixtoEfectivo + mixtoTarjeta) | currency:'EUR':'symbol':'1.2-2' }} · Total: {{ totalCarrito | currency:'EUR':'symbol':'1.2-2' }}
-            </p>
-          }
-        </div>
-      }
-
-      <!-- Importe entregado -->
-      @if (metodoPago !== 'mixto') {
-        <div class="field-group">
-          <label>Importe entregado (€)</label>
-          <input type="number" [(ngModel)]="importeEntregado" min="0" step="0.01" class="pos-input" placeholder="0,00" />
-          @if (importeEntregado > 0 && importeEntregado >= totalCarrito) {
-            <p class="vuelta-preview">
-              Vuelta: {{ (importeEntregado - totalCarrito) | currency:'EUR':'symbol':'1.2-2' }}
-            </p>
-          }
-        </div>
-      }
-
-      <!-- Notas -->
-      <div class="field-group">
-        <label>Notas</label>
-        <input type="text" [(ngModel)]="notas" placeholder="Observaciones..." class="pos-input" />
-      </div>
-
-      @if (error) { <p class="error-line">{{ error }}</p> }
-
-      <div class="carrito-acciones">
-        <button class="btn-limpiar" (click)="limpiarCarrito()" [disabled]="carrito.length === 0">
-          🗑️ Limpiar
+      <!-- Tabs: Ventas / Devoluciones / Cierres (moved here) -->
+      <div class="tabs pos-tabs">
+        <button [class.active]="vistaActiva === 'venta'" (click)="cambiarVista('venta')">
+          🛍️ Venta
         </button>
-        <button class="btn-cobrar" (click)="cobrar()" [disabled]="carrito.length === 0 || procesando">
-          {{ procesando ? 'Procesando...' : '✅ COBRAR ' + (totalCarrito | currency:'EUR':'symbol':'1.2-2') }}
+        <button [class.active]="vistaActiva === 'ventas'" (click)="cambiarVista('ventas')">
+          🛒 Resumen de ventas
+        </button>
+        <button
+          [class.active]="vistaActiva === 'devoluciones'"
+          (click)="cambiarVista('devoluciones')"
+        >
+          ↩️ Devoluciones
+        </button>
+        <button
+          *ngIf="auth.isAdminOrGerente()"
+          [class.active]="vistaActiva === 'cierres'"
+          (click)="cambiarVista('cierres')"
+        >
+          🔒 Cierres
+        </button>
+        <!-- Botón de ocultar lista eliminado según petición -->
+        <!-- BOTÓN PARA MOSTRAR CARRITO (visible solo cuando está oculto) -->
+        <button
+          *ngIf="!showCarrito"
+          title="Mostrar carrito"
+          (click)="toggleCarrito()"
+          class="btn-toggle-carrito"
+          style="margin-left: 0.5rem"
+        >
+          🛒 Mostrar carrito
         </button>
       </div>
-    </div>
 
-  }
+      <!-- ── RESUMEN DE VENTAS ── -->
+      <ng-container *ngIf="vistaActiva === 'ventas'">
+        <div *ngIf="cargandoVentas" class="loading">Cargando ventas...</div>
+        <div *ngIf="errorVentas" class="error">{{ errorVentas }}</div>
 
-  <!-- ── Botones fijos ─── -->
-  <button class="btn-cierre-fijo" (click)="abrirCierreCaja()" title="Cierre de caja diario">
-    🔒 Cierre de Caja
-  </button>
-  @if (auth.isAdminOrGerente()) {
-    <button class="btn-pago-proveedor-fijo" (click)="abrirPagoProveedor()" title="Pagar a proveedor">
-      🏭 Pagar Proveedor
-    </button>
-  }
-
-  <!-- ── Modal: Venta realizada ─── -->
-  @if (ventaRealizada) {
-    <div class="overlay" (click)="ventaRealizada = false">
-      <div class="overlay-card" (click)="$event.stopPropagation()">
-        <div class="overlay-icon">✅</div>
-        <h3>¡Venta registrada!</h3>
-        <p class="overlay-total">{{ totalUltimaVenta | currency:'EUR':'symbol':'1.2-2' }}</p>
-        @if (vueltaUltimaVenta > 0) {
-          <div class="overlay-vuelta">
-            <span>Vuelta</span>
-            <strong>{{ vueltaUltimaVenta | currency:'EUR':'symbol':'1.2-2' }}</strong>
+        <ng-container *ngIf="!cargandoVentas && !errorVentas">
+          <div class="summary-bar" *ngIf="showVentasList">
+            <span
+              >Total ventas: <strong>{{ ventas.length }}</strong></span
+            >
+            <span>
+              Importe total:
+              <strong>{{ totalVentas | currency: 'EUR' : 'symbol' : '1.2-2' }}</strong>
+            </span>
+            <!-- (Client editor moved to modal to avoid template nesting issues) -->
           </div>
-        }
-        <button class="btn-overlay-close" (click)="ventaRealizada = false">Continuar</button>
-      </div>
-    </div>
-  }
 
-  <!-- ── Modal: Cierre de caja ─── -->
-  @if (mostrarCierreCaja) {
-    <div class="overlay">
-      <div class="overlay-card cierre-card" (click)="$event.stopPropagation()">
-        <h3>🔒 Cierre de Caja Diario</h3>
-
-        @if (auth.isAdminOrGerente()) {
-          <div class="cierre-resumen-bar">
-            <span>Total ventas hoy</span>
-            <strong>{{ totalVentasHoy | currency:'EUR':'symbol':'1.2-2' }}</strong>
-          </div>
-        }
-
-        <div class="form-grid">
-          <div class="form-field">
-            <label>Efectivo retirado (€)</label>
-            <input type="number" [(ngModel)]="cierreCaja.efectivo_retirado" min="0" step="0.01" class="pos-input" />
-          </div>
-          <div class="form-field">
-            <label>Importe datáfono (€)</label>
-            <input type="number" [(ngModel)]="cierreCaja.importe_datafono" min="0" step="0.01" class="pos-input" />
-          </div>
-          <div class="form-field" style="grid-column:1/-1">
-            <label>Total declarado</label>
-            <strong>{{ (cierreCaja.efectivo_retirado + cierreCaja.importe_datafono) | currency:'EUR':'symbol':'1.2-2' }}</strong>
-          </div>
-          @if (auth.isAdminOrGerente()) {
-            <div class="form-field" style="grid-column:1/-1">
-              <label>Diferencia</label>
-              <strong [class.diferencia-pos]="diferenciaCierre >= 0" [class.diferencia-neg]="diferenciaCierre < 0">
-                {{ diferenciaCierre | currency:'EUR':'symbol':'1.2-2' }}
-              </strong>
-            </div>
-          }
-          <div class="form-field" style="grid-column:1/-1">
-            <label>Notas</label>
-            <textarea [(ngModel)]="cierreCaja.notas" rows="2" class="pos-input"></textarea>
-          </div>
-        </div>
-
-        @if (errorCierre) { <p class="error-line">{{ errorCierre }}</p> }
-
-        <div class="modal-actions">
-          <button class="btn-save-form" (click)="guardarCierre()" [disabled]="guardandoCierre">
-            {{ guardandoCierre ? 'Guardando...' : '💾 Guardar cierre' }}
-          </button>
-          <button class="btn-cancel-form" (click)="mostrarCierreCaja = false">Cancelar</button>
-        </div>
-      </div>
-    </div>
-  }
-
-  <!-- ── Modal: Pago a proveedor ─── -->
-  @if (mostrarPagoProveedor) {
-    <div class="overlay">
-      <div class="overlay-card cierre-card" (click)="$event.stopPropagation()">
-        <h3>🏭 Registrar Pago a Proveedor</h3>
-        <p style="color:#888;font-size:.9rem;margin-bottom:1rem">Se registrará como importe negativo en el listado de ventas.</p>
-
-        <div class="form-grid">
-          <div class="form-field">
-            <label>Proveedor (opcional)</label>
-            <select [(ngModel)]="pagoProveedorForm.proveedor_id" class="pos-input">
-              <option value="">— Sin especificar —</option>
-              @for (p of proveedores; track p.id) {
-                <option [value]="p.id">{{ p.nombre }}</option>
-              }
+          <div
+            class="ventas-filter-bar"
+            *ngIf="showVentasList"
+            style="
+              display: flex;
+              gap: 0.5rem;
+              flex-wrap: nowrap;
+              align-items: center;
+              margin: 0.5rem 0;
+              overflow-x: auto;
+            "
+          >
+            <select
+              [(ngModel)]="ventasFiltroUsuario"
+              (change)="filtrarVentas()"
+              class="pos-select tab-like"
+              style="min-width: 180px"
+            >
+              <option value="">Seleccione usuario</option>
+              <option *ngFor="let u of ventasUsuariosDisponibles" [ngValue]="u.id">
+                {{ u.nombre }}
+              </option>
             </select>
+
+            <select
+              [(ngModel)]="ventasFiltroCliente"
+              (change)="filtrarVentas()"
+              class="pos-select tab-like"
+              style="min-width: 220px"
+            >
+              <option value="">Seleccione el cliente</option>
+              <option *ngFor="let c of clientes" [ngValue]="c.id">{{ c.nombre }}</option>
+            </select>
+
+            <select
+              [(ngModel)]="ventasFiltroMetodo"
+              (change)="filtrarVentas()"
+              class="pos-select tab-like"
+              style="min-width: 160px"
+            >
+              <option value="">Seleccione el metodo de pago</option>
+              <option *ngFor="let m of ventasMetodosDisponibles" [value]="m">{{ m }}</option>
+            </select>
+            <button
+              class="btn-clear tab-like"
+              (click)="limpiarFiltrosVentas()"
+              style="min-width: 120px"
+            >
+              ♻️ Limpiar
+            </button>
           </div>
-          <div class="form-field">
-            <label>Importe (€) *</label>
-            <input type="number" [(ngModel)]="pagoProveedorForm.importe" min="0.01" step="0.01" class="pos-input" placeholder="0.00" />
+
+          <div *ngIf="devolucionVentaId" class="form-panel devolucion-panel">
+            <h4>↩️ Devolución de venta #{{ devolucionVentaId }}</h4>
+            <div class="form-field">
+              <label>Motivo (opcional)</label>
+              <input
+                type="text"
+                [(ngModel)]="motivoDevolucion"
+                placeholder="Motivo de la devolución..."
+                class="input-edit"
+                style="width: 100%"
+              />
+            </div>
+
+            <div class="form-field" style="margin-top: 0.5rem">
+              <label>Contraseña <span class="required">*</span></label>
+              <input
+                type="password"
+                [(ngModel)]="passwordDevolucion"
+                placeholder="Introduce tu contraseña para confirmar..."
+                class="input-edit"
+                style="width: 100%"
+                autocomplete="current-password"
+              />
+            </div>
+            <p *ngIf="errorDevolucion" class="error-inline">{{ errorDevolucion }}</p>
+            <div class="form-actions" style="margin-top: 0.5rem">
+              <button class="btn-cancel-form" (click)="cancelarDevolucion()">Cancelar</button>
+              <button
+                class="btn-save-form"
+                (click)="confirmarDevolucion()"
+                [disabled]="procesandoDevolucion || !passwordDevolucion"
+                style="margin-left: 0.5rem"
+              >
+                {{ procesandoDevolucion ? 'Procesando...' : 'Confirmar devolución' }}
+              </button>
+            </div>
           </div>
-          <div class="form-field" style="grid-column:1/-1">
-            <label>Concepto *</label>
-            <input type="text" [(ngModel)]="pagoProveedorForm.concepto" class="pos-input" placeholder="Descripción del pago" />
+
+          <div class="table-wrapper ventas-wrapper" *ngIf="showVentasList">
+            <table
+              *ngIf="
+                ventasServerPaged ? ventas.length > 0 : ventasFiltradas.length > 0;
+                else sinVentas
+              "
+            >
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Usuario</th>
+                  <th>Cliente/Concepto</th>
+                  <th>Total</th>
+                  <th>Método pago</th>
+                  <th>Fecha</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let v of ventasPaged" [class.devuelta]="v.devuelta">
+                  <td>{{ v.id }}</td>
+
+                  <td>{{ v.user?.nombre ?? '—' }}</td>
+                  <td>
+                    <ng-container *ngIf="ventaEditId === v.id; else clienteNormal">
+                      <select [(ngModel)]="ventaEditClienteId" class="pos-select">
+                        <option [ngValue]="null">— Sin cliente —</option>
+                        <option *ngFor="let c of clientes" [ngValue]="c.id">{{ c.nombre }}</option>
+                      </select>
+                    </ng-container>
+                    <ng-template #clienteNormal>{{ ventaClienteNombre(v) }}</ng-template>
+                  </td>
+                  <td>{{ v.total | currency: 'EUR' : 'symbol' : '1.2-2' }}</td>
+                  <td>{{ v.metodo_pago }}</td>
+                  <td class="fecha-cell">
+                    <span class="fecha-line">{{ v.fecha_venta | date: 'dd/MM/yyyy' }}</span>
+                    <span class="hora-line">{{ v.fecha_venta | date: 'HH:mm' }}</span>
+                  </td>
+                  <td>
+                    <span *ngIf="v.devuelta" class="badge badge--cancelled">Devuelta</span>
+                    <span *ngIf="!v.devuelta" class="badge badge--paid">OK</span>
+                  </td>
+                  <td class="acciones">
+                    <button
+                      *ngIf="!v.devuelta && v.tipo !== 'pago_proveedor'"
+                      class="btn-devolucion"
+                      (click)="iniciarDevolucion(v)"
+                      title="Procesar devolución"
+                    >
+                      ↩️ Devolver
+                    </button>
+
+                    <ng-container *ngIf="ventaEditId === v.id; else botonEditar">
+                      <button
+                        class="btn-save"
+                        (click)="guardarClienteVenta()"
+                        style="margin-left: 0.5rem"
+                      >
+                        💾 Guardar
+                      </button>
+                      <button
+                        class="btn-cancel"
+                        (click)="cancelarEditarCliente()"
+                        style="margin-left: 0.25rem"
+                      >
+                        ✖ Cancelar
+                      </button>
+                    </ng-container>
+
+                    <ng-template #botonEditar>
+                      <button
+                        class="btn-edit"
+                        (click)="seleccionarVentaParaEditar(v)"
+                        title="Editar cliente"
+                        style="margin-left: 0.5rem"
+                      >
+                        ✏️ Editar cliente
+                      </button>
+                    </ng-template>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="table-footer">
+              <div class="pagination">
+                <button
+                  class="page-btn icon"
+                  (click)="goToVentasFirst()"
+                  [disabled]="ventasPage === 1"
+                >
+                  ⏮
+                </button>
+                <button class="page-btn icon" (click)="prevVentas()" [disabled]="ventasPage === 1">
+                  ◀
+                </button>
+                <button
+                  class="page-btn"
+                  *ngFor="let p of ventasVisiblePages"
+                  (click)="goToVentasPage(p)"
+                  [class.active]="ventasPage === p"
+                >
+                  {{ p }}
+                </button>
+                <button
+                  class="page-btn icon"
+                  (click)="nextVentas()"
+                  [disabled]="ventasPage === ventasTotalPages"
+                >
+                  ▶
+                </button>
+                <button
+                  class="page-btn icon"
+                  (click)="goToVentasLast()"
+                  [disabled]="ventasPage === ventasTotalPages"
+                >
+                  ⏭
+                </button>
+              </div>
+              <ng-template #sinVentas><p class="empty">No hay ventas registradas.</p></ng-template>
+            </div>
           </div>
-          <div class="form-field" style="grid-column:1/-1">
-            <label>Método de pago</label>
-            <div class="metodo-btns">
-              <button [class.active]="pagoProveedorForm.metodo_pago === 'efectivo'" (click)="pagoProveedorForm.metodo_pago = 'efectivo'">💵 Efectivo</button>
-              <button [class.active]="pagoProveedorForm.metodo_pago === 'tarjeta'" (click)="pagoProveedorForm.metodo_pago = 'tarjeta'">💳 Tarjeta</button>
-              <button [class.active]="pagoProveedorForm.metodo_pago === 'mixto'" (click)="pagoProveedorForm.metodo_pago = 'mixto'">🔀 Mixto</button>
+        </ng-container>
+      </ng-container>
+
+      <!-- ── RESUMEN DE DEVOLUCIONES ── -->
+      <ng-container *ngIf="vistaActiva === 'devoluciones'">
+        <div *ngIf="cargandoDevoluciones" class="loading">Cargando devoluciones...</div>
+        <ng-container *ngIf="showDevolucionesList">
+          <div
+            class="devoluciones-filter-bar"
+            *ngIf="showDevolucionesList"
+            style="
+              display: flex;
+              gap: 0.5rem;
+              flex-wrap: nowrap;
+              align-items: center;
+              margin: 0.5rem 0;
+              overflow-x: auto;
+            "
+          >
+            <select
+              [(ngModel)]="devolucionesFiltroUsuario"
+              (change)="filtrarDevoluciones()"
+              class="pos-select tab-like"
+              style="min-width: 180px"
+            >
+              <option value="">Seleccione usuario</option>
+              <option *ngFor="let u of devolucionesUsuariosDisponibles" [ngValue]="u.id">
+                {{ u.nombre }}
+              </option>
+            </select>
+
+            <input
+              type="text"
+              [(ngModel)]="devolucionesFiltroMotivo"
+              (input)="filtrarDevoluciones()"
+              placeholder="Motivo"
+              class="pos-input tab-like"
+              style="min-width: 220px"
+            />
+
+            <input
+              type="date"
+              [(ngModel)]="devolucionesFiltroFecha"
+              (change)="filtrarDevoluciones()"
+              class="pos-input tab-like"
+              style="min-width: 160px"
+            />
+
+            <button
+              class="btn-clear tab-like"
+              (click)="limpiarFiltrosDevoluciones()"
+              style="min-width: 120px"
+            >
+              ♻️ Limpiar
+            </button>
+          </div>
+          <div class="table-wrapper devoluciones-wrapper" *ngIf="!cargandoDevoluciones">
+            <table *ngIf="devoluciones.length > 0; else sinDevoluciones">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Venta</th>
+                  <th>Usuario</th>
+                  <th>Importe</th>
+                  <th>Motivo</th>
+                  <th>Fecha</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let d of devolucionesPaged">
+                  <td>{{ d.id }}</td>
+                  <td>#{{ d.venta_id }}</td>
+                  <td>{{ d.user?.nombre ?? '—' }}</td>
+                  <td>{{ d.importe | currency: 'EUR' : 'symbol' : '1.2-2' }}</td>
+                  <td>{{ d.motivo ?? '—' }}</td>
+                  <td>{{ d.fecha | date: 'dd/MM/yyyy HH:mm' }}</td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="table-footer">
+              <div class="pagination">
+                <button
+                  class="page-btn icon"
+                  (click)="goToDevolucionesFirst()"
+                  [disabled]="devolucionesPage === 1"
+                >
+                  ⏮
+                </button>
+                <button
+                  class="page-btn icon"
+                  (click)="prevDevoluciones()"
+                  [disabled]="devolucionesPage === 1"
+                >
+                  ◀
+                </button>
+                <button
+                  class="page-btn"
+                  *ngFor="let p of devolucionesVisiblePages"
+                  (click)="goToDevolucionesPage(p)"
+                  [class.active]="devolucionesPage === p"
+                >
+                  {{ p }}
+                </button>
+                <button
+                  class="page-btn icon"
+                  (click)="nextDevoluciones()"
+                  [disabled]="devolucionesPage === devolucionesTotalPages"
+                >
+                  ▶
+                </button>
+                <button
+                  class="page-btn icon"
+                  (click)="goToDevolucionesLast()"
+                  [disabled]="devolucionesPage === devolucionesTotalPages"
+                >
+                  ⏭
+                </button>
+              </div>
+              <ng-template #sinDevoluciones
+                ><p class="empty">No hay devoluciones registradas.</p></ng-template
+              >
+            </div>
+          </div>
+        </ng-container>
+      </ng-container>
+
+      <!-- ── RESUMEN DE CIERRES DE CAJA (SOLO admin/gerente) ── -->
+      <ng-container *ngIf="vistaActiva === 'cierres' && auth.isAdminOrGerente()">
+        <div *ngIf="cargandoCierres" class="loading">Cargando cierres...</div>
+
+        <ng-container *ngIf="!cargandoCierres">
+          <div class="summary-bar" *ngIf="showCierresList">
+            <span
+              >Total cierres registrados: <strong>{{ cierres.length }}</strong></span
+            >
+          </div>
+
+          <div
+            class="cierres-filter-bar"
+            *ngIf="showCierresList"
+            style="
+              display: flex;
+              gap: 0.5rem;
+              flex-wrap: nowrap;
+              align-items: center;
+              margin: 0.5rem 0;
+              overflow-x: auto;
+            "
+          >
+            <input
+              type="date"
+              [(ngModel)]="cierresFiltroFecha"
+              (change)="filtrarCierres()"
+              class="pos-input tab-like"
+              style="min-width: 160px"
+            />
+
+            <select
+              [(ngModel)]="cierresFiltroUsuario"
+              (change)="filtrarCierres()"
+              class="pos-select tab-like"
+              style="min-width: 220px"
+            >
+              <option value="">Seleccione usuario</option>
+              <option *ngFor="let u of cierresUsuariosDisponibles" [ngValue]="u.id">
+                {{ u.nombre }}
+              </option>
+            </select>
+
+            <button
+              class="btn-clear tab-like"
+              (click)="limpiarFiltrosCierres()"
+              style="min-width: 120px"
+            >
+              ♻️ Limpiar
+            </button>
+          </div>
+
+          <div
+            class="table-wrapper cierres-wrapper"
+            *ngIf="showCierresList && cierres.length > 0; else sinCierres"
+          >
+            <table>
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Fecha</th>
+                  <th>Realizado por</th>
+                  <th>Efectivo declarado</th>
+                  <th>Tarjeta declarada</th>
+                  <th>Total declarado</th>
+                  <th>Total esperado</th>
+                  <th>Diferencia total</th>
+                </tr>
+              </thead>
+              <tbody>
+                <ng-container *ngFor="let c of cierresPaged">
+                  <!-- Fila resumen -->
+                  <tr
+                    class="fila-cierre"
+                    [class.fila-expandida]="expandedCierreId === c.id"
+                    (click)="toggleCierre(c.id)"
+                  >
+                    <td>
+                      <span class="expand-icon">{{ expandedCierreId === c.id ? '▼' : '▶' }}</span>
+                    </td>
+                    <td>{{ c.fecha | date: 'dd/MM/yyyy' }}</td>
+                    <td>{{ c.user?.nombre ?? '—' }}</td>
+                    <td>
+                      {{ money(c.efectivo_retirado) || 0 | currency: 'EUR' : 'symbol' : '1.2-2' }}
+                    </td>
+                    <td>
+                      {{ money(c.importe_datafono) || 0 | currency: 'EUR' : 'symbol' : '1.2-2' }}
+                    </td>
+                    <td>
+                      <strong>{{
+                        (money(c.efectivo_retirado) || 0) + (money(c.importe_datafono) || 0)
+                          | currency: 'EUR' : 'symbol' : '1.2-2'
+                      }}</strong>
+                    </td>
+                    <td>{{ money(c.total_ventas) || 0 | currency: 'EUR' : 'symbol' : '1.2-2' }}</td>
+                    <td>
+                      <span
+                        [class.diff-pos]="money(c.diferencia) >= 0"
+                        [class.diff-neg]="money(c.diferencia) < 0"
+                      >
+                        {{ money(c.diferencia) >= 0 ? '+' : ''
+                        }}{{ money(c.diferencia) || 0 | currency: 'EUR' : 'symbol' : '1.2-2' }}
+                      </span>
+                    </td>
+                  </tr>
+
+                  <!-- Panel expandible con desglose -->
+                  <tr *ngIf="expandedCierreId === c.id" class="fila-detalle-cierre">
+                    <td colspan="8">
+                      <div class="cierre-detalle-panel" (click)="$event.stopPropagation()">
+                        <div class="cierre-detalle-grid">
+                          <div class="cierre-detalle-bloque">
+                            <h5>💵 Efectivo</h5>
+                            <div class="cierre-row">
+                              <span class="cierre-row-label">Declarado</span>
+                              <span>{{
+                                money(c.efectivo_retirado) || 0
+                                  | currency: 'EUR' : 'symbol' : '1.2-2'
+                              }}</span>
+                            </div>
+                            <div class="cierre-row">
+                              <span class="cierre-row-label">Esperado (ventas efectivo)</span>
+                              <span>{{
+                                money(c.efectivo_esperado) || 0
+                                  | currency: 'EUR' : 'symbol' : '1.2-2'
+                              }}</span>
+                            </div>
+                            <div class="cierre-row cierre-row-diff">
+                              <span class="cierre-row-label">Diferencia efectivo</span>
+                              <span
+                                [class.diff-pos]="
+                                  money(c.efectivo_retirado) - (money(c.efectivo_esperado) || 0) >=
+                                  0
+                                "
+                                [class.diff-neg]="
+                                  money(c.efectivo_retirado) - (money(c.efectivo_esperado) || 0) < 0
+                                "
+                              >
+                                {{
+                                  money(c.efectivo_retirado) - (money(c.efectivo_esperado) || 0) >=
+                                  0
+                                    ? '+'
+                                    : ''
+                                }}{{
+                                  money(c.efectivo_retirado) - (money(c.efectivo_esperado) || 0) ||
+                                    0 | currency: 'EUR' : 'symbol' : '1.2-2'
+                                }}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div class="cierre-detalle-bloque">
+                            <h5>💳 Tarjeta</h5>
+                            <div class="cierre-row">
+                              <span class="cierre-row-label">Declarado</span>
+                              <span>{{
+                                money(c.importe_datafono) || 0
+                                  | currency: 'EUR' : 'symbol' : '1.2-2'
+                              }}</span>
+                            </div>
+                            <div class="cierre-row">
+                              <span class="cierre-row-label">Esperado (ventas tarjeta)</span>
+                              <span>{{
+                                money(c.tarjeta_esperada) || 0
+                                  | currency: 'EUR' : 'symbol' : '1.2-2'
+                              }}</span>
+                            </div>
+                            <div class="cierre-row cierre-row-diff">
+                              <span class="cierre-row-label">Diferencia tarjeta</span>
+                              <span
+                                [class.diff-pos]="
+                                  c.importe_datafono - (c.tarjeta_esperada ?? 0) >= 0
+                                "
+                                [class.diff-neg]="
+                                  c.importe_datafono - (c.tarjeta_esperada ?? 0) < 0
+                                "
+                              >
+                                {{
+                                  money(c.importe_datafono) - (money(c.tarjeta_esperada) || 0) >= 0
+                                    ? '+'
+                                    : ''
+                                }}{{
+                                  money(c.importe_datafono) - (money(c.tarjeta_esperada) || 0) || 0
+                                    | currency: 'EUR' : 'symbol' : '1.2-2'
+                                }}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div class="cierre-detalle-bloque">
+                            <h5>📊 Total</h5>
+                            <div class="cierre-row">
+                              <span class="cierre-row-label">Total declarado</span>
+                              <span>{{
+                                (money(c.efectivo_retirado) || 0) + (money(c.importe_datafono) || 0)
+                                  | currency: 'EUR' : 'symbol' : '1.2-2'
+                              }}</span>
+                            </div>
+                            <div class="cierre-row">
+                              <span class="cierre-row-label">Total esperado (ventas)</span>
+                              <span>{{
+                                money(c.total_ventas) || 0 | currency: 'EUR' : 'symbol' : '1.2-2'
+                              }}</span>
+                            </div>
+                            <div class="cierre-row cierre-row-diff">
+                              <span class="cierre-row-label">Diferencia total</span>
+                              <span
+                                [class.diff-pos]="c.diferencia >= 0"
+                                [class.diff-neg]="c.diferencia < 0"
+                              >
+                                {{ money(c.diferencia) >= 0 ? '+' : ''
+                                }}{{
+                                  money(c.diferencia) || 0 | currency: 'EUR' : 'symbol' : '1.2-2'
+                                }}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div *ngIf="c.notas" class="cierre-notas">
+                          <span class="cierre-row-label">📝 Comentarios:</span>
+                          <span>{{ c.notas }}</span>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                </ng-container>
+              </tbody>
+            </table>
+            <div class="table-footer">
+              <div class="pagination">
+                <button
+                  class="page-btn icon"
+                  (click)="goToCierresFirst()"
+                  [disabled]="cierresPage === 1"
+                >
+                  ⏮
+                </button>
+                <button
+                  class="page-btn icon"
+                  (click)="prevCierres()"
+                  [disabled]="cierresPage === 1"
+                >
+                  ◀
+                </button>
+                <button
+                  class="page-btn"
+                  *ngFor="let p of cierresVisiblePages"
+                  (click)="goToCierresPage(p)"
+                  [class.active]="cierresPage === p"
+                >
+                  {{ p }}
+                </button>
+                <button
+                  class="page-btn icon"
+                  (click)="nextCierres()"
+                  [disabled]="cierresPage === cierresTotalPages"
+                >
+                  ▶
+                </button>
+                <button
+                  class="page-btn icon"
+                  (click)="goToCierresLast()"
+                  [disabled]="cierresPage === cierresTotalPages"
+                >
+                  ⏭
+                </button>
+              </div>
+            </div>
+          </div>
+          <ng-template #sinCierres
+            ><p class="empty">No hay cierres de caja registrados.</p></ng-template
+          >
+        </ng-container>
+      </ng-container>
+
+      <!-- ── VENTA / CATALOGO (admin/gerente/empleado) ── -->
+      <div *ngIf="vistaActiva === 'venta'">
+        <div class="pos-columns" style="display: flex; gap: 1rem; align-items: flex-start">
+          <div class="pos-column-catalog" style="flex: 1; min-width: 0">
+            <div class="pos-search-bar" *ngIf="showCatalog">
+              <input
+                type="text"
+                [(ngModel)]="busqueda"
+                (input)="filtrar()"
+                placeholder="🔍 Buscar por nombre o SKU..."
+                class="pos-search-input"
+              />
+              <select [(ngModel)]="categoriaFiltro" (change)="filtrar()" class="pos-cat-select">
+                <option value="">Todas las categorías</option>
+                <option *ngFor="let c of categorias" [value]="c.id">{{ c.nombre }}</option>
+              </select>
+            </div>
+
+            <div class="productos-grid" *ngIf="showCatalog">
+              <div
+                *ngFor="let p of productosPaged"
+                class="producto-card"
+                [class.sin-stock]="p.stock_quantity === 0"
+                (click)="agregarAlCarrito(p)"
+                title="{{ p.stock_quantity === 0 ? 'Sin stock' : 'Añadir al carrito' }}"
+              >
+                <div class="prod-nombre">{{ p.nombre }}</div>
+                <div class="prod-sku" *ngIf="p.sku">SKU: {{ p.sku }}</div>
+                <div class="prod-precio">{{ p.precio | currency: 'EUR' : 'symbol' : '1.2-2' }}</div>
+                <div class="prod-stock" [class.stock-agotado]="p.stock_quantity === 0">
+                  {{ p.stock_quantity === 0 ? 'Sin stock' : 'Stock: ' + p.stock_quantity }}
+                </div>
+              </div>
+              <p *ngIf="productosFiltrados.length === 0" class="empty">
+                No se encontraron productos.
+              </p>
+            </div>
+
+            <div class="table-footer" *ngIf="showCatalog && productosFiltrados.length > 0">
+              <div class="pagination">
+                <button
+                  class="page-btn icon"
+                  (click)="goToProductosFirst()"
+                  [disabled]="productosPage === 1"
+                >
+                  ⏮
+                </button>
+                <button
+                  class="page-btn icon"
+                  (click)="prevProductos()"
+                  [disabled]="productosPage === 1"
+                >
+                  ◀
+                </button>
+                <button
+                  class="page-btn"
+                  *ngFor="let p of productosVisiblePages"
+                  (click)="goToProductosPage(p)"
+                  [class.active]="productosPage === p"
+                >
+                  {{ p }}
+                </button>
+                <button
+                  class="page-btn icon"
+                  (click)="nextProductos()"
+                  [disabled]="productosPage === productosTotalPages"
+                >
+                  ▶
+                </button>
+                <button
+                  class="page-btn icon"
+                  (click)="goToProductosLast()"
+                  [disabled]="productosPage === productosTotalPages"
+                >
+                  ⏭
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div style="width: var(--cart-width, 380px); flex: 0 0 var(--cart-width, 380px)">
+            <div
+              *ngIf="showCarrito && vistaActiva === 'venta'"
+              class="splitter"
+              (mousedown)="startResizeCart($event)"
+              title="Arrastrar para redimensionar carrito"
+              style="width: 8px; cursor: col-resize; margin-left: -8px; margin-right: 8px"
+            ></div>
+
+            <!-- ── Panel derecho: Carrito (admin/gerente/empleado) ─── -->
+            <div *ngIf="showCarrito && vistaActiva === 'venta'" class="pos-carrito">
+              <div class="carrito-header">
+                <h3 class="carrito-titulo">🛒 Carrito</h3>
+                <button class="btn-toggle-carrito" (click)="toggleCarrito()">
+                  🛒 Ocultar carrito
+                </button>
+              </div>
+
+              <div class="carrito-lista" [class.vacio]="carrito.length === 0">
+                <p *ngIf="carrito.length === 0" class="carrito-vacio">
+                  Sin productos en el carrito
+                </p>
+
+                <div *ngFor="let item of carrito" class="carrito-item">
+                  <div class="item-info">
+                    <span class="item-nombre">{{ item.producto.nombre }}</span>
+                    <span class="item-precio-unit"
+                      >{{ item.precio_unitario | currency: 'EUR' : 'symbol' : '1.2-2' }} / ud.</span
+                    >
+                  </div>
+                  <div class="item-controls">
+                    <button class="btn-qty" (click)="decrementarCantidad(item)">−</button>
+                    <span class="item-qty">{{ item.cantidad }}</span>
+                    <button class="btn-qty" (click)="incrementarCantidad(item)">+</button>
+                  </div>
+                  <span class="item-subtotal">{{
+                    item.subtotal | currency: 'EUR' : 'symbol' : '1.2-2'
+                  }}</span>
+                  <button class="btn-remove-item" (click)="eliminarItem(item)" title="Eliminar">
+                    ✕
+                  </button>
+                </div>
+              </div>
+
+              <!-- Total -->
+              <div class="carrito-total">
+                <span>TOTAL</span>
+                <span class="total-importe">{{
+                  totalCarrito | currency: 'EUR' : 'symbol' : '1.2-2'
+                }}</span>
+              </div>
+
+              <!-- Cliente -->
+              <div class="field-group">
+                <label>Cliente (opcional)</label>
+                <select [(ngModel)]="clienteId" class="pos-select">
+                  <option [ngValue]="null">— Sin cliente —</option>
+                  <option *ngFor="let c of clientes" [ngValue]="c.id">{{ c.nombre }}</option>
+                </select>
+              </div>
+
+              <!-- Método de pago -->
+              <div class="field-group">
+                <label>Método de pago</label>
+                <div class="metodo-btns">
+                  <button
+                    [class.active]="metodoPago === 'efectivo'"
+                    (click)="setMetodoPago('efectivo')"
+                  >
+                    💵 Efectivo
+                  </button>
+                  <button
+                    [class.active]="metodoPago === 'tarjeta'"
+                    (click)="setMetodoPago('tarjeta')"
+                  >
+                    💳 Tarjeta
+                  </button>
+                  <button [class.active]="metodoPago === 'mixto'" (click)="setMetodoPago('mixto')">
+                    🔀 Mixto
+                  </button>
+                </div>
+              </div>
+
+              <!-- Desglose pago mixto -->
+              <div *ngIf="metodoPago === 'mixto'" class="field-group">
+                <label>Desglose efectivo / tarjeta</label>
+                <div class="mixto-row">
+                  <div class="mixto-col">
+                    <span class="mixto-label">💵 Efectivo</span>
+                    <input
+                      type="number"
+                      [(ngModel)]="mixtoEfectivo"
+                      min="0"
+                      step="0.01"
+                      class="pos-input"
+                      placeholder="0,00"
+                    />
+                  </div>
+                  <div class="mixto-col">
+                    <span class="mixto-label">💳 Tarjeta</span>
+                    <input
+                      type="number"
+                      [(ngModel)]="mixtoTarjeta"
+                      min="0"
+                      step="0.01"
+                      class="pos-input"
+                      placeholder="0,00"
+                    />
+                  </div>
+                </div>
+                <p
+                  *ngIf="
+                    mixtoEfectivo + mixtoTarjeta > 0 &&
+                    mixtoEfectivo + mixtoTarjeta !== totalCarrito
+                  "
+                  class="mixto-aviso"
+                >
+                  Suma: {{ mixtoEfectivo + mixtoTarjeta | currency: 'EUR' : 'symbol' : '1.2-2' }} ·
+                  Total:
+                  {{ totalCarrito | currency: 'EUR' : 'symbol' : '1.2-2' }}
+                </p>
+              </div>
+
+              <!-- Importe entregado por el cliente -->
+              <div *ngIf="metodoPago !== 'mixto'" class="field-group">
+                <label>Importe entregado (€)</label>
+                <input
+                  type="number"
+                  [(ngModel)]="importeEntregado"
+                  min="0"
+                  step="0.01"
+                  class="pos-input"
+                  placeholder="0,00"
+                />
+                <p
+                  *ngIf="importeEntregado > 0 && importeEntregado >= totalCarrito"
+                  class="vuelta-preview"
+                >
+                  Vuelta:
+                  {{ importeEntregado - totalCarrito | currency: 'EUR' : 'symbol' : '1.2-2' }}
+                </p>
+              </div>
+
+              <!-- Notas -->
+              <div class="field-group">
+                <label>Notas</label>
+                <input
+                  type="text"
+                  [(ngModel)]="notas"
+                  placeholder="Observaciones..."
+                  class="pos-input"
+                />
+              </div>
+
+              <p *ngIf="error" class="error-line">{{ error }}</p>
+
+              <div class="carrito-acciones">
+                <button
+                  class="btn-limpiar"
+                  (click)="limpiarCarrito()"
+                  [disabled]="carrito.length === 0"
+                >
+                  🗑️ Limpiar
+                </button>
+                <button
+                  class="btn-cobrar"
+                  (click)="cobrar()"
+                  [disabled]="carrito.length === 0 || procesando"
+                >
+                  {{
+                    procesando
+                      ? 'Procesando...'
+                      : '✅ COBRAR ' + (totalCarrito | currency: 'EUR' : 'symbol' : '1.2-2')
+                  }}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Botones fijos (CIERRE DE CAJA / PAGO PROVEEDOR)─── -->
+          <button class="btn-cierre-fijo" (click)="abrirCierreCaja()" title="Cierre de caja diario">
+            🔒 Cierre de Caja
+          </button>
+          <button
+            *ngIf="auth.isAdminOrGerente()"
+            class="btn-pago-proveedor-fijo"
+            (click)="abrirPagoProveedor()"
+            title="Pagar a proveedor"
+          >
+            🏭 Pagar Proveedor
+          </button>
+
+          <!-- ── Modal: Venta realizada ─── -->
+          <div *ngIf="ventaRealizada" class="overlay" (click)="ventaRealizada = false">
+            <div class="overlay-card" (click)="$event.stopPropagation()">
+              <div class="overlay-icon">✅</div>
+              <h3>¡Venta registrada!</h3>
+              <p class="overlay-total">
+                {{ totalUltimaVenta | currency: 'EUR' : 'symbol' : '1.2-2' }}
+              </p>
+              <div *ngIf="vueltaUltimaVenta > 0" class="overlay-vuelta">
+                <span>Vuelta</span>
+                <strong>{{ vueltaUltimaVenta | currency: 'EUR' : 'symbol' : '1.2-2' }}</strong>
+              </div>
+              <button class="btn-overlay-close" (click)="ventaRealizada = false">Continuar</button>
+            </div>
+          </div>
+
+          <!-- ── Modal: Editar cliente de venta (top-level) ─── -->
+          <div *ngIf="ventaEditId" class="overlay" (click)="cancelarEditarCliente()">
+            <div class="overlay-card" (click)="$event.stopPropagation()" style="max-width: 420px">
+              <h3>✏️ Editar cliente (venta #{{ ventaEditId }})</h3>
+              <div style="margin: 1rem 0">
+                <label style="display: block; font-weight: 600; margin-bottom: 0.4rem"
+                  >Cliente</label
+                >
+                <select [(ngModel)]="ventaEditClienteId" class="pos-select" style="width: 100%">
+                  <option [ngValue]="null">— Sin cliente —</option>
+                  <option *ngFor="let c of clientes" [ngValue]="c.id">{{ c.nombre }}</option>
+                </select>
+                <p *ngIf="ventaEditError" class="error-line" style="margin-top: 0.5rem">
+                  {{ ventaEditError }}
+                </p>
+                <p *ngIf="ventaEditSuccess" style="color: #16a34a; margin-top: 0.5rem">
+                  {{ ventaEditSuccess }}
+                </p>
+              </div>
+              <div
+                style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 0.5rem"
+              >
+                <button class="btn-cancel-form" (click)="cancelarEditarCliente()">Cancelar</button>
+                <button
+                  class="btn-save-form"
+                  (click)="guardarClienteVenta()"
+                  [disabled]="
+                    guardandoCliente || ventaEditOriginalClienteId === (ventaEditClienteId ?? null)
+                  "
+                >
+                  {{ guardandoCliente ? 'Guardando...' : 'Guardar cliente' }}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Modal: Cierre de caja ─── -->
+          <div *ngIf="mostrarCierreCaja" class="overlay">
+            <div class="overlay-card cierre-card" (click)="$event.stopPropagation()">
+              <h3>🔒 Cierre de Caja Diario</h3>
+
+              <div class="cierre-resumen-bar" *ngIf="auth.isAdminOrGerente()">
+                <span>Total ventas hoy</span>
+                <strong>{{ totalVentasHoy | currency: 'EUR' : 'symbol' : '1.2-2' }}</strong>
+              </div>
+
+              <div class="form-grid">
+                <div class="form-field">
+                  <label>Efectivo retirado (€)</label>
+                  <input
+                    type="number"
+                    [(ngModel)]="cierreCaja.efectivo_retirado"
+                    min="0"
+                    step="0.01"
+                    class="pos-input"
+                  />
+                </div>
+                <div class="form-field">
+                  <label>Importe datáfono (€)</label>
+                  <input
+                    type="number"
+                    [(ngModel)]="cierreCaja.importe_datafono"
+                    min="0"
+                    step="0.01"
+                    class="pos-input"
+                  />
+                </div>
+                <div class="form-field" style="grid-column: 1/-1">
+                  <label>Total declarado</label>
+                  <strong>{{
+                    cierreCaja.efectivo_retirado + cierreCaja.importe_datafono
+                      | currency: 'EUR' : 'symbol' : '1.2-2'
+                  }}</strong>
+                </div>
+                <ng-container *ngIf="auth.isAdminOrGerente()">
+                  <div class="form-field" style="grid-column: 1/-1">
+                    <label>Diferencia</label>
+                    <strong
+                      [class.diferencia-pos]="diferenciaCierre >= 0"
+                      [class.diferencia-neg]="diferenciaCierre < 0"
+                    >
+                      {{ diferenciaCierre | currency: 'EUR' : 'symbol' : '1.2-2' }}
+                    </strong>
+                  </div>
+                </ng-container>
+                <div class="form-field" style="grid-column: 1/-1">
+                  <label>Notas</label>
+                  <textarea [(ngModel)]="cierreCaja.notas" rows="2" class="pos-input"></textarea>
+                </div>
+              </div>
+
+              <p *ngIf="errorCierre" class="error-line">{{ errorCierre }}</p>
+
+              <div class="modal-actions">
+                <button
+                  class="btn-save-form"
+                  (click)="guardarCierre()"
+                  [disabled]="guardandoCierre"
+                >
+                  {{ guardandoCierre ? 'Guardando...' : '💾 Guardar cierre' }}
+                </button>
+                <button class="btn-cancel-form" (click)="mostrarCierreCaja = false">
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Modal: Pago a proveedor ─── -->
+          <div *ngIf="mostrarPagoProveedor" class="overlay">
+            <div class="overlay-card cierre-card" (click)="$event.stopPropagation()">
+              <h3>🏭 Registrar Pago a Proveedor</h3>
+              <p style="color: #888; font-size: 0.9rem; margin-bottom: 1rem">
+                Se registrará como importe negativo en el listado de ventas.
+              </p>
+
+              <div class="form-grid">
+                <div class="form-field">
+                  <label>Proveedor (opcional)</label>
+                  <select [(ngModel)]="pagoProveedorForm.proveedor_id" class="pos-input">
+                    <option value="">— Sin especificar —</option>
+                    <option *ngFor="let p of proveedores" [value]="p.id">{{ p.nombre }}</option>
+                  </select>
+                </div>
+                <div class="form-field">
+                  <label>Importe (€) *</label>
+                  <input
+                    type="number"
+                    [(ngModel)]="pagoProveedorForm.importe"
+                    min="0.01"
+                    step="0.01"
+                    class="pos-input"
+                    placeholder="0.00"
+                  />
+                </div>
+                <div class="form-field" style="grid-column: 1/-1">
+                  <label>Concepto *</label>
+                  <input
+                    type="text"
+                    [(ngModel)]="pagoProveedorForm.concepto"
+                    class="pos-input"
+                    placeholder="Descripción del pago"
+                  />
+                </div>
+                <div class="form-field" style="grid-column: 1/-1">
+                  <label>Método de pago</label>
+                  <div class="metodo-btns">
+                    <button
+                      [class.active]="pagoProveedorForm.metodo_pago === 'efectivo'"
+                      (click)="pagoProveedorForm.metodo_pago = 'efectivo'"
+                    >
+                      💵 Efectivo
+                    </button>
+                    <button
+                      [class.active]="pagoProveedorForm.metodo_pago === 'tarjeta'"
+                      (click)="pagoProveedorForm.metodo_pago = 'tarjeta'"
+                    >
+                      💳 Tarjeta
+                    </button>
+                    <button
+                      [class.active]="pagoProveedorForm.metodo_pago === 'mixto'"
+                      (click)="pagoProveedorForm.metodo_pago = 'mixto'"
+                    >
+                      🔀 Mixto
+                    </button>
+                  </div>
+                </div>
+                <!-- ── Modal: Editar cliente de venta ─── -->
+                <div *ngIf="ventaEditId" class="overlay" (click)="cancelarEditarCliente()">
+                  <div
+                    class="overlay-card"
+                    (click)="$event.stopPropagation()"
+                    style="max-width: 420px"
+                  >
+                    <h3>✏️ Editar cliente (venta #{{ ventaEditId }})</h3>
+                    <div style="margin: 1rem 0">
+                      <label style="display: block; font-weight: 600; margin-bottom: 0.4rem"
+                        >Cliente</label
+                      >
+                      <select
+                        [(ngModel)]="ventaEditClienteId"
+                        class="pos-select"
+                        style="width: 100%"
+                      >
+                        <option [ngValue]="null">— Sin cliente —</option>
+                        <option *ngFor="let c of clientes" [ngValue]="c.id">{{ c.nombre }}</option>
+                      </select>
+                      <p *ngIf="ventaEditError" class="error-line" style="margin-top: 0.5rem">
+                        {{ ventaEditError }}
+                      </p>
+                      <p *ngIf="ventaEditSuccess" style="color: #16a34a; margin-top: 0.5rem">
+                        {{ ventaEditSuccess }}
+                      </p>
+                    </div>
+                    <div
+                      style="
+                        display: flex;
+                        gap: 0.5rem;
+                        justify-content: flex-end;
+                        margin-top: 0.5rem;
+                      "
+                    >
+                      <button class="btn-cancel-form" (click)="cancelarEditarCliente()">
+                        Cancelar
+                      </button>
+                      <button
+                        class="btn-save-form"
+                        (click)="guardarClienteVenta()"
+                        [disabled]="
+                          guardandoCliente ||
+                          ventaEditOriginalClienteId === (ventaEditClienteId ?? null)
+                        "
+                      >
+                        {{ guardandoCliente ? 'Guardando...' : 'Guardar cliente' }}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <p *ngIf="errorPago" class="error-line">{{ errorPago }}</p>
+
+              <div class="modal-actions">
+                <button
+                  class="btn-save-form"
+                  (click)="confirmarPagoProveedor()"
+                  [disabled]="procesandoPago"
+                >
+                  {{ procesandoPago ? 'Registrando...' : '💾 Registrar pago' }}
+                </button>
+                <button class="btn-cancel-form" (click)="mostrarPagoProveedor = false">
+                  Cancelar
+                </button>
+              </div>
             </div>
           </div>
         </div>
-
-        @if (errorPago) { <p class="error-line">{{ errorPago }}</p> }
-
-        <div class="modal-actions">
-          <button class="btn-save-form" (click)="confirmarPagoProveedor()" [disabled]="procesandoPago">
-            {{ procesandoPago ? 'Registrando...' : '💾 Registrar pago' }}
-          </button>
-          <button class="btn-cancel-form" (click)="mostrarPagoProveedor = false">Cancelar</button>
-        </div>
       </div>
     </div>
-  }
-
+  </div>
 </div>

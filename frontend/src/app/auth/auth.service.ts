@@ -38,7 +38,11 @@ export class AuthService {
   getCurrentUser(): User | null {
     const raw = localStorage.getItem('current_user');
     if (!raw) return null;
-    try { return JSON.parse(raw) as User; } catch { return null; }
+    try {
+      return JSON.parse(raw) as User;
+    } catch {
+      return null;
+    }
   }
 
   isAdmin(): boolean {
