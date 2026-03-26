@@ -103,6 +103,14 @@ docker-volume-*/
 .devcontainer/*.local.*
 
 ############################
+# Herramientas locales de IA
+############################
+
+# Claude Code y oh-my-claudecode (configuración local, no relevante para el proyecto)
+.claude/
+.omc/
+
+############################
 # Otros
 ############################
 

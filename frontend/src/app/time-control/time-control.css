@@ -8,6 +8,83 @@
   margin-bottom: 1.5rem;
 }
 
+/* ── Jornada card ── */
+.jornada-section { margin-bottom: 1.5rem; }
+
+.jornada-card {
+  background: #fff;
+  border: 2px solid #e2e8f0;
+  border-radius: 0.75rem;
+  padding: 1.2rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  transition: border-color 0.2s;
+}
+.jornada-card.activa { border-color: #22c55e; background: #f0fdf4; }
+
+.jornada-center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  text-align: center;
+}
+.jornada-icon { font-size: 1.8rem; }
+.jornada-estado { font-weight: 600; color: #0a2342; margin: 0 0 0.2rem; }
+.jornada-timer { font-size: 1.5rem; font-weight: 700; color: #16a34a; margin: 0; font-variant-numeric: tabular-nums; }
+.jornada-inicio { font-size: 0.82rem; color: #64748b; margin: 0.1rem 0 0; }
+
+.btn-iniciar, .btn-finalizar {
+  padding: 0.6rem 1.4rem;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.btn-iniciar { background: #0a2342; color: #fff; }
+.btn-finalizar { background: #dc2626; color: #fff; }
+.btn-iniciar:disabled, .btn-finalizar:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-iniciar:hover:not(:disabled) { background: #17375e; }
+.btn-finalizar:hover:not(:disabled) { background: #b91c1c; }
+
+.error-inline { color: #dc2626; font-size: 0.85rem; margin-top: 0.4rem; }
+
+.jornada-card.en-pausa { border-color: #f59e0b; background: #fffbeb; }
+
+.btns-fin {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.btn-pausar {
+  padding: 0.5rem 1.2rem;
+  border: 2px solid #f59e0b;
+  background: #fff;
+  color: #b45309;
+  border-radius: 0.5rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-pausar:hover:not(:disabled) { background: #fffbeb; }
+.btn-pausar:disabled { opacity: 0.5; cursor: not-allowed; }
+.jornada-tramos { font-size: 0.8rem; color: #64748b; margin: 0.2rem 0 0; }
+
+tfoot .fila-total td {
+  font-weight: 700;
+  background: #f1f5f9;
+  border-top: 2px solid #e2e8f0;
+  padding: 0.5rem 0.75rem;
+  color: #0a2342;
+}
+
 .loading, .error {
   padding: 1rem;
   border-radius: 0.5rem;

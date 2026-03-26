@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
@@ -14,8 +14,31 @@ export class Header {
   public auth = inject(AuthService);
   private router = inject(Router);
 
+  dropdownOpen = false;
+
+  toggleDropdown(): void {
+    this.dropdownOpen = !this.dropdownOpen;
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    if (!target.closest('.avatar-wrapper')) {
+      this.dropdownOpen = false;
+    }
+  }
+
   navigateToPerfil(): void {
+    this.dropdownOpen = false;
     this.router.navigate(['/perfil']);
+  }
+
+  logout(): void {
+    this.dropdownOpen = false;
+    this.auth.logout().subscribe({
+      next: () => this.router.navigate(['/login']),
+      error: () => this.router.navigate(['/login']),
+    });
   }
 
   get nombreUsuario(): string {

@@ -22,7 +22,7 @@ class ProductoController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'nombre'         => 'required|string|max:255',
+            'nombre'         => 'required|string|max:255|unique:productos,nombre',
             'sku'            => 'nullable|string|max:100|unique:productos,sku',
             'descripcion' => 'nullable|string',
             'precio' => 'required|numeric',
@@ -61,7 +61,7 @@ class ProductoController extends Controller
             return response()->json(['error' => 'No encontrado'], 404);
         }
         $validated = $request->validate([
-            'nombre'         => 'sometimes|string|max:255',
+            'nombre'         => 'sometimes|string|max:255|unique:productos,nombre,' . $id,
             'sku'            => 'nullable|string|max:100|unique:productos,sku,'. $id,
             'descripcion' => 'nullable|string',
             'precio' => 'sometimes|numeric',

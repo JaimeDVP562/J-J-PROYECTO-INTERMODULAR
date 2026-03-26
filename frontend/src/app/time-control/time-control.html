@@ -1,301 +1,344 @@
 <div class="time-control">
   <h2>Control Horario</h2>
 
+  <!-- ── FICHAR ── -->
+  @if (jornadaCargada) {
+    <section class="jornada-section">
+      <div class="jornada-card" [class.activa]="jornadaActiva" [class.en-pausa]="!jornadaActiva && tramosCompletadosHoy > 0">
+        <button class="btn-iniciar" (click)="iniciarJornada()" [disabled]="accionJornada || !!jornadaActiva">
+          {{ accionJornada && !jornadaActiva ? 'Iniciando...' : '▶ Iniciar turno' }}
+        </button>
+
+        <div class="jornada-center">
+          <span class="jornada-icon">
+            {{ jornadaActiva ? '🟢' : (tramosCompletadosHoy > 0 ? '🟡' : '⚪') }}
+          </span>
+          <div>
+            <p class="jornada-estado">
+              {{ jornadaActiva ? 'Turno en curso' : (tramosCompletadosHoy > 0 ? 'En pausa' : 'Sin jornada activa') }}
+            </p>
+            <p class="jornada-timer">{{ tiempoTotal }}</p>
+            @if (tramosCompletadosHoy > 0) {
+              <p class="jornada-tramos">
+                {{ tramosCompletadosHoy }} tramo{{ tramosCompletadosHoy !== 1 ? 's' : '' }} completado{{ tramosCompletadosHoy !== 1 ? 's' : '' }}
+              </p>
+            }
+          </div>
+        </div>
+
+        @if (jornadaActiva) {
+          <div class="btns-fin">
+            <button class="btn-pausar" (click)="finalizarJornada()" [disabled]="accionJornada">
+              {{ accionJornada ? '...' : '⏸ Pausar turno' }}
+            </button>
+            <button class="btn-finalizar" (click)="finalizarJornada()" [disabled]="accionJornada">
+              {{ accionJornada ? '...' : '⏹ Cerrar turno' }}
+            </button>
+          </div>
+        } @else {
+          <button class="btn-finalizar" disabled>⏹ Cerrar turno</button>
+        }
+      </div>
+      @if (errorJornada) {
+        <p class="error-inline">{{ errorJornada }}</p>
+      }
+    </section>
+  }
+
   <!-- Sub-tabs -->
   <div class="tabs">
-    <button [class.active]="vistaActiva === 'hoy'" (click)="vistaActiva = 'hoy'">📅 Hoy</button>
+    @if (auth.isAdminOrGerente()) {
+      <button [class.active]="vistaActiva === 'hoy'" (click)="vistaActiva = 'hoy'">📅 Hoy</button>
+    }
     <button [class.active]="vistaActiva === 'mensual'" (click)="vistaActiva = 'mensual'; cargarMensual()">📊 Resumen mensual</button>
   </div>
 
-  <div *ngIf="cargando" class="loading">Cargando...</div>
-  <div *ngIf="error" class="error">{{ error }}</div>
+  @if (cargando) {
+    <div class="loading">Cargando...</div>
+  }
+  @if (error) {
+    <div class="error">{{ error }}</div>
+  }
 
   <!-- ── VISTA HOY ── -->
-  <ng-container *ngIf="vistaActiva === 'hoy' && !cargando && !error">
+  @if (vistaActiva === 'hoy' && !cargando && !error) {
 
     <!-- ADMIN / GERENTE -->
-    <ng-container *ngIf="auth.isAdminOrGerente()">
+    @if (auth.isAdminOrGerente()) {
 
-      <h3 class="seccion-titulo">👤 Mi actividad hoy</h3>
-      <div class="table-wrapper">
-        <table *ngIf="misJornadas.length > 0; else sinMisJornadas">
-          <thead>
-            <tr><th>Inicio</th><th>Fin</th><th>Duración</th><th>Estado</th></tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let j of misJornadas">
-              <td>{{ j.inicio | date:'HH:mm' }}</td>
-              <td>{{ j.fin ? (j.fin | date:'HH:mm') : '—' }}</td>
-              <td>{{ j.duracion_minutos != null ? formatMin(j.duracion_minutos) : '—' }}</td>
-              <td>
-                <span *ngIf="!j.fin" class="badge-en-curso">🟢 En curso</span>
-                <span *ngIf="j.fin" class="badge-completada">✅ Completada</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <ng-template #sinMisJornadas>
-          <p class="empty">No tienes jornadas registradas hoy.</p>
-        </ng-template>
-      </div>
-
-      <h3 class="seccion-titulo">👥 Actividad del equipo</h3>
+      <h3 class="seccion-titulo">📋 Resumen diario</h3>
       <div class="summary-bar">
         <span>Empleados con actividad hoy: <strong>{{ resumen.length }}</strong></span>
       </div>
       <div class="table-wrapper">
-        <table *ngIf="resumen.length > 0; else sinResumen">
-          <thead>
-            <tr>
-              <th>Empleado</th><th>Rol</th><th>Períodos</th>
-              <th>Total hoy</th><th>Estado actual</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let r of resumen">
-              <td>{{ r.nombre }}</td>
-              <td><span class="badge-rol">{{ r.rol }}</span></td>
-              <td class="periodos-cell">
-                <span *ngIf="r.periodos && r.periodos.length > 0" class="periodos-list">
-                  {{ formatPeriodosResumen(r.periodos) }}
-                </span>
-                <span *ngIf="!r.periodos || r.periodos.length === 0" class="text-muted">—</span>
-              </td>
-              <td><strong>{{ formatMin(r.total_minutos) }}</strong></td>
-              <td>
-                <span *ngIf="r.jornada_activa" class="badge-en-curso">
-                  🟢 En curso desde {{ r.jornada_activa.inicio | date:'HH:mm' }}
-                </span>
-                <span *ngIf="!r.jornada_activa" class="badge-sin-jornada">⚪ Sin jornada activa</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <ng-template #sinResumen>
+        @if (resumen.length > 0) {
+          <table>
+            <thead>
+              <tr>
+                <th>Empleado</th><th>Rol</th><th>Períodos</th>
+                <th>Total hoy</th><th>Estado actual</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (r of resumen; track r.nombre) {
+                <tr>
+                  <td>{{ r.nombre }}</td>
+                  <td><span class="badge-rol">{{ r.rol }}</span></td>
+                  <td class="periodos-cell">
+                    @if (r.periodos && r.periodos.length > 0) {
+                      <span class="periodos-list">{{ formatPeriodosResumen(r.periodos) }}</span>
+                    } @else {
+                      <span class="text-muted">—</span>
+                    }
+                  </td>
+                  <td><strong>{{ formatMin(r.total_minutos) }}</strong></td>
+                  <td>
+                    @if (r.jornada_activa) {
+                      <span class="badge-en-curso">🟢 En curso desde {{ r.jornada_activa.inicio | date:'HH:mm' }}</span>
+                    } @else {
+                      <span class="badge-sin-jornada">⚪ Sin jornada activa</span>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        } @else {
           <p class="empty">Ningún usuario ha registrado jornada hoy.</p>
-        </ng-template>
+        }
       </div>
 
-    </ng-container>
+    }
 
-    <!-- USUARIO NORMAL -->
-    <ng-container *ngIf="!auth.isAdminOrGerente()">
-      <div class="summary-bar">
-        <span>Mis jornadas — últimas 12 horas: <strong>{{ misJornadas.length }}</strong></span>
-      </div>
-      <div class="table-wrapper">
-        <table *ngIf="misJornadas.length > 0; else sinJornadas">
-          <thead>
-            <tr><th>Inicio</th><th>Fin</th><th>Duración</th><th>Estado</th></tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let j of misJornadas">
-              <td>{{ j.inicio | date:'HH:mm' }}</td>
-              <td>{{ j.fin ? (j.fin | date:'HH:mm') : '—' }}</td>
-              <td>{{ j.duracion_minutos != null ? formatMin(j.duracion_minutos) : '—' }}</td>
-              <td>
-                <span *ngIf="!j.fin" class="badge-en-curso">🟢 En curso</span>
-                <span *ngIf="j.fin" class="badge-completada">✅ Completada</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <ng-template #sinJornadas>
-          <p class="empty">No tienes jornadas registradas en las últimas 12 horas.</p>
-        </ng-template>
-      </div>
-    </ng-container>
-
-  </ng-container>
+  }
 
   <!-- ── VISTA MENSUAL ── -->
-  <ng-container *ngIf="vistaActiva === 'mensual'">
+  @if (vistaActiva === 'mensual') {
     <div class="mensual-filter">
       <select [(ngModel)]="mesSeleccionado" class="mes-select">
-        <option *ngFor="let m of meses" [value]="m.n">{{ m.label }}</option>
+        @for (m of meses; track m.n) {
+          <option [value]="m.n">{{ m.label }}</option>
+        }
       </select>
       <input type="number" [(ngModel)]="anoSeleccionado" min="2020" max="2099" class="ano-input" />
       <button class="btn-filtrar" (click)="cargarMensual()">Consultar</button>
     </div>
 
-    <div *ngIf="cargandoMensual" class="loading">Cargando resumen...</div>
+    @if (cargandoMensual) {
+      <div class="loading">Cargando resumen...</div>
+    }
 
-    <!-- Admin/Gerente: mi actividad + equipo -->
-    <ng-container *ngIf="auth.isAdminOrGerente() && !cargandoMensual">
-
-      <h3 class="seccion-titulo">👤 Mi actividad</h3>
-      <ng-container *ngIf="miResumenMensual; else sinMiActividad">
+    <!-- ── Mi actividad: visible para TODOS los roles ── -->
+    @if (!cargandoMensual) {
+      <h3 class="seccion-titulo">👤 Mi actividad — {{ meses[mesSeleccionado - 1].label }} {{ anoSeleccionado }}</h3>
+      @if (miResumen) {
         <div class="mensual-resumen-cards">
           <div class="resumen-card">
-            <span class="card-value">{{ miResumenMensual.dias_trabajados }}</span>
+            <span class="card-value">{{ miResumen.dias_trabajados }}</span>
             <span class="card-label">Días trabajados</span>
           </div>
           <div class="resumen-card">
-            <span class="card-value">{{ formatMin(miResumenMensual.total_minutos) }}</span>
-            <span class="card-label">Total</span>
-          </div>
-          <div class="resumen-card">
-            <span class="card-value">{{ miResumenMensual.num_jornadas }}</span>
-            <span class="card-label">Nº jornadas</span>
+            <span class="card-value">{{ formatMin(miResumen.total_minutos) }}</span>
+            <span class="card-label">Horas trabajadas</span>
           </div>
         </div>
-      </ng-container>
-      <ng-template #sinMiActividad>
+      } @else {
         <p class="empty">Sin actividad registrada este mes.</p>
-      </ng-template>
+      }
+    }
+
+    <!-- Admin/Gerente: equipo -->
+    @if (auth.isAdminOrGerente() && !cargandoMensual) {
 
       <h3 class="seccion-titulo">👥 Actividad del equipo</h3>
-      <div class="table-wrapper" *ngIf="equipoResumenMensual.length > 0; else sinEquipo">
-        <table>
-          <thead>
-            <tr><th>Empleado</th><th>Días trabajados</th><th>Total</th><th>Nº jornadas</th></tr>
-          </thead>
-          <tbody>
-            <ng-container *ngFor="let r of equipoResumenMensual">
+      @if (equipoResumenMensual.length > 0) {
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr><th>Empleado</th><th>Días trabajados</th><th>Total</th></tr>
+            </thead>
+            <tbody>
+              @for (r of equipoResumenMensual; track r.user_id) {
+                <!-- Fila empleado (clickable) -->
+                <tr class="fila-usuario" [class.fila-expandida]="expandedUserId === r.user_id"
+                    (click)="toggleDetalle(r.user_id)">
+                  <td>
+                    <span class="expand-icon">{{ expandedUserId === r.user_id ? '▼' : '▶' }}</span>
+                    {{ r.nombre }}
+                  </td>
+                  <td>{{ r.dias_trabajados }}</td>
+                  <td>{{ formatMin(r.total_minutos) }}</td>
+                </tr>
 
-              <!-- Fila empleado (clickable) -->
-              <tr class="fila-usuario" [class.fila-expandida]="expandedUserId === r.user_id"
-                  (click)="toggleDetalle(r.user_id)">
-                <td>
-                  <span class="expand-icon">{{ expandedUserId === r.user_id ? '▼' : '▶' }}</span>
-                  {{ r.nombre }}
-                </td>
-                <td>{{ r.dias_trabajados }}</td>
-                <td>{{ formatMin(r.total_minutos) }}</td>
-                <td>{{ r.num_jornadas }}</td>
-              </tr>
+                <!-- Fila de detalle expandida -->
+                @if (expandedUserId === r.user_id) {
+                  <tr class="fila-detalle-container">
+                    <td colspan="4">
+                      <div class="detalle-panel" (click)="$event.stopPropagation()">
 
-              <!-- Fila de detalle expandida -->
-              <tr *ngIf="expandedUserId === r.user_id" class="fila-detalle-container">
-                <td colspan="4">
-                  <div class="detalle-panel" (click)="$event.stopPropagation()">
-
-                    <div class="detalle-header">
-                      <span class="detalle-titulo">
-                        {{ r.nombre }} · {{ meses[mesSeleccionado - 1].label }} {{ anoSeleccionado }}
-                      </span>
-                      <button class="btn-nueva-jornada" (click)="abrirFormNuevaJornada()">+ Nueva jornada</button>
-                    </div>
-
-                    <!-- Formulario nueva jornada -->
-                    <div *ngIf="mostrarFormNuevaJornada" class="nueva-jornada-form">
-                      <div class="form-inline">
-                        <div class="form-inline-field">
-                          <label>Inicio *</label>
-                          <input type="datetime-local" [(ngModel)]="nuevaJornadaForm.inicio" class="input-edit" />
+                        <div class="detalle-header">
+                          <span class="detalle-titulo">
+                            {{ r.nombre }} · {{ meses[mesSeleccionado - 1].label }} {{ anoSeleccionado }}
+                          </span>
+                          <button class="btn-nueva-jornada" (click)="abrirFormNuevaJornada()">+ Nueva jornada</button>
                         </div>
-                        <div class="form-inline-field">
-                          <label>Fin</label>
-                          <input type="datetime-local" [(ngModel)]="nuevaJornadaForm.fin" class="input-edit" />
-                        </div>
-                        <div class="form-inline-actions">
-                          <button class="btn-save" (click)="crearJornada()" [disabled]="guardandoJornada">
-                            {{ guardandoJornada ? '...' : '💾' }}
-                          </button>
-                          <button class="btn-cancel" (click)="mostrarFormNuevaJornada = false">✖</button>
-                        </div>
-                      </div>
-                    </div>
 
-                    <p *ngIf="errorJornada" class="error-inline">{{ errorJornada }}</p>
-                    <div *ngIf="cargandoDetalle" class="loading" style="padding:.5rem 0">Cargando...</div>
-
-                    <table *ngIf="!cargandoDetalle && jornadasDetalle.length > 0" class="tabla-detalle">
-                      <thead>
-                        <tr><th>Período</th><th>Inicio</th><th>Fin</th><th>Duración</th><th>Estado</th><th></th></tr>
-                      </thead>
-                      <tbody>
-                        <ng-container *ngFor="let dia of jornadasPorDia">
-                          <!-- Fila agrupadora de día -->
-                          <tr class="fila-dia-grupo">
-                            <td colspan="6">
-                              <span class="dia-label">📅 {{ dia.label }}</span>
-                              <span class="dia-periodos">{{ formatDiaPeriodos(dia.jornadas) }}</span>
-                              <span class="dia-total">{{ formatMin(sumMinutos(dia.jornadas)) }}</span>
-                            </td>
-                          </tr>
-                          <!-- Filas individuales de cada período -->
-                          <ng-container *ngFor="let j of dia.jornadas; let i = index">
-                            <tr *ngIf="editandoJornadaId !== j.id" class="fila-periodo">
-                              <td class="num-periodo">{{ i + 1 }}</td>
-                              <td>{{ j.inicio | date:'HH:mm' }}</td>
-                              <td>{{ j.fin ? (j.fin | date:'HH:mm') : '—' }}</td>
-                              <td>{{ j.duracion_minutos != null ? formatMin(j.duracion_minutos) : '—' }}</td>
-                              <td>
-                                <span *ngIf="!j.fin" class="badge-en-curso">🟢 Abierta</span>
-                                <span *ngIf="j.fin" class="badge-completada">✅</span>
-                              </td>
-                              <td class="acciones">
-                                <button class="btn-edit" (click)="iniciarEditJornada(j)" title="Editar">✏️</button>
-                                <button class="btn-del" (click)="eliminarJornada(j.id)" title="Eliminar">🗑️</button>
-                              </td>
-                            </tr>
-                            <tr *ngIf="editandoJornadaId === j.id" class="fila-edicion">
-                              <td>{{ i + 1 }}</td>
-                              <td><input type="datetime-local" [(ngModel)]="editJornadaForm.inicio" class="input-edit" /></td>
-                              <td><input type="datetime-local" [(ngModel)]="editJornadaForm.fin" class="input-edit" /></td>
-                              <td colspan="2">—</td>
-                              <td class="acciones">
-                                <button class="btn-save" (click)="guardarEditJornada()" [disabled]="guardandoJornada">
+                        <!-- Formulario nueva jornada -->
+                        @if (mostrarFormNuevaJornada) {
+                          <div class="nueva-jornada-form">
+                            <div class="form-inline">
+                              <div class="form-inline-field">
+                                <label>Inicio *</label>
+                                <input type="datetime-local" [(ngModel)]="nuevaJornadaForm.inicio" class="input-edit" />
+                              </div>
+                              <div class="form-inline-field">
+                                <label>Fin</label>
+                                <input type="datetime-local" [(ngModel)]="nuevaJornadaForm.fin" class="input-edit" />
+                              </div>
+                              <div class="form-inline-actions">
+                                <button class="btn-save" (click)="crearJornada()" [disabled]="guardandoJornada">
                                   {{ guardandoJornada ? '...' : '💾' }}
                                 </button>
-                                <button class="btn-cancel" (click)="editandoJornadaId = null">✖</button>
-                              </td>
-                            </tr>
-                          </ng-container>
-                        </ng-container>
-                      </tbody>
-                    </table>
+                                <button class="btn-cancel" (click)="mostrarFormNuevaJornada = false">✖</button>
+                              </div>
+                            </div>
+                          </div>
+                        }
 
-                    <p *ngIf="!cargandoDetalle && jornadasDetalle.length === 0" class="empty" style="margin:.5rem 0">
-                      Sin jornadas registradas este mes.
-                    </p>
+                        @if (errorJornada) {
+                          <p class="error-inline">{{ errorJornada }}</p>
+                        }
+                        @if (cargandoDetalle) {
+                          <div class="loading" style="padding:.5rem 0">Cargando...</div>
+                        }
 
-                  </div>
-                </td>
-              </tr>
+                        @if (!cargandoDetalle && jornadasDetalle.length > 0) {
+                          <table class="tabla-detalle">
+                            <thead>
+                              <tr><th>Período</th><th>Inicio</th><th>Fin</th><th>Duración</th><th>Estado</th><th></th></tr>
+                            </thead>
+                            <tbody>
+                              @for (dia of jornadasPorDia; track dia.fecha) {
+                                <!-- Fila agrupadora de día -->
+                                <tr class="fila-dia-grupo">
+                                  <td colspan="6">
+                                    <span class="dia-label">📅 {{ dia.label }}</span>
+                                    <span class="dia-periodos">{{ formatDiaPeriodos(dia.jornadas) }}</span>
+                                    <span class="dia-total">{{ formatMin(sumMinutos(dia.jornadas)) }}</span>
+                                  </td>
+                                </tr>
+                                <!-- Filas individuales de cada período -->
+                                @for (j of dia.jornadas; track j.id; let i = $index) {
+                                  @if (editandoJornadaId !== j.id) {
+                                    <tr class="fila-periodo">
+                                      <td class="num-periodo">{{ i + 1 }}</td>
+                                      <td>{{ j.inicio | date:'HH:mm' }}</td>
+                                      <td>{{ j.fin ? (j.fin | date:'HH:mm') : '—' }}</td>
+                                      <td>{{ j.duracion_minutos != null ? formatMin(j.duracion_minutos) : '—' }}</td>
+                                      <td>
+                                        @if (!j.fin) { <span class="badge-en-curso">🟢 Abierta</span> }
+                                        @else { <span class="badge-completada">✅</span> }
+                                      </td>
+                                      <td class="acciones">
+                                        <button class="btn-edit" (click)="iniciarEditJornada(j)" title="Editar">✏️</button>
+                                        <button class="btn-del" (click)="eliminarJornada(j.id)" title="Eliminar">🗑️</button>
+                                      </td>
+                                    </tr>
+                                  } @else {
+                                    <tr class="fila-edicion">
+                                      <td>{{ i + 1 }}</td>
+                                      <td><input type="datetime-local" [(ngModel)]="editJornadaForm.inicio" class="input-edit" /></td>
+                                      <td><input type="datetime-local" [(ngModel)]="editJornadaForm.fin" class="input-edit" /></td>
+                                      <td colspan="2">—</td>
+                                      <td class="acciones">
+                                        <button class="btn-save" (click)="guardarEditJornada()" [disabled]="guardandoJornada">
+                                          {{ guardandoJornada ? '...' : '💾' }}
+                                        </button>
+                                        <button class="btn-cancel" (click)="editandoJornadaId = null">✖</button>
+                                      </td>
+                                    </tr>
+                                  }
+                                }
+                              }
+                            </tbody>
+                          </table>
+                        }
 
-            </ng-container>
-          </tbody>
-        </table>
-      </div>
-      <ng-template #sinEquipo>
+                        @if (!cargandoDetalle && jornadasDetalle.length === 0) {
+                          <p class="empty" style="margin:.5rem 0">Sin jornadas registradas este mes.</p>
+                        }
+
+                      </div>
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
         <p class="empty">Sin datos del equipo para el período seleccionado.</p>
-      </ng-template>
+      }
 
-    </ng-container>
+    }
 
-    <!-- Usuario normal: resumen propio -->
-    <ng-container *ngIf="!auth.isAdminOrGerente() && !cargandoMensual && resumenMensualUsuario">
-      <div class="mensual-resumen-cards">
-        <div class="resumen-card">
-          <span class="card-value">{{ resumenMensualUsuario.dias_trabajados }}</span>
-          <span class="card-label">Días trabajados</span>
+    <!-- Usuario normal: detalle de días -->
+    @if (!auth.isAdminOrGerente() && !cargandoMensual && resumenMensualUsuario) {
+      @if (resumenMensualUsuario.detalle_dias.length > 0) {
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr><th>Empleado</th><th>Días trabajados</th><th>Total</th></tr>
+            </thead>
+            <tbody>
+              @for (d of resumenMensualUsuario.detalle_dias; track d.fecha) {
+                <tr class="fila-usuario" [class.fila-expandida]="expandedDia === d.fecha"
+                    (click)="toggleDia(d.fecha)">
+                  <td>
+                    <span class="expand-icon">{{ expandedDia === d.fecha ? '▼' : '▶' }}</span>
+                    {{ d.fecha | date:'dd/MM/yyyy' }}
+                  </td>
+                  <td>1</td>
+                  <td>{{ formatMin(d.minutos) }}</td>
+                </tr>
+                @if (expandedDia === d.fecha) {
+                  <tr class="fila-detalle-container">
+                    <td colspan="3">
+                      <div class="detalle-panel">
+                        <div class="detalle-header">
+                          <span class="detalle-titulo">{{ d.fecha | date:'dd/MM/yyyy' }}</span>
+                        </div>
+                        <table class="tabla-detalle">
+                          <thead>
+                            <tr><th>Período</th><th>Inicio</th><th>Fin</th><th>Duración</th><th>Estado</th></tr>
+                          </thead>
+                          <tbody>
+                            @for (j of jornadasDelDia(d.fecha); track j.id; let i = $index) {
+                              <tr class="fila-periodo">
+                                <td class="num-periodo">{{ i + 1 }}</td>
+                                <td>{{ j.inicio | date:'HH:mm' }}</td>
+                                <td>{{ j.fin ? (j.fin | date:'HH:mm') : '—' }}</td>
+                                <td>{{ j.duracion_minutos != null ? formatMin(j.duracion_minutos) : '—' }}</td>
+                                <td>
+                                  @if (!j.fin) { <span class="badge-en-curso">🟢 Abierta</span> }
+                                  @else { <span class="badge-completada">✅</span> }
+                                </td>
+                              </tr>
+                            }
+                          </tbody>
+                        </table>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
         </div>
-        <div class="resumen-card">
-          <span class="card-value">{{ formatMin(resumenMensualUsuario.total_minutos) }}</span>
-          <span class="card-label">Total</span>
-        </div>
-      </div>
-
-      <div class="table-wrapper" *ngIf="resumenMensualUsuario.detalle_dias.length > 0">
-        <table>
-          <thead>
-            <tr><th>Fecha</th><th>Minutos</th><th>Jornadas</th></tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let d of resumenMensualUsuario.detalle_dias">
-              <td>{{ d.fecha | date:'dd/MM/yyyy' }}</td>
-              <td>{{ formatMin(d.minutos) }}</td>
-              <td>{{ d.jornadas }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <p *ngIf="resumenMensualUsuario.detalle_dias.length === 0" class="empty">
-        Sin jornadas en el período seleccionado.
-      </p>
-    </ng-container>
-  </ng-container>
+      } @else {
+        <p class="empty">Sin jornadas en el período seleccionado.</p>
+      }
+    }
+  }
 
 </div>

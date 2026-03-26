@@ -35,7 +35,7 @@ class UserController extends Controller
         $rolesPermitidos = $request->user()->rol === 'admin' ? 'gerente,vendedor' : 'vendedor';
 
         $validated = $request->validate([
-            'nombre'   => 'required|string|max:255',
+            'nombre'   => 'required|string|max:255|unique:users,nombre',
             'email'    => 'required|email|unique:users,email',
             'password' => 'required|string|min:6',
             'rol'      => 'required|in:' . $rolesPermitidos,
@@ -64,7 +64,7 @@ class UserController extends Controller
         }
 
         $validated = $request->validate([
-            'nombre'   => 'sometimes|string|max:255',
+            'nombre'   => 'sometimes|string|max:255|unique:users,nombre,' . $id,
             'email'    => 'sometimes|email|unique:users,email,' . $id,
             'password' => 'nullable|string|min:6',
             'rol'      => 'sometimes|in:gerente,vendedor',

@@ -52,13 +52,26 @@ export class PerfilComponent implements OnInit {
   }
 
   guardar(): void {
-    this.guardando = true;
     this.exito = '';
     this.errorForm = '';
 
+    const nombreTrim = this.form.nombre.trim();
+    const emailTrim = this.form.email.trim();
+
+    if (!nombreTrim) { this.errorForm = 'El nombre no puede estar vacío.'; return; }
+    if (!emailTrim) { this.errorForm = 'El email no puede estar vacío.'; return; }
+
+    const sinCambios = nombreTrim === this.usuario?.nombre &&
+                       emailTrim === this.usuario?.email &&
+                       !this.form.password &&
+                       !this.fotoFile;
+    if (sinCambios) { this.errorForm = 'No has modificado ningún dato.'; return; }
+
+    this.guardando = true;
+
     const formData = new FormData();
-    formData.append('nombre', this.form.nombre);
-    formData.append('email', this.form.email);
+    formData.append('nombre', nombreTrim);
+    formData.append('email', emailTrim);
     if (this.form.password) formData.append('password', this.form.password);
     if (this.fotoFile) formData.append('photo', this.fotoFile);
 
@@ -68,7 +81,10 @@ export class PerfilComponent implements OnInit {
         this.guardando = false;
         this.form.password = '';
         this.fotoFile = null;
-        // Update local storage user data
+        if (this.usuario) {
+          this.usuario.nombre = res.data.nombre;
+          this.usuario.email = res.data.email;
+        }
         const user = this.auth.getCurrentUser();
         if (user && res.data) {
           user.nombre = res.data.nombre;
@@ -78,7 +94,14 @@ export class PerfilComponent implements OnInit {
         }
       },
       error: (e) => {
-        this.errorForm = e?.error?.message ?? 'Error al actualizar el perfil.';
+        const errors = e?.error?.errors;
+        if (errors) {
+          if (errors.nombre) { this.errorForm = 'Ese nombre de usuario ya está en uso.'; }
+          else if (errors.email) { this.errorForm = 'Ese email ya está en uso por otro usuario.'; }
+          else { this.errorForm = Object.values(errors).flat().join(' '); }
+        } else {
+          this.errorForm = e?.error?.message ?? 'Error al actualizar el perfil.';
+        }
         this.guardando = false;
       },
     });

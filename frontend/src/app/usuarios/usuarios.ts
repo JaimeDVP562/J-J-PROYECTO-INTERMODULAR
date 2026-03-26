@@ -20,6 +20,27 @@ export class UsuariosComponent implements OnInit {
   cargando = true;
   error = '';
 
+  // Paginación
+  paginaActual = 1;
+  readonly porPagina = 10;
+
+  get totalPaginas(): number {
+    return Math.ceil(this.usuarios.length / this.porPagina);
+  }
+
+  get usuariosPaginados(): User[] {
+    const inicio = (this.paginaActual - 1) * this.porPagina;
+    return this.usuarios.slice(inicio, inicio + this.porPagina);
+  }
+
+  get paginas(): number[] {
+    return Array.from({ length: this.totalPaginas }, (_, i) => i + 1);
+  }
+
+  irAPagina(p: number): void {
+    if (p >= 1 && p <= this.totalPaginas) this.paginaActual = p;
+  }
+
   // Añadir
   mostrarForm = false;
   nuevoUsuario: Partial<User> & { password?: string } = {};
@@ -41,7 +62,7 @@ export class UsuariosComponent implements OnInit {
   cargar(): void {
     this.cargando = true;
     this.api.getUsuarios().subscribe({
-      next: (u) => { this.usuarios = u; this.cargando = false; },
+      next: (u) => { this.usuarios = u; this.paginaActual = 1; this.cargando = false; },
       error: () => { this.error = 'Error al cargar usuarios.'; this.cargando = false; },
     });
   }
@@ -58,6 +79,14 @@ export class UsuariosComponent implements OnInit {
       this.errorForm = 'Nombre, email y contraseña son obligatorios.';
       return;
     }
+    const nombreDup = this.usuarios.some(
+      u => u.nombre.trim().toLowerCase() === this.nuevoUsuario.nombre!.trim().toLowerCase()
+    );
+    if (nombreDup) { this.errorForm = 'Ya existe un usuario con ese nombre.'; return; }
+    const emailDup = this.usuarios.some(
+      u => u.email.trim().toLowerCase() === this.nuevoUsuario.email!.trim().toLowerCase()
+    );
+    if (emailDup) { this.errorForm = 'Ya existe un usuario con ese email.'; return; }
     this.guardando = true;
     this.api.createUsuario(this.nuevoUsuario as any).subscribe({
       next: () => {
@@ -86,6 +115,16 @@ export class UsuariosComponent implements OnInit {
 
   guardarEdicion(): void {
     if (!this.editandoId) return;
+    const nombreDup = this.editForm.nombre && this.usuarios.some(
+      u => u.id !== this.editandoId &&
+           u.nombre.trim().toLowerCase() === this.editForm.nombre!.trim().toLowerCase()
+    );
+    if (nombreDup) { this.editError = 'Ya existe un usuario con ese nombre.'; return; }
+    const emailDup = this.editForm.email && this.usuarios.some(
+      u => u.id !== this.editandoId &&
+           u.email.trim().toLowerCase() === this.editForm.email!.trim().toLowerCase()
+    );
+    if (emailDup) { this.editError = 'Ya existe un usuario con ese email.'; return; }
     this.guardando = true;
     const payload: any = { ...this.editForm };
     if (!payload.password) delete payload.password;
