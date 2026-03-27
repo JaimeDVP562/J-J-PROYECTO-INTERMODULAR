@@ -31,7 +31,14 @@
       "Bash(docker ps:*)",
       "Bash(docker compose:*)",
       "Bash(docker exec:*)",
-      "Bash(wc -l \"c:/Users/Jesus/Desktop/J-J-PROYECTO-INTERMODULAR/despliegue\"/*.tf \"c:/Users/Jesus/Desktop/J-J-PROYECTO-INTERMODULAR/despliegue/templates\"/*.tftpl)"
+      "Bash(wc -l \"c:/Users/Jesus/Desktop/J-J-PROYECTO-INTERMODULAR/despliegue\"/*.tf \"c:/Users/Jesus/Desktop/J-J-PROYECTO-INTERMODULAR/despliegue/templates\"/*.tftpl)",
+      "WebFetch(domain:linkfred.com)",
+      "Bash(find c:UsersJesusDesktopJ-J-PROYECTO-INTERMODULARbackenddatabase -type f \\\\\\(-name *.php \\\\\\))",
+      "Bash(find c:UsersJesusDesktopJ-J-PROYECTO-INTERMODULARbackend -type f \\\\\\(-name *swagger* -o -name *openapi* -o -name *.yaml -o -name *.yml \\\\\\))",
+      "Bash(find c:UsersJesusDesktopJ-J-PROYECTO-INTERMODULAR -type f \\\\\\(-name *diagram* -o -name *schema* -o -name *.md -o -name *ER* -o -name *entity* \\\\\\))",
+      "Bash(grep -l \"rol\\\\|admin\\\\|gerente\" c:UsersJesusDesktopJ-J-PROYECTO-INTERMODULARbackendappHttpControllersApi/*.php)",
+      "Bash(find c:UsersJesusDesktopJ-J-PROYECTO-INTERMODULAR -maxdepth 2 -type f \\\\\\(-name *.md -o -name *.txt -o -name *.json \\\\\\))",
+      "Bash(wc -l c:UsersJesusDesktopJ-J-PROYECTO-INTERMODULARbackendappHttpControllersApi/*.php)"
     ]
   }
 }
