@@ -1,0 +1,91 @@
+#!/bin/bash
+set -e
+
+#################################
+# SISTEMA BASE
+#################################
+
+apt-get update -y
+apt-get upgrade -y
+
+apt-get install -y \
+  ufw \
+  fail2ban \
+  curl \
+  vim \
+  htop
+
+#################################
+# HOSTNAME
+#################################
+
+hostnamectl set-hostname bastion.${domain}
+
+#################################
+# SSH HARDENING
+#################################
+
+sed -i 's/^#Port 22/Port 22/' /etc/ssh/sshd_config
+sed -i 's/^#PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
+sed -i 's/^#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config
+sed -i 's/^#PubkeyAuthentication yes/PubkeyAuthentication yes/' /etc/ssh/sshd_config
+sed -i 's/^#MaxAuthTries.*/MaxAuthTries 3/' /etc/ssh/sshd_config
+sed -i 's/^#LoginGraceTime.*/LoginGraceTime 30/' /etc/ssh/sshd_config
+sed -i 's/^#ClientAliveInterval.*/ClientAliveInterval 300/' /etc/ssh/sshd_config
+sed -i 's/^#ClientAliveCountMax.*/ClientAliveCountMax 2/' /etc/ssh/sshd_config
+sed -i 's/^UsePAM yes/UsePAM yes/' /etc/ssh/sshd_config
+
+systemctl restart ssh
+
+#################################
+# FIREWALL (UFW)
+#################################
+
+ufw default deny incoming
+ufw default allow outgoing
+ufw allow 22/tcp
+ufw --force enable
+
+#################################
+# FAIL2BAN
+#################################
+
+cat > /etc/fail2ban/jail.local <<'EOF'
+[sshd]
+enabled = true
+port = 22
+filter = sshd
+logpath = /var/log/auth.log
+maxretry = 3
+bantime = 1h
+findtime = 10m
+EOF
+
+systemctl enable fail2ban
+systemctl restart fail2ban
+
+#################################
+# BANNER LEGAL (OPCIONAL PERO PRO)
+#################################
+
+cat > /etc/issue.net <<'EOF'
+**************************************************
+*  Authorized access only. All activity logged. *
+**************************************************
+EOF
+
+sed -i 's|^#Banner.*|Banner /etc/issue.net|' /etc/ssh/sshd_config
+systemctl restart ssh
+
+#################################
+# TIMEZONE Y LOGS
+#################################
+
+timedatectl set-timezone Europe/Madrid
+
+#################################
+# LIMPIEZA
+#################################
+
+apt-get autoremove -y
+apt-get autoclean -y
