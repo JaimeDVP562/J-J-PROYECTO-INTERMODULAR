@@ -30,7 +30,8 @@
       "Bash(docker stats:*)",
       "Bash(docker ps:*)",
       "Bash(docker compose:*)",
-      "Bash(docker exec:*)"
+      "Bash(docker exec:*)",
+      "Bash(wc -l \"c:/Users/Jesus/Desktop/J-J-PROYECTO-INTERMODULAR/despliegue\"/*.tf \"c:/Users/Jesus/Desktop/J-J-PROYECTO-INTERMODULAR/despliegue/templates\"/*.tftpl)"
     ]
   }
 }

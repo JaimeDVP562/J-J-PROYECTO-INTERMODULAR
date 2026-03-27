@@ -200,6 +200,16 @@ resource "aws_instance" "database" {
 
 
 #################################
+# IP ELÁSTICA (BASTION)
+#################################
+
+resource "aws_eip" "bastion" {
+    domain   = "vpc"
+    instance = aws_instance.bastion.id
+    tags     = { Name = "Bastion-EIP" }
+}
+
+#################################
 # ZONA DNS ROUTE53
 #################################
 
