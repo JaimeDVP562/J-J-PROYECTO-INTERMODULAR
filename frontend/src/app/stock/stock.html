@@ -1,38 +1,100 @@
 <div class="stock">
   <h2>Stock</h2>
 
-  @if (cargando) { <div class="loading">Cargando stock...</div> }
-  @if (error) { <div class="error">{{ error }}</div> }
+  @if (cargando) {
+    <div class="loading">Cargando stock...</div>
+  }
+  @if (error) {
+    <div class="error">{{ error }}</div>
+  }
 
   @if (!cargando && !error) {
-
     <!-- Tabs -->
     <div class="tabs">
-      <button [class.active]="vistaActiva === 'inventario'" (click)="vistaActiva = 'inventario'">📦 Inventario</button>
-      <button [class.active]="vistaActiva === 'productos'" (click)="vistaActiva = 'productos'">🗂️ Productos</button>
-      <button [class.active]="vistaActiva === 'proveedores'" (click)="vistaActiva = 'proveedores'">🚚 Proveedores</button>
+      <button [class.active]="vistaActiva === 'inventario'" (click)="vistaActiva = 'inventario'">
+        📦 Inventario
+      </button>
+      <button [class.active]="vistaActiva === 'productos'" (click)="vistaActiva = 'productos'">
+        🗂️ Productos
+      </button>
+      <button [class.active]="vistaActiva === 'proveedores'" (click)="vistaActiva = 'proveedores'">
+        🚚 Proveedores
+      </button>
+    </div>
+
+    <!-- Global filters applied to all tabs -->
+    <div class="mensual-filter stock-filters">
+      <input
+        type="text"
+        [(ngModel)]="filtroTexto"
+        (input)="filtrarStock()"
+        placeholder="🔍 Buscar..."
+        class="tab-like search-input"
+      />
+      <select [(ngModel)]="filtroCategoria" (change)="filtrarStock()" class="tab-like select">
+        <option value="">Categoría</option>
+        @for (c of categorias; track c.id) {
+          <option [value]="c.id">{{ c.nombre }}</option>
+        }
+      </select>
+      <select [(ngModel)]="filtroProveedor" (change)="filtrarStock()" class="tab-like select">
+        <option value="">Proveedor</option>
+        @for (pv of proveedores; track pv.id) {
+          <option [value]="pv.id">{{ pv.nombre }}</option>
+        }
+      </select>
+      <button class="btn-clear tab-like" (click)="limpiarFiltrosStock()">Limpiar filtros</button>
     </div>
 
     <!-- ── INVENTARIO ──────────────────────────────────────── -->
     @if (vistaActiva === 'inventario') {
       <div class="summary-bar">
-        <span>Total: <strong>{{ inventarios.length }}</strong> registros</span>
-        @if (stockBajo > 0) { <span class="alerta">⚠️ {{ stockBajo }} con stock bajo</span> }
+        <span
+          >Mostrando: <strong>{{ inventariosFiltrados.length }}</strong> de
+          {{ inventarios.length }} registros</span
+        >
+        @if (stockBajo > 0) {
+          <span class="alerta">⚠️ {{ stockBajo }} con stock bajo</span>
+        }
       </div>
       <div class="table-wrapper">
-        @if (inventarios.length > 0) {
+        @if (inventariosFiltrados.length > 0) {
           <table>
             <thead>
-              <tr><th>Producto</th><th>SKU</th><th>Categoría</th><th>Disponible</th><th>Ubicación</th></tr>
+              <tr>
+                <th>Producto</th>
+                <th>SKU</th>
+                <th>Proveedor</th>
+                <th>Categoría</th>
+                <th>Disponible</th>
+                <th>Ubicación</th>
+              </tr>
             </thead>
             <tbody>
               @for (inv of inventariosPaginados; track inv.id) {
-                <tr [class.stock-alerta]="inv.cantidad_disponible < 10"
-                    [class.stock-bajo]="inv.cantidad_disponible >= 10 && inv.cantidad_disponible <= inv.cantidad_minima">
+                <tr
+                  [class.stock-alerta]="inv.cantidad_disponible < 10"
+                  [class.stock-bajo]="
+                    inv.cantidad_disponible >= 10 && inv.cantidad_disponible <= inv.cantidad_minima
+                  "
+                >
                   <td>{{ inv.producto?.nombre ?? '—' }}</td>
-                  <td><span class="sku-badge">{{ inv.producto?.sku ?? '—' }}</span></td>
+                  <td>
+                    <span class="sku-badge">{{ inv.producto?.sku ?? '—' }}</span>
+                  </td>
+                  <td>
+                    {{
+                      inv.producto?.proveedor?.nombre ??
+                        proveedorNombrePorProducto(inv.producto_id) ??
+                        '—'
+                    }}
+                  </td>
                   <td>{{ inv.producto?.categoria?.nombre ?? '—' }}</td>
-                  <td><span [class.valor-bajo]="inv.cantidad_disponible <= inv.cantidad_minima">{{ inv.cantidad_disponible }}</span></td>
+                  <td>
+                    <span [class.valor-bajo]="inv.cantidad_disponible <= inv.cantidad_minima">{{
+                      inv.cantidad_disponible
+                    }}</span>
+                  </td>
                   <td>{{ inv.ubicacion ?? '—' }}</td>
                 </tr>
               }
@@ -41,37 +103,61 @@
         } @else {
           <p class="empty">No hay registros de inventario.</p>
         }
-        <div class="pagination">
-          <button class="page-btn" (click)="irAPagina('inventario', paginaInventario - 1)" [disabled]="totalPaginasInventario <= 1 || paginaInventario === 1">‹</button>
-          <span class="page-info">Página {{ paginaInventario }} / {{ totalPaginasInventario || 1 }}</span>
-          <button class="page-btn" (click)="irAPagina('inventario', paginaInventario + 1)" [disabled]="totalPaginasInventario <= 1 || paginaInventario === totalPaginasInventario">›</button>
+        <div class="pagination table-footer">
+          <button
+            class="page-btn icon"
+            (click)="goToInventarioFirst()"
+            [disabled]="paginaInventario === 1"
+          >
+            ⏮
+          </button>
+          <button
+            class="page-btn icon"
+            (click)="prevInventario()"
+            [disabled]="paginaInventario === 1"
+          >
+            ◀
+          </button>
+          @for (p of inventariosVisiblePages; track p) {
+            <button
+              class="page-btn"
+              [class.active]="paginaInventario === p"
+              (click)="irAPagina('inventario', p)"
+            >
+              {{ p }}
+            </button>
+          }
+          <button
+            class="page-btn icon"
+            (click)="nextInventario()"
+            [disabled]="paginaInventario === totalPaginasInventario"
+          >
+            ▶
+          </button>
+          <button
+            class="page-btn icon"
+            (click)="goToInventarioLast()"
+            [disabled]="paginaInventario === totalPaginasInventario"
+          >
+            ⏭
+          </button>
         </div>
       </div>
     }
 
     <!-- ── PRODUCTOS ──────────────────────────────────────── -->
     @if (vistaActiva === 'productos') {
-      <div class="filter-bar">
-        <input type="text" [(ngModel)]="busquedaProducto" (input)="filtrarProductos()"
-          placeholder="🔍 Buscar por nombre, SKU o descripción..." class="search-input" />
-        <select [(ngModel)]="categoriaFiltro" (change)="filtrarProductos()" class="cat-select">
-          <option value="">Todas las categorías</option>
-          @for (c of categorias; track c.id) {
-            <option [value]="c.id">{{ c.nombre }}</option>
-          }
-        </select>
-        @if (auth.isAdminOrGerente()) {
-          <button class="btn-add" (click)="abrirFormProducto()">+ Añadir producto</button>
-        }
-      </div>
-
       @if (mostrarFormProducto && auth.isAdminOrGerente()) {
         <div class="form-panel">
           <h4>Nuevo producto</h4>
           <div class="form-grid">
             <div class="form-field">
               <label>Nombre *</label>
-              <input type="text" [(ngModel)]="nuevoProducto.nombre" placeholder="Nombre del producto" />
+              <input
+                type="text"
+                [(ngModel)]="nuevoProducto.nombre"
+                placeholder="Nombre del producto"
+              />
             </div>
             <div class="form-field">
               <label>SKU</label>
@@ -79,7 +165,11 @@
             </div>
             <div class="form-field">
               <label>Descripción</label>
-              <input type="text" [(ngModel)]="nuevoProducto.descripcion" placeholder="Descripción" />
+              <input
+                type="text"
+                [(ngModel)]="nuevoProducto.descripcion"
+                placeholder="Descripción"
+              />
             </div>
             <div class="form-field">
               <label>Precio (€) *</label>
@@ -108,18 +198,29 @@
               </select>
             </div>
           </div>
-          @if (errorProducto) { <p class="error-inline">{{ errorProducto }}</p> }
+          @if (errorProducto) {
+            <p class="error-inline">{{ errorProducto }}</p>
+          }
           <div class="form-actions">
-            <button class="btn-save-form" (click)="guardarProducto()" [disabled]="guardandoProducto">
+            <button
+              class="btn-save-form tab-like"
+              (click)="guardarProducto()"
+              [disabled]="guardandoProducto"
+            >
               {{ guardandoProducto ? 'Guardando...' : '💾 Guardar' }}
             </button>
-            <button class="btn-cancel-form" (click)="mostrarFormProducto = false">Cancelar</button>
+            <button class="btn-cancel-form tab-like" (click)="mostrarFormProducto = false">
+              Cancelar
+            </button>
           </div>
         </div>
       }
 
-      <div class="summary-bar" style="margin-top:0">
-        <span>Mostrando: <strong>{{ productosFiltrados.length }}</strong> de {{ productos.length }} productos</span>
+      <div class="summary-bar" style="margin-top: 0">
+        <span
+          >Mostrando: <strong>{{ productosFiltrados.length }}</strong> de
+          {{ productos.length }} productos</span
+        >
       </div>
 
       <div class="table-wrapper">
@@ -127,32 +228,57 @@
           <table>
             <thead>
               <tr>
-                <th>Nombre</th><th>SKU</th><th>Categoría</th><th>Proveedor</th><th>Precio</th>
+                <th>Nombre</th>
+                <th>SKU</th>
+                <th>Categoría</th>
+                <th>Proveedor</th>
+                <th>Precio</th>
                 <th>Stock</th>
-                @if (auth.isAdminOrGerente()) { <th>Ajustar stock</th> }
-                @if (auth.isAdminOrGerente()) { <th></th> }
+                @if (auth.isAdminOrGerente()) {
+                  <th>Ajustar stock</th>
+                }
+                @if (auth.isAdminOrGerente()) {
+                  <th></th>
+                }
               </tr>
             </thead>
             <tbody>
               @for (p of productosPaginados; track p.id) {
                 <tr [class.stock-alerta]="p.stock_quantity < 10">
                   <td>{{ p.nombre }}</td>
-                  <td><span class="sku-badge">{{ p.sku ?? '—' }}</span></td>
+                  <td>
+                    <span class="sku-badge">{{ p.sku ?? '—' }}</span>
+                  </td>
                   <td>{{ p.categoria?.nombre ?? '—' }}</td>
                   <td>{{ p.proveedor?.nombre ?? '—' }}</td>
-                  <td>{{ p.precio | currency:'EUR':'symbol':'1.2-2' }}</td>
-                  <td><strong>{{ p.stock_quantity }}</strong></td>
+                  <td>{{ p.precio | currency: 'EUR' : 'symbol' : '1.2-2' }}</td>
+                  <td>
+                    <strong>{{ p.stock_quantity }}</strong>
+                  </td>
                   @if (auth.isAdminOrGerente()) {
                     <td class="stock-ajuste-cell">
-                      <input type="number" [(ngModel)]="stockAjuste[p.id]" min="0" step="1"
-                        class="stock-ajuste-input" [disabled]="actualizandoStockId === p.id" />
-                      <button class="btn-ajuste" (click)="establecerStock(p)"
-                        [disabled]="actualizandoStockId === p.id || stockAjuste[p.id] === p.stock_quantity">
+                      <input
+                        type="number"
+                        [(ngModel)]="stockAjuste[p.id]"
+                        min="0"
+                        step="1"
+                        class="stock-ajuste-input"
+                        [disabled]="actualizandoStockId === p.id"
+                      />
+                      <button
+                        class="btn-ajuste tab-like"
+                        (click)="establecerStock(p)"
+                        [disabled]="
+                          actualizandoStockId === p.id || stockAjuste[p.id] === p.stock_quantity
+                        "
+                      >
                         {{ actualizandoStockId === p.id ? '...' : '💾' }}
                       </button>
                     </td>
                     <td>
-                      <button class="btn-del" (click)="eliminarProducto(p.id)" title="Eliminar">🗑️</button>
+                      <button class="btn-del" (click)="eliminarProducto(p.id)" title="Eliminar">
+                        🗑️
+                      </button>
                     </td>
                   }
                 </tr>
@@ -162,10 +288,44 @@
         } @else {
           <p class="empty">No se encontraron productos.</p>
         }
-        <div class="pagination">
-          <button class="page-btn" (click)="irAPagina('productos', paginaProductos - 1)" [disabled]="totalPaginasProductos <= 1 || paginaProductos === 1">‹</button>
-          <span class="page-info">Página {{ paginaProductos }} / {{ totalPaginasProductos || 1 }}</span>
-          <button class="page-btn" (click)="irAPagina('productos', paginaProductos + 1)" [disabled]="totalPaginasProductos <= 1 || paginaProductos === totalPaginasProductos">›</button>
+        <div class="pagination table-footer">
+          <button
+            class="page-btn icon"
+            (click)="goToProductosFirst()"
+            [disabled]="paginaProductos === 1"
+          >
+            ⏮
+          </button>
+          <button
+            class="page-btn icon"
+            (click)="prevProductos()"
+            [disabled]="paginaProductos === 1"
+          >
+            ◀
+          </button>
+          @for (p of productosVisiblePages; track p) {
+            <button
+              class="page-btn"
+              [class.active]="paginaProductos === p"
+              (click)="irAPagina('productos', p)"
+            >
+              {{ p }}
+            </button>
+          }
+          <button
+            class="page-btn icon"
+            (click)="nextProductos()"
+            [disabled]="paginaProductos === totalPaginasProductos"
+          >
+            ▶
+          </button>
+          <button
+            class="page-btn icon"
+            (click)="goToProductosLast()"
+            [disabled]="paginaProductos === totalPaginasProductos"
+          >
+            ⏭
+          </button>
         </div>
       </div>
     }
@@ -173,9 +333,14 @@
     <!-- ── PROVEEDORES ────────────────────────────────────── -->
     @if (vistaActiva === 'proveedores') {
       <div class="summary-bar">
-        <span>Total: <strong>{{ proveedores.length }}</strong> proveedores</span>
+        <span
+          >Mostrando: <strong>{{ proveedoresFiltrados.length }}</strong> de
+          {{ proveedores.length }} proveedores</span
+        >
         @if (auth.isAdminOrGerente()) {
-          <button class="btn-add" (click)="abrirFormProveedor()">+ Añadir proveedor</button>
+          <button class="btn-add tab-like" (click)="abrirFormProveedor()">
+            + Añadir proveedor
+          </button>
         }
       </div>
 
@@ -200,23 +365,36 @@
               <input type="text" [(ngModel)]="nuevoProveedor.address" placeholder="Dirección" />
             </div>
           </div>
-          @if (errorProveedor) { <p class="error-inline">{{ errorProveedor }}</p> }
+          @if (errorProveedor) {
+            <p class="error-inline">{{ errorProveedor }}</p>
+          }
           <div class="form-actions">
-            <button class="btn-save-form" (click)="crearProveedor()" [disabled]="guardandoProveedor">
+            <button
+              class="btn-save-form tab-like"
+              (click)="crearProveedor()"
+              [disabled]="guardandoProveedor"
+            >
               {{ guardandoProveedor ? 'Guardando...' : '💾 Guardar' }}
             </button>
-            <button class="btn-cancel-form" (click)="mostrarFormProveedor = false">Cancelar</button>
+            <button class="btn-cancel-form tab-like" (click)="mostrarFormProveedor = false">
+              Cancelar
+            </button>
           </div>
         </div>
       }
 
       <div class="table-wrapper">
-        @if (proveedores.length > 0) {
+        @if (proveedoresFiltrados.length > 0) {
           <table>
             <thead>
               <tr>
-                <th>Nombre</th><th>Email</th><th>Teléfono</th><th>Dirección</th>
-                @if (auth.isAdminOrGerente()) { <th>Acciones</th> }
+                <th>Nombre</th>
+                <th>Email</th>
+                <th>Teléfono</th>
+                <th>Dirección</th>
+                @if (auth.isAdminOrGerente()) {
+                  <th>Acciones</th>
+                }
               </tr>
             </thead>
             <tbody>
@@ -230,7 +408,9 @@
                     @if (auth.isAdminOrGerente()) {
                       <td class="acciones">
                         <button class="btn-edit" (click)="iniciarEditProveedor(pv)">✏️</button>
-                        <button class="btn-del" (click)="eliminarProveedor(pv.id)" title="Eliminar">🗑️</button>
+                        <button class="btn-del" (click)="eliminarProveedor(pv.id)" title="Eliminar">
+                          🗑️
+                        </button>
                       </td>
                     }
                   </tr>
@@ -238,13 +418,29 @@
                   <tr class="fila-edicion">
                     <td>
                       <input type="text" [(ngModel)]="editProvForm.nombre" class="input-edit" />
-                      @if (editProvError) { <span class="error-inline">{{ editProvError }}</span> }
+                      @if (editProvError) {
+                        <span class="error-inline">{{ editProvError }}</span>
+                      }
                     </td>
-                    <td><input type="email" [(ngModel)]="editProvForm.contact_email" class="input-edit" /></td>
-                    <td><input type="text" [(ngModel)]="editProvForm.phone" class="input-edit" /></td>
-                    <td><input type="text" [(ngModel)]="editProvForm.address" class="input-edit" /></td>
+                    <td>
+                      <input
+                        type="email"
+                        [(ngModel)]="editProvForm.contact_email"
+                        class="input-edit"
+                      />
+                    </td>
+                    <td>
+                      <input type="text" [(ngModel)]="editProvForm.phone" class="input-edit" />
+                    </td>
+                    <td>
+                      <input type="text" [(ngModel)]="editProvForm.address" class="input-edit" />
+                    </td>
                     <td class="acciones">
-                      <button class="btn-save" (click)="guardarProveedor()" [disabled]="guardandoProveedor">
+                      <button
+                        class="btn-save"
+                        (click)="guardarProveedor()"
+                        [disabled]="guardandoProveedor"
+                      >
                         {{ guardandoProveedor ? '...' : '💾' }}
                       </button>
                       <button class="btn-cancel" (click)="cancelarEditProveedor()">✖</button>
@@ -257,13 +453,46 @@
         } @else {
           <p class="empty">No hay proveedores.</p>
         }
-        <div class="pagination">
-          <button class="page-btn" (click)="irAPagina('proveedores', paginaProveedores - 1)" [disabled]="totalPaginasProveedores <= 1 || paginaProveedores === 1">‹</button>
-          <span class="page-info">Página {{ paginaProveedores }} / {{ totalPaginasProveedores || 1 }}</span>
-          <button class="page-btn" (click)="irAPagina('proveedores', paginaProveedores + 1)" [disabled]="totalPaginasProveedores <= 1 || paginaProveedores === totalPaginasProveedores">›</button>
+        <div class="pagination table-footer">
+          <button
+            class="page-btn icon"
+            (click)="goToProveedoresFirst()"
+            [disabled]="paginaProveedores === 1"
+          >
+            ⏮
+          </button>
+          <button
+            class="page-btn icon"
+            (click)="prevProveedores()"
+            [disabled]="paginaProveedores === 1"
+          >
+            ◀
+          </button>
+          @for (p of proveedoresVisiblePages; track p) {
+            <button
+              class="page-btn"
+              [class.active]="paginaProveedores === p"
+              (click)="irAPagina('proveedores', p)"
+            >
+              {{ p }}
+            </button>
+          }
+          <button
+            class="page-btn icon"
+            (click)="nextProveedores()"
+            [disabled]="paginaProveedores === totalPaginasProveedores"
+          >
+            ▶
+          </button>
+          <button
+            class="page-btn icon"
+            (click)="goToProveedoresLast()"
+            [disabled]="paginaProveedores === totalPaginasProveedores"
+          >
+            ⏭
+          </button>
         </div>
       </div>
     }
-
   }
 </div>

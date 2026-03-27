@@ -4,23 +4,40 @@
   <!-- ── FICHAR ── -->
   @if (jornadaCargada) {
     <section class="jornada-section">
-      <div class="jornada-card" [class.activa]="jornadaActiva" [class.en-pausa]="!jornadaActiva && tramosCompletadosHoy > 0">
-        <button class="btn-iniciar" (click)="iniciarJornada()" [disabled]="accionJornada || !!jornadaActiva">
+      <div
+        class="jornada-card"
+        [class.activa]="jornadaActiva"
+        [class.en-pausa]="!jornadaActiva && tramosCompletadosHoy > 0"
+      >
+        <button
+          class="btn-iniciar"
+          (click)="iniciarJornada()"
+          [disabled]="accionJornada || !!jornadaActiva"
+        >
           {{ accionJornada && !jornadaActiva ? 'Iniciando...' : '▶ Iniciar turno' }}
         </button>
 
         <div class="jornada-center">
           <span class="jornada-icon">
-            {{ jornadaActiva ? '🟢' : (tramosCompletadosHoy > 0 ? '🟡' : '⚪') }}
+            {{ jornadaActiva ? '🟢' : tramosCompletadosHoy > 0 ? '🟡' : '⚪' }}
           </span>
           <div>
             <p class="jornada-estado">
-              {{ jornadaActiva ? 'Turno en curso' : (tramosCompletadosHoy > 0 ? 'En pausa' : 'Sin jornada activa') }}
+              {{
+                jornadaActiva
+                  ? 'Turno en curso'
+                  : tramosCompletadosHoy > 0
+                    ? 'En pausa'
+                    : 'Sin jornada activa'
+              }}
             </p>
             <p class="jornada-timer">{{ tiempoTotal }}</p>
             @if (tramosCompletadosHoy > 0) {
               <p class="jornada-tramos">
-                {{ tramosCompletadosHoy }} tramo{{ tramosCompletadosHoy !== 1 ? 's' : '' }} completado{{ tramosCompletadosHoy !== 1 ? 's' : '' }}
+                {{ tramosCompletadosHoy }} tramo{{
+                  tramosCompletadosHoy !== 1 ? 's' : ''
+                }}
+                completado{{ tramosCompletadosHoy !== 1 ? 's' : '' }}
               </p>
             }
           </div>
@@ -50,7 +67,12 @@
     @if (auth.isAdminOrGerente()) {
       <button [class.active]="vistaActiva === 'hoy'" (click)="vistaActiva = 'hoy'">📅 Hoy</button>
     }
-    <button [class.active]="vistaActiva === 'mensual'" (click)="vistaActiva = 'mensual'; cargarMensual()">📊 Resumen mensual</button>
+    <button
+      [class.active]="vistaActiva === 'mensual'"
+      (click)="vistaActiva = 'mensual'; cargarMensual()"
+    >
+      📊 Resumen mensual
+    </button>
   </div>
 
   @if (cargando) {
@@ -62,28 +84,53 @@
 
   <!-- ── VISTA HOY ── -->
   @if (vistaActiva === 'hoy' && !cargando && !error) {
-
     <!-- ADMIN / GERENTE -->
     @if (auth.isAdminOrGerente()) {
-
       <h3 class="seccion-titulo">📋 Resumen diario</h3>
       <div class="summary-bar">
-        <span>Empleados con actividad hoy: <strong>{{ resumen.length }}</strong></span>
+        <span
+          >Empleados con actividad hoy: <strong>{{ resumenFiltrado.length }}</strong></span
+        >
+      </div>
+      <div class="mensual-filter today-filters">
+        <select [(ngModel)]="filtroEmpleado" (change)="filtrarResumenHoy()" class="tab-like select">
+          <option value="">Empleado</option>
+          @for (e of empleadosHoy; track e.nombre) {
+            <option [value]="e.id ?? e.nombre">{{ e.nombre }}</option>
+          }
+        </select>
+        <select [(ngModel)]="filtroRol" (change)="filtrarResumenHoy()" class="tab-like select">
+          <option value="">Rol</option>
+          @for (r of rolesHoy; track r) {
+            <option [value]="r">{{ r }}</option>
+          }
+        </select>
+        <select [(ngModel)]="filtroEstado" (change)="filtrarResumenHoy()" class="tab-like select">
+          <option value="">Estado actual</option>
+          <option value="active">En curso</option>
+          <option value="inactive">Sin jornada</option>
+        </select>
+        <button class="btn-clear tab-like" (click)="limpiarFiltrosHoy()">Limpiar filtros</button>
       </div>
       <div class="table-wrapper">
         @if (resumen.length > 0) {
           <table>
             <thead>
               <tr>
-                <th>Empleado</th><th>Rol</th><th>Períodos</th>
-                <th>Total hoy</th><th>Estado actual</th>
+                <th>Empleado</th>
+                <th>Rol</th>
+                <th>Períodos</th>
+                <th>Total hoy</th>
+                <th>Estado actual</th>
               </tr>
             </thead>
             <tbody>
-              @for (r of resumen; track r.nombre) {
+              @for (r of resumenPaginados; track r.nombre) {
                 <tr>
                   <td>{{ r.nombre }}</td>
-                  <td><span class="badge-rol">{{ r.rol }}</span></td>
+                  <td>
+                    <span class="badge-rol">{{ r.rol }}</span>
+                  </td>
                   <td class="periodos-cell">
                     @if (r.periodos && r.periodos.length > 0) {
                       <span class="periodos-list">{{ formatPeriodosResumen(r.periodos) }}</span>
@@ -91,10 +138,14 @@
                       <span class="text-muted">—</span>
                     }
                   </td>
-                  <td><strong>{{ formatMin(r.total_minutos) }}</strong></td>
+                  <td>
+                    <strong>{{ formatMin(r.total_minutos) }}</strong>
+                  </td>
                   <td>
                     @if (r.jornada_activa) {
-                      <span class="badge-en-curso">🟢 En curso desde {{ r.jornada_activa.inicio | date:'HH:mm' }}</span>
+                      <span class="badge-en-curso"
+                        >🟢 En curso desde {{ r.jornada_activa.inicio | date: 'HH:mm' }}</span
+                      >
                     } @else {
                       <span class="badge-sin-jornada">⚪ Sin jornada activa</span>
                     }
@@ -106,22 +157,67 @@
         } @else {
           <p class="empty">Ningún usuario ha registrado jornada hoy.</p>
         }
+        <div class="pagination table-footer">
+          <button
+            class="page-btn icon"
+            (click)="goToResumenFirst()"
+            [disabled]="paginaResumenHoy === 1"
+          >
+            ⏮
+          </button>
+          <button class="page-btn icon" (click)="prevResumen()" [disabled]="paginaResumenHoy === 1">
+            ◀
+          </button>
+          @for (p of resumenVisiblePages; track p) {
+            <button
+              class="page-btn"
+              [class.active]="paginaResumenHoy === p"
+              (click)="paginaResumenHoy = p"
+            >
+              {{ p }}
+            </button>
+          }
+          <button
+            class="page-btn icon"
+            (click)="nextResumen()"
+            [disabled]="paginaResumenHoy === totalPaginasResumen"
+          >
+            ▶
+          </button>
+          <button
+            class="page-btn icon"
+            (click)="goToResumenLast()"
+            [disabled]="paginaResumenHoy === totalPaginasResumen"
+          >
+            ⏭
+          </button>
+        </div>
       </div>
-
     }
-
   }
 
   <!-- ── VISTA MENSUAL ── -->
   @if (vistaActiva === 'mensual') {
     <div class="mensual-filter">
-      <select [(ngModel)]="mesSeleccionado" class="mes-select">
+      <select
+        [(ngModel)]="mesSeleccionado"
+        (change)="cargarMensual()"
+        class="mes-select tab-like select"
+      >
         @for (m of meses; track m.n) {
           <option [value]="m.n">{{ m.label }}</option>
         }
       </select>
-      <input type="number" [(ngModel)]="anoSeleccionado" min="2020" max="2099" class="ano-input" />
-      <button class="btn-filtrar" (click)="cargarMensual()">Consultar</button>
+      <select
+        [(ngModel)]="anoSeleccionado"
+        (change)="cargarMensual()"
+        class="ano-input tab-like select"
+      >
+        @for (y of availableYears; track y) {
+          <option [value]="y">{{ y }}</option>
+        }
+      </select>
+      <button class="btn-clear tab-like" (click)="limpiarFiltrosMensual()">Limpiar filtros</button>
     </div>
 
     @if (cargandoMensual) {
@@ -130,7 +226,9 @@
 
     <!-- ── Mi actividad: visible para TODOS los roles ── -->
     @if (!cargandoMensual) {
-      <h3 class="seccion-titulo">👤 Mi actividad — {{ meses[mesSeleccionado - 1].label }} {{ anoSeleccionado }}</h3>
+      <h3 class="seccion-titulo">
+        👤 Mi actividad — {{ meses[mesSeleccionado - 1].label }} {{ anoSeleccionado }}
+      </h3>
       @if (miResumen) {
         <div class="mensual-resumen-cards">
           <div class="resumen-card">
@@ -142,6 +240,41 @@
             <span class="card-label">Horas trabajadas</span>
           </div>
         </div>
+        <div class="pagination table-footer">
+          <button
+            class="page-btn icon"
+            (click)="goToResumenFirst()"
+            [disabled]="paginaResumenHoy === 1"
+          >
+            ⏮
+          </button>
+          <button class="page-btn icon" (click)="prevResumen()" [disabled]="paginaResumenHoy === 1">
+            ◀
+          </button>
+          @for (p of resumenVisiblePages; track p) {
+            <button
+              class="page-btn"
+              [class.active]="paginaResumenHoy === p"
+              (click)="paginaResumenHoy = p"
+            >
+              {{ p }}
+            </button>
+          }
+          <button
+            class="page-btn icon"
+            (click)="nextResumen()"
+            [disabled]="paginaResumenHoy === totalPaginasResumen"
+          >
+            ▶
+          </button>
+          <button
+            class="page-btn icon"
+            (click)="goToResumenLast()"
+            [disabled]="paginaResumenHoy === totalPaginasResumen"
+          >
+            ⏭
+          </button>
+        </div>
       } @else {
         <p class="empty">Sin actividad registrada este mes.</p>
       }
@@ -149,19 +282,25 @@
 
     <!-- Admin/Gerente: equipo -->
     @if (auth.isAdminOrGerente() && !cargandoMensual) {
-
       <h3 class="seccion-titulo">👥 Actividad del equipo</h3>
       @if (equipoResumenMensual.length > 0) {
         <div class="table-wrapper">
           <table>
             <thead>
-              <tr><th>Empleado</th><th>Días trabajados</th><th>Total</th></tr>
+              <tr>
+                <th>Empleado</th>
+                <th>Días trabajados</th>
+                <th>Total</th>
+              </tr>
             </thead>
             <tbody>
-              @for (r of equipoResumenMensual; track r.user_id) {
+              @for (r of equipoPaginados; track r.user_id) {
                 <!-- Fila empleado (clickable) -->
-                <tr class="fila-usuario" [class.fila-expandida]="expandedUserId === r.user_id"
-                    (click)="toggleDetalle(r.user_id)">
+                <tr
+                  class="fila-usuario"
+                  [class.fila-expandida]="expandedUserId === r.user_id"
+                  (click)="toggleDetalle(r.user_id)"
+                >
                   <td>
                     <span class="expand-icon">{{ expandedUserId === r.user_id ? '▼' : '▶' }}</span>
                     {{ r.nombre }}
@@ -175,12 +314,14 @@
                   <tr class="fila-detalle-container">
                     <td colspan="4">
                       <div class="detalle-panel" (click)="$event.stopPropagation()">
-
                         <div class="detalle-header">
                           <span class="detalle-titulo">
-                            {{ r.nombre }} · {{ meses[mesSeleccionado - 1].label }} {{ anoSeleccionado }}
+                            {{ r.nombre }} · {{ meses[mesSeleccionado - 1].label }}
+                            {{ anoSeleccionado }}
                           </span>
-                          <button class="btn-nueva-jornada" (click)="abrirFormNuevaJornada()">+ Nueva jornada</button>
+                          <button class="btn-nueva-jornada" (click)="abrirFormNuevaJornada()">
+                            + Nueva jornada
+                          </button>
                         </div>
 
                         <!-- Formulario nueva jornada -->
@@ -189,17 +330,34 @@
                             <div class="form-inline">
                               <div class="form-inline-field">
                                 <label>Inicio *</label>
-                                <input type="datetime-local" [(ngModel)]="nuevaJornadaForm.inicio" class="input-edit" />
+                                <input
+                                  type="datetime-local"
+                                  [(ngModel)]="nuevaJornadaForm.inicio"
+                                  class="input-edit"
+                                />
                               </div>
                               <div class="form-inline-field">
                                 <label>Fin</label>
-                                <input type="datetime-local" [(ngModel)]="nuevaJornadaForm.fin" class="input-edit" />
+                                <input
+                                  type="datetime-local"
+                                  [(ngModel)]="nuevaJornadaForm.fin"
+                                  class="input-edit"
+                                />
                               </div>
                               <div class="form-inline-actions">
-                                <button class="btn-save" (click)="crearJornada()" [disabled]="guardandoJornada">
+                                <button
+                                  class="btn-save"
+                                  (click)="crearJornada()"
+                                  [disabled]="guardandoJornada"
+                                >
                                   {{ guardandoJornada ? '...' : '💾' }}
                                 </button>
-                                <button class="btn-cancel" (click)="mostrarFormNuevaJornada = false">✖</button>
+                                <button
+                                  class="btn-cancel"
+                                  (click)="mostrarFormNuevaJornada = false"
+                                >
+                                  ✖
+                                </button>
                               </div>
                             </div>
                           </div>
@@ -209,13 +367,20 @@
                           <p class="error-inline">{{ errorJornada }}</p>
                         }
                         @if (cargandoDetalle) {
-                          <div class="loading" style="padding:.5rem 0">Cargando...</div>
+                          <div class="loading" style="padding: 0.5rem 0">Cargando...</div>
                         }
 
                         @if (!cargandoDetalle && jornadasDetalle.length > 0) {
                           <table class="tabla-detalle">
                             <thead>
-                              <tr><th>Período</th><th>Inicio</th><th>Fin</th><th>Duración</th><th>Estado</th><th></th></tr>
+                              <tr>
+                                <th>Período</th>
+                                <th>Inicio</th>
+                                <th>Fin</th>
+                                <th>Duración</th>
+                                <th>Estado</th>
+                                <th></th>
+                              </tr>
                             </thead>
                             <tbody>
                               @for (dia of jornadasPorDia; track dia.fecha) {
@@ -223,8 +388,12 @@
                                 <tr class="fila-dia-grupo">
                                   <td colspan="6">
                                     <span class="dia-label">📅 {{ dia.label }}</span>
-                                    <span class="dia-periodos">{{ formatDiaPeriodos(dia.jornadas) }}</span>
-                                    <span class="dia-total">{{ formatMin(sumMinutos(dia.jornadas)) }}</span>
+                                    <span class="dia-periodos">{{
+                                      formatDiaPeriodos(dia.jornadas)
+                                    }}</span>
+                                    <span class="dia-total">{{
+                                      formatMin(sumMinutos(dia.jornadas))
+                                    }}</span>
                                   </td>
                                 </tr>
                                 <!-- Filas individuales de cada período -->
@@ -232,29 +401,71 @@
                                   @if (editandoJornadaId !== j.id) {
                                     <tr class="fila-periodo">
                                       <td class="num-periodo">{{ i + 1 }}</td>
-                                      <td>{{ j.inicio | date:'HH:mm' }}</td>
-                                      <td>{{ j.fin ? (j.fin | date:'HH:mm') : '—' }}</td>
-                                      <td>{{ j.duracion_minutos != null ? formatMin(j.duracion_minutos) : '—' }}</td>
+                                      <td>{{ j.inicio | date: 'HH:mm' }}</td>
+                                      <td>{{ j.fin ? (j.fin | date: 'HH:mm') : '—' }}</td>
                                       <td>
-                                        @if (!j.fin) { <span class="badge-en-curso">🟢 Abierta</span> }
-                                        @else { <span class="badge-completada">✅</span> }
+                                        {{
+                                          j.duracion_minutos != null
+                                            ? formatMin(j.duracion_minutos)
+                                            : '—'
+                                        }}
+                                      </td>
+                                      <td>
+                                        @if (!j.fin) {
+                                          <span class="badge-en-curso">🟢 Abierta</span>
+                                        } @else {
+                                          <span class="badge-completada">✅</span>
+                                        }
                                       </td>
                                       <td class="acciones">
-                                        <button class="btn-edit" (click)="iniciarEditJornada(j)" title="Editar">✏️</button>
-                                        <button class="btn-del" (click)="eliminarJornada(j.id)" title="Eliminar">🗑️</button>
+                                        <button
+                                          class="btn-edit"
+                                          (click)="iniciarEditJornada(j)"
+                                          title="Editar"
+                                        >
+                                          ✏️
+                                        </button>
+                                        <button
+                                          class="btn-del"
+                                          (click)="eliminarJornada(j.id)"
+                                          title="Eliminar"
+                                        >
+                                          🗑️
+                                        </button>
                                       </td>
                                     </tr>
                                   } @else {
                                     <tr class="fila-edicion">
                                       <td>{{ i + 1 }}</td>
-                                      <td><input type="datetime-local" [(ngModel)]="editJornadaForm.inicio" class="input-edit" /></td>
-                                      <td><input type="datetime-local" [(ngModel)]="editJornadaForm.fin" class="input-edit" /></td>
+                                      <td>
+                                        <input
+                                          type="datetime-local"
+                                          [(ngModel)]="editJornadaForm.inicio"
+                                          class="input-edit"
+                                        />
+                                      </td>
+                                      <td>
+                                        <input
+                                          type="datetime-local"
+                                          [(ngModel)]="editJornadaForm.fin"
+                                          class="input-edit"
+                                        />
+                                      </td>
                                       <td colspan="2">—</td>
                                       <td class="acciones">
-                                        <button class="btn-save" (click)="guardarEditJornada()" [disabled]="guardandoJornada">
+                                        <button
+                                          class="btn-save"
+                                          (click)="guardarEditJornada()"
+                                          [disabled]="guardandoJornada"
+                                        >
                                           {{ guardandoJornada ? '...' : '💾' }}
                                         </button>
-                                        <button class="btn-cancel" (click)="editandoJornadaId = null">✖</button>
+                                        <button
+                                          class="btn-cancel"
+                                          (click)="editandoJornadaId = null"
+                                        >
+                                          ✖
+                                        </button>
                                       </td>
                                     </tr>
                                   }
@@ -265,9 +476,10 @@
                         }
 
                         @if (!cargandoDetalle && jornadasDetalle.length === 0) {
-                          <p class="empty" style="margin:.5rem 0">Sin jornadas registradas este mes.</p>
+                          <p class="empty" style="margin: 0.5rem 0">
+                            Sin jornadas registradas este mes.
+                          </p>
                         }
-
                       </div>
                     </td>
                   </tr>
@@ -276,10 +488,36 @@
             </tbody>
           </table>
         </div>
+        <div class="pagination table-footer">
+          <button class="page-btn icon" (click)="goToEquipoFirst()" [disabled]="paginaEquipo === 1">
+            ⏮
+          </button>
+          <button class="page-btn icon" (click)="prevEquipo()" [disabled]="paginaEquipo === 1">
+            ◀
+          </button>
+          @for (p of equipoVisiblePages; track p) {
+            <button class="page-btn" [class.active]="paginaEquipo === p" (click)="paginaEquipo = p">
+              {{ p }}
+            </button>
+          }
+          <button
+            class="page-btn icon"
+            (click)="nextEquipo()"
+            [disabled]="paginaEquipo === totalPaginasEquipo"
+          >
+            ▶
+          </button>
+          <button
+            class="page-btn icon"
+            (click)="goToEquipoLast()"
+            [disabled]="paginaEquipo === totalPaginasEquipo"
+          >
+            ⏭
+          </button>
+        </div>
       } @else {
         <p class="empty">Sin datos del equipo para el período seleccionado.</p>
       }
-
     }
 
     <!-- Usuario normal: detalle de días -->
@@ -288,15 +526,22 @@
         <div class="table-wrapper">
           <table>
             <thead>
-              <tr><th>Empleado</th><th>Días trabajados</th><th>Total</th></tr>
+              <tr>
+                <th>Empleado</th>
+                <th>Días trabajados</th>
+                <th>Total</th>
+              </tr>
             </thead>
             <tbody>
-              @for (d of resumenMensualUsuario.detalle_dias; track d.fecha) {
-                <tr class="fila-usuario" [class.fila-expandida]="expandedDia === d.fecha"
-                    (click)="toggleDia(d.fecha)">
+              @for (d of diasPaginados; track d.fecha) {
+                <tr
+                  class="fila-usuario"
+                  [class.fila-expandida]="expandedDia === d.fecha"
+                  (click)="toggleDia(d.fecha)"
+                >
                   <td>
                     <span class="expand-icon">{{ expandedDia === d.fecha ? '▼' : '▶' }}</span>
-                    {{ d.fecha | date:'dd/MM/yyyy' }}
+                    {{ d.fecha | date: 'dd/MM/yyyy' }}
                   </td>
                   <td>1</td>
                   <td>{{ formatMin(d.minutos) }}</td>
@@ -306,22 +551,35 @@
                     <td colspan="3">
                       <div class="detalle-panel">
                         <div class="detalle-header">
-                          <span class="detalle-titulo">{{ d.fecha | date:'dd/MM/yyyy' }}</span>
+                          <span class="detalle-titulo">{{ d.fecha | date: 'dd/MM/yyyy' }}</span>
                         </div>
                         <table class="tabla-detalle">
                           <thead>
-                            <tr><th>Período</th><th>Inicio</th><th>Fin</th><th>Duración</th><th>Estado</th></tr>
+                            <tr>
+                              <th>Período</th>
+                              <th>Inicio</th>
+                              <th>Fin</th>
+                              <th>Duración</th>
+                              <th>Estado</th>
+                            </tr>
                           </thead>
                           <tbody>
                             @for (j of jornadasDelDia(d.fecha); track j.id; let i = $index) {
                               <tr class="fila-periodo">
                                 <td class="num-periodo">{{ i + 1 }}</td>
-                                <td>{{ j.inicio | date:'HH:mm' }}</td>
-                                <td>{{ j.fin ? (j.fin | date:'HH:mm') : '—' }}</td>
-                                <td>{{ j.duracion_minutos != null ? formatMin(j.duracion_minutos) : '—' }}</td>
+                                <td>{{ j.inicio | date: 'HH:mm' }}</td>
+                                <td>{{ j.fin ? (j.fin | date: 'HH:mm') : '—' }}</td>
                                 <td>
-                                  @if (!j.fin) { <span class="badge-en-curso">🟢 Abierta</span> }
-                                  @else { <span class="badge-completada">✅</span> }
+                                  {{
+                                    j.duracion_minutos != null ? formatMin(j.duracion_minutos) : '—'
+                                  }}
+                                </td>
+                                <td>
+                                  @if (!j.fin) {
+                                    <span class="badge-en-curso">🟢 Abierta</span>
+                                  } @else {
+                                    <span class="badge-completada">✅</span>
+                                  }
                                 </td>
                               </tr>
                             }
@@ -334,11 +592,37 @@
               }
             </tbody>
           </table>
+          <div class="pagination table-footer">
+            <button class="page-btn icon" (click)="goToDiasFirst()" [disabled]="paginaDias === 1">
+              ⏮
+            </button>
+            <button class="page-btn icon" (click)="prevDias()" [disabled]="paginaDias === 1">
+              ◀
+            </button>
+            @for (p of diasVisiblePages; track p) {
+              <button class="page-btn" [class.active]="paginaDias === p" (click)="paginaDias = p">
+                {{ p }}
+              </button>
+            }
+            <button
+              class="page-btn icon"
+              (click)="nextDias()"
+              [disabled]="paginaDias === totalPaginasDias"
+            >
+              ▶
+            </button>
+            <button
+              class="page-btn icon"
+              (click)="goToDiasLast()"
+              [disabled]="paginaDias === totalPaginasDias"
+            >
+              ⏭
+            </button>
+          </div>
         </div>
       } @else {
         <p class="empty">Sin jornadas en el período seleccionado.</p>
       }
     }
   }
-
 </div>

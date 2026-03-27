@@ -5,7 +5,12 @@ import { forkJoin, interval, Subscription } from 'rxjs';
 import { startWith } from 'rxjs/operators';
 import { ApiService } from '../services/api.service';
 import { AuthService } from '../auth/auth.service';
-import { Jornada, ResumenJornada, ResumenMensualUsuario, ResumenMensualAdmin } from '../models/models';
+import {
+  Jornada,
+  ResumenJornada,
+  ResumenMensualUsuario,
+  ResumenMensualAdmin,
+} from '../models/models';
 
 @Component({
   selector: 'app-time-control',
@@ -51,6 +56,109 @@ export class TimeControlComponent implements OnInit, OnDestroy {
   cargando = true;
   error = '';
 
+  // Paginación (similar a POS/Stock)
+  readonly porPagina = 10;
+  paginaResumenHoy = 1;
+  paginaEquipo = 1;
+  paginaDias = 1;
+
+  // Filtros para la vista 'Hoy'
+  filtroEmpleado: number | '' = '';
+  filtroRol: string = '';
+  filtroEstado: '' | 'active' | 'inactive' = '';
+  // Resultado después de aplicar filtros
+  resumenFiltrado: ResumenJornada[] = [];
+
+  // Enhanced pagination helpers
+  private visiblePages(totalPages: number, currentPage: number, maxVisible = 3): number[] {
+    totalPages = Math.max(1, totalPages ?? 1);
+    if (totalPages <= maxVisible) return Array.from({ length: totalPages }, (_, i) => i + 1);
+    const half = Math.floor(maxVisible / 2);
+    let start = Math.max(1, currentPage - half);
+    let end = start + maxVisible - 1;
+    if (end > totalPages) {
+      end = totalPages;
+      start = end - maxVisible + 1;
+    }
+    const pages: number[] = [];
+    for (let n = start; n <= end; n++) pages.push(n);
+    return pages;
+  }
+
+  /* --- Resumen (hoy) pagination --- */
+  get resumenPaginados(): ResumenJornada[] {
+    const start = (this.paginaResumenHoy - 1) * this.porPagina;
+    return this.resumenFiltrado.slice(start, start + this.porPagina);
+  }
+  get totalPaginasResumen(): number {
+    return Math.ceil((this.resumenFiltrado?.length ?? 0) / this.porPagina);
+  }
+  get resumenVisiblePages(): number[] {
+    return this.visiblePages(this.totalPaginasResumen, this.paginaResumenHoy, 3);
+  }
+  prevResumen() {
+    if (this.paginaResumenHoy > 1) this.paginaResumenHoy--;
+  }
+  nextResumen() {
+    if (this.paginaResumenHoy < this.totalPaginasResumen) this.paginaResumenHoy++;
+  }
+  goToResumenFirst() {
+    this.paginaResumenHoy = 1;
+  }
+  goToResumenLast() {
+    this.paginaResumenHoy = this.totalPaginasResumen || 1;
+  }
+
+  /* --- Equipo (mensual) pagination --- */
+  get equipoPaginados(): ResumenMensualAdmin[] {
+    const list = this.equipoResumenMensual;
+    const start = (this.paginaEquipo - 1) * this.porPagina;
+    return list.slice(start, start + this.porPagina);
+  }
+  get totalPaginasEquipo(): number {
+    return Math.ceil(this.equipoResumenMensual.length / this.porPagina);
+  }
+  get equipoVisiblePages(): number[] {
+    return this.visiblePages(this.totalPaginasEquipo, this.paginaEquipo, 3);
+  }
+  prevEquipo() {
+    if (this.paginaEquipo > 1) this.paginaEquipo--;
+  }
+  nextEquipo() {
+    if (this.paginaEquipo < this.totalPaginasEquipo) this.paginaEquipo++;
+  }
+  goToEquipoFirst() {
+    this.paginaEquipo = 1;
+  }
+  goToEquipoLast() {
+    this.paginaEquipo = this.totalPaginasEquipo || 1;
+  }
+
+  /* --- Dias (resumen mensual usuario) pagination --- */
+  get diasPaginados(): any[] {
+    const list = this.resumenMensualUsuario?.detalle_dias ?? [];
+    const start = (this.paginaDias - 1) * this.porPagina;
+    return list.slice(start, start + this.porPagina);
+  }
+  get totalPaginasDias(): number {
+    return Math.ceil((this.resumenMensualUsuario?.detalle_dias?.length ?? 0) / this.porPagina);
+  }
+  get diasVisiblePages(): number[] {
+    return this.visiblePages(this.totalPaginasDias, this.paginaDias, 3);
+  }
+  prevDias() {
+    if (this.paginaDias > 1) this.paginaDias--;
+  }
+  nextDias() {
+    if (this.paginaDias < this.totalPaginasDias) this.paginaDias++;
+  }
+  goToDiasFirst() {
+    this.paginaDias = 1;
+  }
+  goToDiasLast() {
+    this.paginaDias = this.totalPaginasDias || 1;
+  }
+
   // ── Jornada propia (fichar) ──
   jornadaActiva: Jornada | null = null;
   jornadaCargada = false;
@@ -59,11 +167,46 @@ export class TimeControlComponent implements OnInit, OnDestroy {
   private timerSub?: Subscription;
 
   meses = [
-    { n: 1, label: 'Enero' }, { n: 2, label: 'Febrero' }, { n: 3, label: 'Marzo' },
-    { n: 4, label: 'Abril' }, { n: 5, label: 'Mayo' }, { n: 6, label: 'Junio' },
-    { n: 7, label: 'Julio' }, { n: 8, label: 'Agosto' }, { n: 9, label: 'Septiembre' },
-    { n: 10, label: 'Octubre' }, { n: 11, label: 'Noviembre' }, { n: 12, label: 'Diciembre' },
+    { n: 1, label: 'Enero' },
+    { n: 2, label: 'Febrero' },
+    { n: 3, label: 'Marzo' },
+    { n: 4, label: 'Abril' },
+    { n: 5, label: 'Mayo' },
+    { n: 6, label: 'Junio' },
+    { n: 7, label: 'Julio' },
+    { n: 8, label: 'Agosto' },
+    { n: 9, label: 'Septiembre' },
+    { n: 10, label: 'Octubre' },
+    { n: 11, label: 'Noviembre' },
+    { n: 12, label: 'Diciembre' },
   ];
+
+  get availableYears(): number[] {
+    const current = new Date().getFullYear();
+    const start = Math.max(2020, current - 3);
+    const end = current + 1;
+    const years: number[] = [];
+    for (let y = start; y <= end; y++) years.push(y);
+    // Ensure selected year is present
+    if (this.anoSeleccionado && !years.includes(this.anoSeleccionado))
+      years.push(this.anoSeleccionado);
+    // Sort descending so latest year appears first
+    return years.sort((a, b) => b - a);
+  }
+
+  limpiarFiltrosMensual(): void {
+    const now = new Date();
+    this.mesSeleccionado = now.getMonth() + 1;
+    this.anoSeleccionado = now.getFullYear();
+    this.paginaEquipo = 1;
+    this.paginaDias = 1;
+    this.paginaResumenHoy = 1;
+    this.expandedUserId = null;
+    this.expandedDia = null;
+    this.jornadasDetalle = [];
+    this.jornadasMensualesEmpleado = [];
+    this.cargarMensual();
+  }
 
   ngOnInit(): void {
     this.cargarJornadaActiva();
@@ -75,15 +218,25 @@ export class TimeControlComponent implements OnInit, OnDestroy {
       }).subscribe({
         next: ({ resumen, jornadas }) => {
           this.resumen = resumen;
+          this.filtrarResumenHoy();
           this.misJornadas = jornadas;
           this.cargando = false;
         },
-        error: () => { this.error = 'Error al cargar el resumen.'; this.cargando = false; },
+        error: () => {
+          this.error = 'Error al cargar el resumen.';
+          this.cargando = false;
+        },
       });
     } else {
       this.api.getJornadas().subscribe({
-        next: (j) => { this.misJornadas = j; this.cargando = false; },
-        error: () => { this.error = 'Error al cargar jornadas.'; this.cargando = false; },
+        next: (j) => {
+          this.misJornadas = j;
+          this.cargando = false;
+        },
+        error: () => {
+          this.error = 'Error al cargar jornadas.';
+          this.cargando = false;
+        },
       });
     }
   }
@@ -146,9 +299,52 @@ export class TimeControlComponent implements OnInit, OnDestroy {
 
   private recargarJornadas(): void {
     if (this.auth.isAdminOrGerente()) {
-      this.api.getResumenJornadasHoy().subscribe((r) => (this.resumen = r));
+      this.api.getResumenJornadasHoy().subscribe((r) => {
+        this.resumen = r;
+        this.filtrarResumenHoy();
+      });
     }
     this.api.getJornadas().subscribe((js) => (this.misJornadas = js));
+  }
+
+  // Opciones derivadas del resumen para los filtros
+  get empleadosHoy(): { id?: number; nombre: string }[] {
+    const map = new Map<number | string, { id?: number; nombre: string }>();
+    for (const r of this.resumen) {
+      const key = r.user_id ?? r.nombre;
+      if (!map.has(key)) map.set(key as number | string, { id: r.user_id, nombre: r.nombre });
+    }
+    return Array.from(map.values());
+  }
+
+  get rolesHoy(): string[] {
+    const s = new Set<string>();
+    for (const r of this.resumen) if (r.rol) s.add(r.rol);
+    return Array.from(s.values());
+  }
+
+  filtrarResumenHoy(): void {
+    let list = this.resumen ?? [];
+    if (this.filtroEmpleado !== '') {
+      const val = String(this.filtroEmpleado);
+      list = list.filter((r) => String(r.user_id ?? r.nombre) === val);
+    }
+    if (this.filtroRol) {
+      list = list.filter((r) => r.rol === this.filtroRol);
+    }
+    if (this.filtroEstado) {
+      if (this.filtroEstado === 'active') list = list.filter((r) => !!r.jornada_activa);
+      else if (this.filtroEstado === 'inactive') list = list.filter((r) => !r.jornada_activa);
+    }
+    this.resumenFiltrado = list;
+    this.paginaResumenHoy = 1;
+  }
+
+  limpiarFiltrosHoy(): void {
+    this.filtroEmpleado = '';
+    this.filtroRol = '';
+    this.filtroEstado = '';
+    this.filtrarResumenHoy();
   }
 
   private parseFecha(s: string | null | undefined): Date {
@@ -169,11 +365,12 @@ export class TimeControlComponent implements OnInit, OnDestroy {
       .subscribe(() => {
         if (!this.jornadaActiva) return;
         const minutosCompletados = this.jornadasPropias
-          .filter(j => j.fin != null)
+          .filter((j) => j.fin != null)
           .reduce((sum, j) => sum + (j.duracion_minutos ?? 0), 0);
-        const segundosActivos = Math.max(0, Math.floor(
-          (Date.now() - this.parseFecha(this.jornadaActiva.inicio).getTime()) / 1000,
-        ));
+        const segundosActivos = Math.max(
+          0,
+          Math.floor((Date.now() - this.parseFecha(this.jornadaActiva.inicio).getTime()) / 1000),
+        );
         const total = minutosCompletados * 60 + segundosActivos;
         const h = Math.floor(total / 3600);
         const m = Math.floor((total % 3600) / 60);
@@ -184,11 +381,11 @@ export class TimeControlComponent implements OnInit, OnDestroy {
 
   private get jornadasPropias(): Jornada[] {
     const uid = this.auth.getCurrentUser()?.id;
-    return this.misJornadas.filter(j => j.user_id === uid);
+    return this.misJornadas.filter((j) => j.user_id === uid);
   }
 
   get tramosCompletadosHoy(): number {
-    return this.jornadasPropias.filter(j => j.fin != null).length;
+    return this.jornadasPropias.filter((j) => j.fin != null).length;
   }
 
   get totalMinutosHoy(): number {
@@ -214,13 +411,18 @@ export class TimeControlComponent implements OnInit, OnDestroy {
           this.resumenMensualUsuario = data;
           const uid = this.auth.getCurrentUser()?.id;
           if (uid) {
-            this.api.getJornadasUsuario(uid, this.mesSeleccionado, this.anoSeleccionado)
-              .subscribe({ next: (js) => { this.jornadasMensualesEmpleado = js; } });
+            this.api.getJornadasUsuario(uid, this.mesSeleccionado, this.anoSeleccionado).subscribe({
+              next: (js) => {
+                this.jornadasMensualesEmpleado = js;
+              },
+            });
           }
         }
         this.cargandoMensual = false;
       },
-      error: () => { this.cargandoMensual = false; },
+      error: () => {
+        this.cargandoMensual = false;
+      },
     });
   }
 
@@ -229,13 +431,13 @@ export class TimeControlComponent implements OnInit, OnDestroy {
   }
 
   jornadasDelDia(fecha: string): Jornada[] {
-    return this.jornadasMensualesEmpleado.filter(j => j.inicio.slice(0, 10) === fecha);
+    return this.jornadasMensualesEmpleado.filter((j) => j.inicio.slice(0, 10) === fecha);
   }
 
   get miResumenMensual(): ResumenMensualAdmin | null {
     const user = this.auth.getCurrentUser();
     if (!user) return null;
-    return this.resumenMensualAdmin.find(r => r.user_id === user.id) ?? null;
+    return this.resumenMensualAdmin.find((r) => r.user_id === user.id) ?? null;
   }
 
   get miResumen(): { dias_trabajados: number; total_minutos: number } | null {
@@ -246,7 +448,7 @@ export class TimeControlComponent implements OnInit, OnDestroy {
   get equipoResumenMensual(): ResumenMensualAdmin[] {
     const user = this.auth.getCurrentUser();
     if (!user) return this.resumenMensualAdmin;
-    return this.resumenMensualAdmin.filter(r => r.user_id !== user.id);
+    return this.resumenMensualAdmin.filter((r) => r.user_id !== user.id);
   }
 
   // ── Detalle jornadas empleado ──────────────────────────────────────
@@ -268,14 +470,22 @@ export class TimeControlComponent implements OnInit, OnDestroy {
   cargarJornadasDetalle(userId: number): void {
     this.cargandoDetalle = true;
     this.api.getJornadasUsuario(userId, this.mesSeleccionado, this.anoSeleccionado).subscribe({
-      next: (j) => { this.jornadasDetalle = j; this.cargandoDetalle = false; },
-      error: () => { this.cargandoDetalle = false; },
+      next: (j) => {
+        this.jornadasDetalle = j;
+        this.cargandoDetalle = false;
+      },
+      error: () => {
+        this.cargandoDetalle = false;
+      },
     });
   }
 
   iniciarEditJornada(j: Jornada): void {
     this.editandoJornadaId = j.id;
-    this.editJornadaForm = { inicio: this.toDatetimeLocal(j.inicio), fin: this.toDatetimeLocal(j.fin) };
+    this.editJornadaForm = {
+      inicio: this.toDatetimeLocal(j.inicio),
+      fin: this.toDatetimeLocal(j.fin),
+    };
     this.mostrarFormNuevaJornada = false;
     this.errorJornada = '';
   }
@@ -283,30 +493,32 @@ export class TimeControlComponent implements OnInit, OnDestroy {
   guardarEditJornada(): void {
     if (!this.editandoJornadaId) return;
     this.guardandoJornada = true;
-    this.api.updateJornada(this.editandoJornadaId, {
-      inicio: this.editJornadaForm.inicio,
-      fin: this.editJornadaForm.fin || null,
-    }).subscribe({
-      next: (j) => {
-        const idx = this.jornadasDetalle.findIndex(x => x.id === j.id);
-        if (idx !== -1) this.jornadasDetalle[idx] = j;
-        this.editandoJornadaId = null;
-        this.guardandoJornada = false;
-        this.cargarMensual();
-        if (this.expandedUserId) this.cargarJornadasDetalle(this.expandedUserId);
-      },
-      error: (e) => {
-        this.errorJornada = e?.error?.message ?? 'Error al guardar.';
-        this.guardandoJornada = false;
-      },
-    });
+    this.api
+      .updateJornada(this.editandoJornadaId, {
+        inicio: this.editJornadaForm.inicio,
+        fin: this.editJornadaForm.fin || null,
+      })
+      .subscribe({
+        next: (j) => {
+          const idx = this.jornadasDetalle.findIndex((x) => x.id === j.id);
+          if (idx !== -1) this.jornadasDetalle[idx] = j;
+          this.editandoJornadaId = null;
+          this.guardandoJornada = false;
+          this.cargarMensual();
+          if (this.expandedUserId) this.cargarJornadasDetalle(this.expandedUserId);
+        },
+        error: (e) => {
+          this.errorJornada = e?.error?.message ?? 'Error al guardar.';
+          this.guardandoJornada = false;
+        },
+      });
   }
 
   eliminarJornada(id: number): void {
     if (!confirm('¿Eliminar esta jornada? Esta acción no se puede deshacer.')) return;
     this.api.deleteJornada(id).subscribe({
       next: () => {
-        this.jornadasDetalle = this.jornadasDetalle.filter(j => j.id !== id);
+        this.jornadasDetalle = this.jornadasDetalle.filter((j) => j.id !== id);
         this.cargarMensual();
         if (this.expandedUserId) this.cargarJornadasDetalle(this.expandedUserId);
       },
@@ -326,22 +538,24 @@ export class TimeControlComponent implements OnInit, OnDestroy {
       return;
     }
     this.guardandoJornada = true;
-    this.api.createJornadaAdmin({
-      user_id: this.expandedUserId,
-      inicio: this.nuevaJornadaForm.inicio,
-      fin: this.nuevaJornadaForm.fin || undefined,
-    }).subscribe({
-      next: () => {
-        this.mostrarFormNuevaJornada = false;
-        this.guardandoJornada = false;
-        this.cargarMensual();
-        if (this.expandedUserId) this.cargarJornadasDetalle(this.expandedUserId);
-      },
-      error: (e) => {
-        this.errorJornada = e?.error?.message ?? 'Error al crear la jornada.';
-        this.guardandoJornada = false;
-      },
-    });
+    this.api
+      .createJornadaAdmin({
+        user_id: this.expandedUserId,
+        inicio: this.nuevaJornadaForm.inicio,
+        fin: this.nuevaJornadaForm.fin || undefined,
+      })
+      .subscribe({
+        next: () => {
+          this.mostrarFormNuevaJornada = false;
+          this.guardandoJornada = false;
+          this.cargarMensual();
+          if (this.expandedUserId) this.cargarJornadasDetalle(this.expandedUserId);
+        },
+        error: (e) => {
+          this.errorJornada = e?.error?.message ?? 'Error al crear la jornada.';
+          this.guardandoJornada = false;
+        },
+      });
   }
 
   toDatetimeLocal(iso?: string | null): string {
@@ -356,12 +570,12 @@ export class TimeControlComponent implements OnInit, OnDestroy {
   }
 
   formatPeriodosResumen(periodos: { inicio: string; fin: string | null }[]): string {
-    return periodos.map(p => `${p.inicio}-${p.fin ?? '...'}`).join(' / ');
+    return periodos.map((p) => `${p.inicio}-${p.fin ?? '...'}`).join(' / ');
   }
 
   formatDiaPeriodos(jornadas: Jornada[]): string {
     return jornadas
-      .map(j => `${j.inicio.slice(11, 16)}-${j.fin ? j.fin.slice(11, 16) : '...'}`)
+      .map((j) => `${j.inicio.slice(11, 16)}-${j.fin ? j.fin.slice(11, 16) : '...'}`)
       .join(' / ');
   }
 

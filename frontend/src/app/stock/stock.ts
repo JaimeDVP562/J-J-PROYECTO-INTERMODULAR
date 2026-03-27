@@ -20,6 +20,8 @@ export class StockComponent implements OnInit {
   inventarios: Inventario[] = [];
   productos: Producto[] = [];
   productosFiltrados: Producto[] = [];
+  inventariosFiltrados: Inventario[] = [];
+  proveedoresFiltrados: Proveedor[] = [];
   proveedores: Proveedor[] = [];
   categorias: Categoria[] = [];
   cargando = true;
@@ -29,7 +31,10 @@ export class StockComponent implements OnInit {
 
   // Filters (productos)
   busquedaProducto = '';
-  categoriaFiltro: number | '' = '';
+  // Generic filters applied to all three tabs
+  filtroTexto = '';
+  filtroCategoria: number | '' = '';
+  filtroProveedor: number | '' = '';
 
   // Añadir producto
   mostrarFormProducto = false;
@@ -58,21 +63,27 @@ export class StockComponent implements OnInit {
 
   get inventariosPaginados(): Inventario[] {
     const i = (this.paginaInventario - 1) * this.porPagina;
-    return this.inventarios.slice(i, i + this.porPagina);
+    return this.inventariosFiltrados.slice(i, i + this.porPagina);
   }
-  get totalPaginasInventario(): number { return Math.ceil(this.inventarios.length / this.porPagina); }
+  get totalPaginasInventario(): number {
+    return Math.ceil(this.inventariosFiltrados.length / this.porPagina);
+  }
 
   get productosPaginados(): Producto[] {
     const i = (this.paginaProductos - 1) * this.porPagina;
     return this.productosFiltrados.slice(i, i + this.porPagina);
   }
-  get totalPaginasProductos(): number { return Math.ceil(this.productosFiltrados.length / this.porPagina); }
+  get totalPaginasProductos(): number {
+    return Math.ceil(this.productosFiltrados.length / this.porPagina);
+  }
 
   get proveedoresPaginados(): Proveedor[] {
     const i = (this.paginaProveedores - 1) * this.porPagina;
-    return this.proveedores.slice(i, i + this.porPagina);
+    return this.proveedoresFiltrados.slice(i, i + this.porPagina);
   }
-  get totalPaginasProveedores(): number { return Math.ceil(this.proveedores.length / this.porPagina); }
+  get totalPaginasProveedores(): number {
+    return Math.ceil(this.proveedoresFiltrados.length / this.porPagina);
+  }
 
   irAPagina(pagina: 'inventario' | 'productos' | 'proveedores', p: number): void {
     if (pagina === 'inventario') {
@@ -82,6 +93,82 @@ export class StockComponent implements OnInit {
     } else {
       if (p >= 1 && p <= this.totalPaginasProveedores) this.paginaProveedores = p;
     }
+  }
+
+  // Enhanced pagination helpers (mirror POS/Billing behavior)
+  private visiblePages(totalPages: number, currentPage: number, maxVisible = 3): number[] {
+    totalPages = Math.max(1, totalPages ?? 1);
+    if (totalPages <= maxVisible) return Array.from({ length: totalPages }, (_, i) => i + 1);
+    const half = Math.floor(maxVisible / 2);
+    let start = Math.max(1, currentPage - half);
+    let end = start + maxVisible - 1;
+    if (end > totalPages) {
+      end = totalPages;
+      start = end - maxVisible + 1;
+    }
+    const pages: number[] = [];
+    for (let n = start; n <= end; n++) pages.push(n);
+    return pages;
+  }
+
+  /* Inventario pagination helpers */
+  get inventariosPages(): number[] {
+    return Array.from({ length: Math.max(1, this.totalPaginasInventario) }, (_, i) => i + 1);
+  }
+  get inventariosVisiblePages(): number[] {
+    return this.visiblePages(this.totalPaginasInventario, this.paginaInventario, 3);
+  }
+  prevInventario() {
+    if (this.paginaInventario > 1) this.paginaInventario--;
+  }
+  nextInventario() {
+    if (this.paginaInventario < this.totalPaginasInventario) this.paginaInventario++;
+  }
+  goToInventarioFirst() {
+    this.paginaInventario = 1;
+  }
+  goToInventarioLast() {
+    this.paginaInventario = this.totalPaginasInventario || 1;
+  }
+
+  /* Productos pagination helpers */
+  get productosPages(): number[] {
+    return Array.from({ length: Math.max(1, this.totalPaginasProductos) }, (_, i) => i + 1);
+  }
+  get productosVisiblePages(): number[] {
+    return this.visiblePages(this.totalPaginasProductos, this.paginaProductos, 3);
+  }
+  prevProductos() {
+    if (this.paginaProductos > 1) this.paginaProductos--;
+  }
+  nextProductos() {
+    if (this.paginaProductos < this.totalPaginasProductos) this.paginaProductos++;
+  }
+  goToProductosFirst() {
+    this.paginaProductos = 1;
+  }
+  goToProductosLast() {
+    this.paginaProductos = this.totalPaginasProductos || 1;
+  }
+
+  /* Proveedores pagination helpers */
+  get proveedoresPages(): number[] {
+    return Array.from({ length: Math.max(1, this.totalPaginasProveedores) }, (_, i) => i + 1);
+  }
+  get proveedoresVisiblePages(): number[] {
+    return this.visiblePages(this.totalPaginasProveedores, this.paginaProveedores, 3);
+  }
+  prevProveedores() {
+    if (this.paginaProveedores > 1) this.paginaProveedores--;
+  }
+  nextProveedores() {
+    if (this.paginaProveedores < this.totalPaginasProveedores) this.paginaProveedores++;
+  }
+  goToProveedoresFirst() {
+    this.paginaProveedores = 1;
+  }
+  goToProveedoresLast() {
+    this.paginaProveedores = this.totalPaginasProveedores || 1;
   }
 
   ngOnInit(): void {
@@ -99,26 +186,80 @@ export class StockComponent implements OnInit {
         this.inventarios = inventarios;
         this.productos = productos;
         this.productosFiltrados = productos;
+        this.inventariosFiltrados = inventarios;
+        this.proveedoresFiltrados = proveedores;
         this.proveedores = proveedores;
         this.categorias = categorias;
         this.inicializarAjustes(productos);
         this.cargando = false;
       },
-      error: () => { this.error = 'Error al cargar el stock.'; this.cargando = false; },
+      error: () => {
+        this.error = 'Error al cargar el stock.';
+        this.cargando = false;
+      },
     });
   }
 
   filtrarProductos(): void {
-    const q = this.busquedaProducto.toLowerCase();
-    this.productosFiltrados = this.productos.filter(p => {
-      const matchQ = !q
-        || p.nombre.toLowerCase().includes(q)
-        || (p.sku ?? '').toLowerCase().includes(q)
-        || (p.descripcion ?? '').toLowerCase().includes(q);
-      const matchCat = !this.categoriaFiltro || p.categoria_id === Number(this.categoriaFiltro);
-      return matchQ && matchCat;
+    // Backwards-compatible: keep existing method but delegate to generic filter
+    this.filtrarStock();
+  }
+
+  filtrarStock(): void {
+    const q = (this.filtroTexto || '').toLowerCase();
+
+    // Productos
+    this.productosFiltrados = this.productos.filter((p) => {
+      const matchQ =
+        !q ||
+        p.nombre.toLowerCase().includes(q) ||
+        (p.sku ?? '').toLowerCase().includes(q) ||
+        (p.descripcion ?? '').toLowerCase().includes(q) ||
+        String(p.proveedor_id ?? '')
+          .toLowerCase()
+          .includes(q);
+      const matchCat = !this.filtroCategoria || p.categoria_id === Number(this.filtroCategoria);
+      const matchProv = !this.filtroProveedor || p.proveedor_id === Number(this.filtroProveedor);
+      return matchQ && matchCat && matchProv;
     });
     this.paginaProductos = 1;
+
+    // Inventarios (filter by producto fields)
+    this.inventariosFiltrados = this.inventarios.filter((inv) => {
+      const p = this.productos.find((x) => x.id === inv.producto_id);
+      if (!p) return false;
+      const matchQ =
+        !q ||
+        p.nombre.toLowerCase().includes(q) ||
+        (p.sku ?? '').toLowerCase().includes(q) ||
+        (p.descripcion ?? '').toLowerCase().includes(q) ||
+        String(p.proveedor_id ?? '')
+          .toLowerCase()
+          .includes(q);
+      const matchCat = !this.filtroCategoria || p.categoria_id === Number(this.filtroCategoria);
+      const matchProv = !this.filtroProveedor || p.proveedor_id === Number(this.filtroProveedor);
+      return matchQ && matchCat && matchProv;
+    });
+    this.paginaInventario = 1;
+
+    // Proveedores
+    this.proveedoresFiltrados = this.proveedores.filter((prov) => {
+      const matchQ =
+        !q ||
+        prov.nombre.toLowerCase().includes(q) ||
+        (prov.contact_email ?? '').toLowerCase().includes(q) ||
+        (prov.phone ?? '').toLowerCase().includes(q);
+      const matchProv = !this.filtroProveedor || prov.id === Number(this.filtroProveedor);
+      return matchQ && matchProv;
+    });
+    this.paginaProveedores = 1;
+  }
+
+  limpiarFiltrosStock(): void {
+    this.filtroTexto = '';
+    this.filtroCategoria = '';
+    this.filtroProveedor = '';
+    this.filtrarStock();
   }
 
   // ── Inicializar mapa de ajuste ─────────────────────────────────────
@@ -151,8 +292,8 @@ export class StockComponent implements OnInit {
     if (!confirm('¿Eliminar este producto? Esta acción no se puede deshacer.')) return;
     this.api.deleteProducto(id).subscribe({
       next: () => {
-        this.productos = this.productos.filter(p => p.id !== id);
-        this.inventarios = this.inventarios.filter(i => i.producto_id !== id);
+        this.productos = this.productos.filter((p) => p.id !== id);
+        this.inventarios = this.inventarios.filter((i) => i.producto_id !== id);
         this.filtrarProductos();
       },
     });
@@ -171,7 +312,7 @@ export class StockComponent implements OnInit {
       return;
     }
     const nombreDup = this.productos.some(
-      p => p.nombre.trim().toLowerCase() === this.nuevoProducto.nombre!.trim().toLowerCase()
+      (p) => p.nombre.trim().toLowerCase() === this.nuevoProducto.nombre!.trim().toLowerCase(),
     );
     if (nombreDup) {
       this.errorProducto = 'Ya existe un producto con ese nombre.';
@@ -182,7 +323,7 @@ export class StockComponent implements OnInit {
       next: () => {
         this.guardandoProducto = false;
         this.mostrarFormProducto = false;
-        this.api.getProductos().subscribe(p => {
+        this.api.getProductos().subscribe((p) => {
           this.productos = p;
           this.inicializarAjustes(p);
           this.filtrarProductos();
@@ -198,7 +339,12 @@ export class StockComponent implements OnInit {
   // ── Proveedores ────────────────────────────────────────────────────
   iniciarEditProveedor(p: Proveedor): void {
     this.editandoProveedorId = p.id;
-    this.editProvForm = { nombre: p.nombre, contact_email: p.contact_email, phone: p.phone, address: p.address };
+    this.editProvForm = {
+      nombre: p.nombre,
+      contact_email: p.contact_email,
+      phone: p.phone,
+      address: p.address,
+    };
     this.editProvError = '';
   }
 
@@ -210,32 +356,54 @@ export class StockComponent implements OnInit {
 
   guardarProveedor(): void {
     if (!this.editandoProveedorId) return;
-    const nombreDup = this.editProvForm.nombre && this.proveedores.some(
-      p => p.id !== this.editandoProveedorId &&
-           p.nombre.trim().toLowerCase() === this.editProvForm.nombre!.trim().toLowerCase()
-    );
-    if (nombreDup) { this.editProvError = 'Ya existe un proveedor con ese nombre.'; return; }
-    const emailDup = this.editProvForm.contact_email && this.proveedores.some(
-      p => p.id !== this.editandoProveedorId &&
-           p.contact_email && p.contact_email.trim().toLowerCase() === this.editProvForm.contact_email!.trim().toLowerCase()
-    );
-    if (emailDup) { this.editProvError = 'Ya existe un proveedor con ese email.'; return; }
+    const nombreDup =
+      this.editProvForm.nombre &&
+      this.proveedores.some(
+        (p) =>
+          p.id !== this.editandoProveedorId &&
+          p.nombre.trim().toLowerCase() === this.editProvForm.nombre!.trim().toLowerCase(),
+      );
+    if (nombreDup) {
+      this.editProvError = 'Ya existe un proveedor con ese nombre.';
+      return;
+    }
+    const emailDup =
+      this.editProvForm.contact_email &&
+      this.proveedores.some(
+        (p) =>
+          p.id !== this.editandoProveedorId &&
+          p.contact_email &&
+          p.contact_email.trim().toLowerCase() ===
+            this.editProvForm.contact_email!.trim().toLowerCase(),
+      );
+    if (emailDup) {
+      this.editProvError = 'Ya existe un proveedor con ese email.';
+      return;
+    }
     this.editProvError = '';
     this.guardandoProveedor = true;
     this.api.updateProveedor(this.editandoProveedorId, this.editProvForm).subscribe({
       next: () => {
         this.guardandoProveedor = false;
         this.editandoProveedorId = null;
-        this.api.getProveedores().subscribe(p => this.proveedores = p);
+        this.api.getProveedores().subscribe((p) => {
+          this.proveedores = p;
+          this.filtrarStock();
+        });
       },
-      error: () => { this.guardandoProveedor = false; },
+      error: () => {
+        this.guardandoProveedor = false;
+      },
     });
   }
 
   eliminarProveedor(id: number): void {
     if (!confirm('¿Eliminar este proveedor? Esta acción no se puede deshacer.')) return;
     this.api.deleteProveedor(id).subscribe({
-      next: () => { this.proveedores = this.proveedores.filter(p => p.id !== id); },
+      next: () => {
+        this.proveedores = this.proveedores.filter((p) => p.id !== id);
+        this.filtrarStock();
+      },
     });
   }
 
@@ -246,27 +414,54 @@ export class StockComponent implements OnInit {
   }
 
   crearProveedor(): void {
-    if (!this.nuevoProveedor.nombre) { this.errorProveedor = 'El nombre es obligatorio.'; return; }
+    if (!this.nuevoProveedor.nombre) {
+      this.errorProveedor = 'El nombre es obligatorio.';
+      return;
+    }
     const nombreDup = this.proveedores.some(
-      p => p.nombre.trim().toLowerCase() === this.nuevoProveedor.nombre!.trim().toLowerCase()
+      (p) => p.nombre.trim().toLowerCase() === this.nuevoProveedor.nombre!.trim().toLowerCase(),
     );
-    if (nombreDup) { this.errorProveedor = 'Ya existe un proveedor con ese nombre.'; return; }
-    const emailDup = this.nuevoProveedor.contact_email && this.proveedores.some(
-      p => p.contact_email && p.contact_email.trim().toLowerCase() === this.nuevoProveedor.contact_email!.trim().toLowerCase()
-    );
-    if (emailDup) { this.errorProveedor = 'Ya existe un proveedor con ese email.'; return; }
+    if (nombreDup) {
+      this.errorProveedor = 'Ya existe un proveedor con ese nombre.';
+      return;
+    }
+    const emailDup =
+      this.nuevoProveedor.contact_email &&
+      this.proveedores.some(
+        (p) =>
+          p.contact_email &&
+          p.contact_email.trim().toLowerCase() ===
+            this.nuevoProveedor.contact_email!.trim().toLowerCase(),
+      );
+    if (emailDup) {
+      this.errorProveedor = 'Ya existe un proveedor con ese email.';
+      return;
+    }
     this.guardandoProveedor = true;
     this.api.createProveedor(this.nuevoProveedor).subscribe({
       next: () => {
         this.guardandoProveedor = false;
         this.mostrarFormProveedor = false;
-        this.api.getProveedores().subscribe(p => this.proveedores = p);
+        this.api.getProveedores().subscribe((p) => {
+          this.proveedores = p;
+          this.filtrarStock();
+        });
       },
-      error: () => { this.errorProveedor = 'Error al crear proveedor.'; this.guardandoProveedor = false; },
+      error: () => {
+        this.errorProveedor = 'Error al crear proveedor.';
+        this.guardandoProveedor = false;
+      },
     });
   }
 
   get stockBajo(): number {
-    return this.inventarios.filter(i => i.cantidad_disponible <= i.cantidad_minima).length;
+    return this.inventarios.filter((i) => i.cantidad_disponible <= i.cantidad_minima).length;
+  }
+
+  proveedorNombrePorProducto(productoId: number): string | null {
+    const prod = this.productos.find((p) => p.id === productoId);
+    if (prod?.proveedor && prod.proveedor.nombre) return prod.proveedor.nombre;
+    const prov = this.proveedores.find((pv) => pv.id === prod?.proveedor_id);
+    return prov ? prov.nombre : null;
   }
 }
