@@ -26,20 +26,20 @@ apt-get install -y \
   unzip \
   git \
   vim \
-  php${PHP_VERSION} \
-  php${PHP_VERSION}-cli \
-  php${PHP_VERSION}-fpm \
-  php${PHP_VERSION}-xml \
-  php${PHP_VERSION}-mbstring \
-  php${PHP_VERSION}-bcmath \
-  php${PHP_VERSION}-curl \
-  php${PHP_VERSION}-zip
+  php$${PHP_VERSION} \
+  php$${PHP_VERSION}-cli \
+  php$${PHP_VERSION}-fpm \
+  php$${PHP_VERSION}-xml \
+  php$${PHP_VERSION}-mbstring \
+  php$${PHP_VERSION}-bcmath \
+  php$${PHP_VERSION}-curl \
+  php$${PHP_VERSION}-zip
 
 #################################
 # HOSTNAME
 #################################
 
-hostnamectl set-hostname api.${DOMAIN}
+hostnamectl set-hostname api.$${DOMAIN}
 
 #################################
 # FIREWALL (DEFENSA EN PROFUNDIDAD)
@@ -55,24 +55,24 @@ ufw --force enable
 # USUARIO APLICACIÓN
 #################################
 
-if ! id -u ${APP_USER} >/dev/null 2>&1; then
-  useradd -r -s /usr/sbin/nologin ${APP_USER}
+if ! id -u $${APP_USER} >/dev/null 2>&1; then
+  useradd -r -s /usr/sbin/nologin $${APP_USER}
 fi
 
 #################################
 # DIRECTORIO APLICACIÓN
 #################################
 
-mkdir -p ${APP_DIR}
-chown -R ${APP_USER}:www-data ${APP_DIR}
-chmod -R 750 ${APP_DIR}
+mkdir -p $${APP_DIR}
+chown -R $${APP_USER}:www-data $${APP_DIR}
+chmod -R 750 $${APP_DIR}
 
 #################################
 # APACHE: MÓDULOS
 #################################
 
 a2enmod headers rewrite proxy_fcgi setenvif ssl
-a2enconf php${PHP_VERSION}-fpm
+a2enconf php$${PHP_VERSION}-fpm
 
 a2dismod autoindex status
 
@@ -118,17 +118,17 @@ sed -i 's/^SecRuleEngine.*/SecRuleEngine DetectionOnly/' /etc/modsecurity/modsec
 
 tee /etc/apache2/sites-available/laravel-api.conf > /dev/null <<EOF
 <VirtualHost *:80>
-    ServerName api.${DOMAIN}
-    DocumentRoot ${APP_DIR}/public
+  ServerName api.$${DOMAIN}
+  DocumentRoot $${APP_DIR}/public
 
-    <Directory ${APP_DIR}/public>
-        Options -Indexes +FollowSymLinks
-        AllowOverride All
-        Require all granted
-    </Directory>
+  <Directory $${APP_DIR}/public>
+    Options -Indexes +FollowSymLinks
+    AllowOverride All
+    Require all granted
+  </Directory>
 
-    ErrorLog \${APACHE_LOG_DIR}/laravel-api_error.log
-    CustomLog \${APACHE_LOG_DIR}/laravel-api_access.log combined
+  ErrorLog $${APACHE_LOG_DIR}/laravel-api_error.log
+  CustomLog $${APACHE_LOG_DIR}/laravel-api_access.log combined
 </VirtualHost>
 EOF
 
@@ -139,5 +139,5 @@ a2ensite laravel-api.conf
 #################################
 
 apachectl configtest
-systemctl restart php${PHP_VERSION}-fpm
+systemctl restart php$${PHP_VERSION}-fpm
 systemctl restart apache2

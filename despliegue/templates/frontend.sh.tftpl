@@ -66,8 +66,8 @@ chmod -R 750 /var/www
 cp /etc/apache2/apache2.conf /etc/apache2/apache2.conf.bak
 
 tee /etc/apache2/apache2.conf > /dev/null <<'EOF'
-DefaultRuntimeDir ${APACHE_RUN_DIR}
-PidFile ${APACHE_PID_FILE}
+DefaultRuntimeDir $${APACHE_RUN_DIR}
+PidFile $${APACHE_PID_FILE}
 
 Timeout 60
 KeepAlive On
@@ -75,11 +75,11 @@ KeepAliveTimeout 5
 MaxRequestWorkers 150
 LimitRequestBody 10485760
 
-User ${APACHE_RUN_USER}
-Group ${APACHE_RUN_GROUP}
+User $${APACHE_RUN_USER}
+Group $${APACHE_RUN_GROUP}
 
 HostnameLookups Off
-ErrorLog ${APACHE_LOG_DIR}/error.log
+ErrorLog $${APACHE_LOG_DIR}/error.log
 LogLevel warn
 
 IncludeOptional mods-enabled/*.load

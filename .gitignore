@@ -125,3 +125,11 @@ obj/
 *.orig
 *~
 
+
+# Terraform
+.terraform/
+despliegue/.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+

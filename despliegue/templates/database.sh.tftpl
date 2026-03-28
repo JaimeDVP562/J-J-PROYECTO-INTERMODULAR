@@ -48,7 +48,7 @@ systemctl enable mysql
 systemctl start mysql
 
 # Configurar MySQL para aceptar conexiones remotas
-sed -i "s/^bind-address.*/bind-address = ${MYSQL_BIND_ADDRESS}/" /etc/mysql/mysql.conf.d/mysqld.cnf
+sed -i "s/^bind-address.*/bind-address = $${MYSQL_BIND_ADDRESS}/" /etc/mysql/mysql.conf.d/mysqld.cnf
 
 systemctl restart mysql
 
@@ -57,15 +57,15 @@ systemctl restart mysql
 #################################
 
 mysql <<EOF
-CREATE DATABASE IF NOT EXISTS ${DB_NAME}
+CREATE DATABASE IF NOT EXISTS $${DB_NAME}
   CHARACTER SET utf8mb4
   COLLATE utf8mb4_unicode_ci;
 
-CREATE USER IF NOT EXISTS '${DB_USER}'@'%' IDENTIFIED BY '${DB_PASSWORD}';
+CREATE USER IF NOT EXISTS '$${DB_USER}'@'%' IDENTIFIED BY '$${DB_PASSWORD}';
 
 GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, INDEX, ALTER
-ON ${DB_NAME}.*
-TO '${DB_USER}'@'%';
+ON $${DB_NAME}.*
+TO '$${DB_USER}'@'%';
 
 FLUSH PRIVILEGES;
 EOF
@@ -75,9 +75,9 @@ EOF
 #################################
 
 cat > /root/mysql_credentials.txt <<EOF
-Database: ${DB_NAME}
-User: ${DB_USER}
-Password: ${DB_PASSWORD}
+Database: $${DB_NAME}
+User: $${DB_USER}
+Password: $${DB_PASSWORD}
 EOF
 
 chmod 600 /root/mysql_credentials.txt
