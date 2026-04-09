@@ -67,68 +67,66 @@ Este apartado refleja un posible reparto de hitos para entrega académica:
 - Hito 4 (Semana 4): Tests, documentación, y despliegue con Terraform.
 
 Adapte plazos según calendario docente y revisiones.
+Presentación
 
-## 5. Tecnologías
+Este documento explica de forma sencilla qué es el proyecto, para qué sirve y cómo probarlo. 
 
-- Backend: Laravel 12, PHP ^8.2 — ver [backend/composer.json](backend/composer.json) y [backend/composer.lock](backend/composer.lock).
-- Frontend: Angular 20 — ver [frontend/package.json](frontend/package.json) y [frontend/package-lock.json](frontend/package-lock.json).
-- Base de datos de desarrollo: MySQL 8.0 (imagen en [docker-compose.yml](docker-compose.yml)).
-- Infraestructura: Terraform (archivos en `despliegue/`).
-- CI: GitHub Actions (archivo [.github/workflows/deploy.yml](.github/workflows/deploy.yml)).
+Nombre del proyecto
 
-## 6. Diseño
+J-J Proyecto Intermodular
 
-### Arquitectura general
+Objetivos del proyecto
 
-La aplicación sigue arquitectura cliente (Angular) — API REST (Laravel) — Base de datos (MySQL). Se contempla un bastion host y separación de grupos de seguridad en la plantilla Terraform (`despliegue/main.tf`).
+- Crear una API que gestione facturas, ventas, inventario y empleados.
+- Construir una interfaz web (SPA) para que vendedores y administradores usen el sistema.
+- Preparar el proyecto para que pueda desplegarse y probarse de forma reproducible (Docker, Terraform, CI).
 
-### Endpoints principales
+Tecnologías utilizadas
 
-La API expone recursos REST según las rutas definidas en [backend/routes/api.php](backend/routes/api.php). Algunos endpoints clave:
+- Backend: Laravel 12 (PHP ^8.2). Ver `backend/composer.json`.
+- Frontend: Angular 20. Ver `frontend/package.json`.
+- Base de datos: MySQL (configuración en `docker-compose.yml`).
+- Infraestructura: Terraform (carpeta `despliegue/`).
+- Integración continua y despliegue automático: GitHub Actions (archivo `.github/workflows/deploy.yml`).
 
-- POST /login — autenticación
-- POST /logout — cierre de sesión
-- /productos — CRUD de productos (apiResource)
-- /proveedores — CRUD de proveedores
-- /facturas — CRUD de facturas (incluye `facturas/next-number` y `facturas/{id}/resend-verifactu`)
-- /ventas — CRUD y rutas específicas (`ventas/mis-hoy`, `ventas/pago-proveedor`)
+Justificación de las tecnologías
 
-Para lista completa, consulte [backend/routes/api.php](backend/routes/api.php).
+- Laravel y PHP: facilitan crear una API robusta y con buenas prácticas (migraciones, pruebas, autenticación).
+- Angular: permite construir una interfaz completa y mantenible para la parte de cliente.
+- Docker y Terraform: ayudan a levantar el proyecto y la infraestructura de forma reproducible, útil para prácticas y despliegues.
 
-### Modelado de datos (breve)
+Reparto de tareas
 
-El directorio `backend/app/Models` contiene entidades como `Producto`, `Proveedor`, `Factura`, `Venta`, `Cliente`, `Empleado`, `Inventario`, `Categoria`. Las migraciones están en `database/migrations` y los seeders en `database/seeders`.
+Las tareas se repartieron de forma equitativa entre los miembros del grupo. Trabajamos por SPRINTs (periodos cortos con objetivos concretos) y usamos Trello para planificar, asignar y hacer seguimiento de las tareas. El tablero es: https://trello.com/b/25Ltfddh/jj-proyect-proyecto-intermodular
 
-## 7. Desarrollo
+Aunque había responsabilidades principales, se rotaron tareas para asegurar que la carga fuera equilibrada:
 
-### Estructura backend
+- Backend: modelos, migraciones y controladores.
+- Frontend: componentes, vistas y conexión con la API.
+- Infraestructura/DevOps: contenedores, Terraform y automatización CI.
 
-- `app/Models` — modelos Eloquent.
-- `app/Http/Controllers/Api` — controladores que implementan la API.
-- `app/Services` — servicios como `VerifactuService.php` (integraciones externas /Mocks).
-- `database/migrations` y `database/seeders` — esquema y datos de prueba.
-- `tests/` — pruebas unitarias y de feature; `phpunit.xml` configura entorno de pruebas.
+Cada SPRINT se definía en Trello y se asignaban tarjetas de forma que todos tuvieran tareas similares en cantidad y complejidad.
 
-### Estructura frontend
+Breve demostración de uso
 
-- `src/app` — componentes y rutas de Angular.
-- `src/environments` — configuración por entorno.
-- `angular.json` y `tsconfig.*` definen compilación. Consulte [frontend/angular.json](frontend/angular.json).
+1. Levantar entorno con Docker Compose (desarrollo):
 
-### Comandos habituales (desarrollo local)
+```bash
+docker compose up --build
+```
 
-Backend:
+2. Si prefieres ejecutar el backend localmente sin Docker:
 
 ```bash
 cd backend
 composer install
-cp .env.example .env   # crear .env local y ajustar DB
+cp .env.example .env
 php artisan key:generate
 php artisan migrate --seed
 php artisan serve --host=0.0.0.0 --port=8000
 ```
 
-Frontend:
+3. Iniciar el frontend localmente:
 
 ```bash
 cd frontend
@@ -136,25 +134,33 @@ npm ci
 npm run start
 ```
 
-Con Docker Compose (entorno integrado):
+4. Flujo rápido (lo que haría un usuario):
+- Crear o seleccionar cliente
+- Añadir productos
+- Generar y guardar la factura
+- Enviar la factura al servicio externo (si procede)
 
-```bash
-docker compose up --build
-```
+Dificultades encontradas
 
-## 8. Pruebas
+- En la configuración de Terraform había reglas de red demasiado abiertas (`0.0.0.0/0`), lo que es inseguro en producción.
+- Algunas partes del despliegue usan versiones distintas de PHP (8.2 vs 8.3), conviene elegir una sola versión para todos los pasos.
+- Ajustes entre frontend y backend (formatos de la API) necesitaron pruebas y correcciones menores.
 
-### Backend
+Posibles mejoras
 
-Las pruebas PHP usan PHPUnit y `phpunit.xml` configura una base de datos SQLite en memoria para tests rápidos.
+- Restringir el acceso SSH y otros puertos en `despliegue/main.tf` a rangos IP concretos.
+- Añadir comprobaciones automáticas en CI (análisis estático y linters) para mejorar calidad.
+- Ampliar pruebas (unitarias y pruebas de integración) y añadir pruebas E2E para flujos principales.
+- Separar configuraciones y Dockerfiles para `dev` y `prod`.
 
-Ejecutar tests:
+Conclusión
 
-```bash
-cd backend
-composer install --dev
-./vendor/bin/phpunit
-```
+El proyecto está completo como prototipo y educativo: funciona como un pequeño ERP y demuestra buenas prácticas. Antes de usarlo en producción conviene reforzar seguridad, pruebas y estandarizar versiones.
+
+Anexos
+
+- Archivos clave: `docker-compose.yml`, `backend/composer.json`, `backend/phpunit.xml`, `backend/routes/api.php`, `despliegue/main.tf`, `.github/workflows/deploy.yml`.
+- Migraciones y seeders: ver `backend/database/migrations` y `backend/database/seeders`.
 
 ### Frontend
 
