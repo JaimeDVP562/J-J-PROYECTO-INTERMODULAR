@@ -38,7 +38,19 @@
       "Bash(find c:UsersJesusDesktopJ-J-PROYECTO-INTERMODULAR -type f \\\\\\(-name *diagram* -o -name *schema* -o -name *.md -o -name *ER* -o -name *entity* \\\\\\))",
       "Bash(grep -l \"rol\\\\|admin\\\\|gerente\" c:UsersJesusDesktopJ-J-PROYECTO-INTERMODULARbackendappHttpControllersApi/*.php)",
       "Bash(find c:UsersJesusDesktopJ-J-PROYECTO-INTERMODULAR -maxdepth 2 -type f \\\\\\(-name *.md -o -name *.txt -o -name *.json \\\\\\))",
-      "Bash(wc -l c:UsersJesusDesktopJ-J-PROYECTO-INTERMODULARbackendappHttpControllersApi/*.php)"
+      "Bash(wc -l c:UsersJesusDesktopJ-J-PROYECTO-INTERMODULARbackendappHttpControllersApi/*.php)",
+      "Bash(pandoc --version)",
+      "Bash(pandoc --list-output-formats)",
+      "Bash(pandoc --list-input-formats)",
+      "Bash(cmd /c \"pandoc --version\")",
+      "Bash(powershell -Command \"pandoc --version\")",
+      "Bash(powershell -Command \"node --version; npm --version\")",
+      "Bash(powershell -Command \"python --version\")",
+      "Bash(powershell -Command \"python3 --version\")",
+      "Bash(powershell -Command \"npx --version\")",
+      "Bash(powershell -Command \"cd 'C:\\\\Users\\\\Jesus\\\\Desktop\\\\J-J-PROYECTO-INTERMODULAR\\\\docs'; node generate_pdf.js\")",
+      "Bash(powershell -Command \"Remove-Item 'C:\\\\Users\\\\Jesus\\\\Desktop\\\\J-J-PROYECTO-INTERMODULAR\\\\docs\\\\generate_pdf.js' -Force; ls 'C:\\\\Users\\\\Jesus\\\\Desktop\\\\J-J-PROYECTO-INTERMODULAR\\\\docs\\\\' | Select-Object Name, Length\")",
+      "Bash(powershell -Command \"Remove-Item 'C:\\\\Users\\\\Jesus\\\\Desktop\\\\J-J-PROYECTO-INTERMODULAR\\\\docs\\\\generate_pdf.js' -Force\")"
     ]
   }
 }
