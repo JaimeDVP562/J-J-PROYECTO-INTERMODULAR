@@ -1,14 +1,14 @@
 variable "region" {
-    type = string
-    default = "us-east-1"
+  type    = string
+  default = "us-east-1"
 }
 
 variable "domain" {
-    type = string
-    default = "J-J-PROYECT.com"
+  type    = string
+  default = "j-j-proyect.com"
 }
 
 variable "key_name" {
-    type = string
-    default = "vockey"
+  type    = string
+  default = "vockey"
 }

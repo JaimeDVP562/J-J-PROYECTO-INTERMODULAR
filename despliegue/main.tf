@@ -201,6 +201,12 @@ resource "aws_eip" "bastion" {
   tags     = { Name = "Bastion-EIP" }
 }
 
+resource "aws_eip" "frontend" {
+  domain   = "vpc"
+  instance = aws_instance.frontend.id
+  tags     = { Name = "Frontend-EIP" }
+}
+
 #################################
 # ZONA DNS ROUTE53
 #################################
@@ -222,7 +228,8 @@ resource "aws_route53_record" "frontend" {
   name    = "frontend.${var.domain}"
   type    = "A"
   ttl     = 300
-  records = [aws_instance.frontend.private_ip]
+  # Use the public elastic IP so the frontend name is reachable from the Internet
+  records = [aws_eip.frontend.public_ip]
 }
 
 resource "aws_route53_record" "api" {

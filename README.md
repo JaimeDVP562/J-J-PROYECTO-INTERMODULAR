@@ -43,12 +43,7 @@ Internet
         EIP ──────▶ │  │ FRONTEND │  │   API    │ │
                     │  │ Apache   │──▶│ Laravel  │ │
                     │  │ Angular  │  │ PHP 8.2  │ │
-                    │  │ HTTPS    │  └────┬─────┘ │
                     │  └──────────┘       │        │
-                    │               ┌─────▼──────┐ │
-                    │               │  DATABASE  │ │
-                    │               │  MySQL 8   │ │
-                    │               └────────────┘ │
                     └──────────────────────────────┘
 ```
 
@@ -257,3 +252,81 @@ El pipeline de GitHub Actions se activa en cada push a `main`:
 - `[OBL]` **Tests unitarios en Angular** — sin archivos `.spec.ts`
 - `[OBL]` **Tests de Angular en GitHub Actions** — el workflow solo ejecuta `build`, no `ng test`
 - `[OPC]` **Librería de componentes UI** — CSS vanilla, sin Material Design, PrimeNG ni similar
+
+
+### Estado de requisitos (análisis)
+
+- ✅ Angular CLI 20 LTS para el proyecto frontend. (Angular 20 detectado)
+- ⚠️ Control de versiones con Git/GitHub; rama `main` de producción y release final etiquetado (tag). (Git/GitHub presente; no se encontraron `git tag` en el repo)
+- ⚠️ Uso de ramas (feature/*) y Pull Requests para integración. (Workflow recomendado, ramas no verificadas en lectura estática)
+- ✅ README en GitHub con título, descripción, objetivos y tecnologías.
+- ❌ Enlace a Trello (o similar) con gestión de tareas y sprints. (no encontrado)
+- ✅ Routing en la aplicación (Angular routing) y guards para rutas protegidas. (guards detectados)
+
+- Comunicación entre componentes (Angular):
+  - ❌ Uso de `@Input()` / `@Output()`. (no detectado)
+  - ✅ Uso de `Services` para compartir lógica y datos. (`AuthService`, `ApiService` presentes)
+
+- ✅ Consumo de API: conexión desde Angular a la API desarrollada en Laravel (HttpClient usado).
+
+- ✅ Backend: Laravel 12 y PHP 8.x.
+- ✅ Base de datos: MySQL 8.x.
+
+- Autenticación y seguridad:
+  - ❌ Panel de administración con autenticación tradicional (Breeze/Jetstream). (no implementado)
+  - ❌ API Security: Laravel Sanctum para tokens de acceso en la API. (no implementado; uso de `api_token` personalizado)
+  - ⚠️ Separación de autenticación (Admin → sesiones / Usuario → tokens). (admin usa frontend/Angular, no sesiones Blade)
+
+- ✅ Validación: uso de validadores (`validate()` / FormRequest parcial detectado en controllers).
+- ❌ Feedback visual de errores en vistas (Blade). (no hay panel Blade)
+
+- ✅ Esquema y datos: todo el esquema se construye mediante Migraciones (31 migraciones detectadas).
+- ⚠️ Uso de Seeders y Factories: Seeders aplicados (11 seeders), pero Factories completas NO (solo `UserFactory` existe).
+- ❌ Diagrama Entidad-Relación (E/R) incluido en el repositorio. (no encontrado)
+
+- Rutas y lógica:
+  - ✅ Protección de rutas y zonas privadas (`Route::middleware(...)` en `routes/api.php`).
+  - ✅ Agrupación de rutas por funcionalidad (`Route::group`).
+  - ❌ Nombrado explícito de rutas con `->name(...)`. (no generalizado; `apiResource` usado)
+  - ✅ Separación entre `web.php` (vistas) y `api.php` (API REST).
+
+- API REST:
+  - ❌ API REST para usuarios con autenticación mediante Sanctum. (Sanctum no implementado)
+  - ✅ CRUD para entidades principales (productos, ventas, facturas, etc.).
+  - ❌ Documentación Swagger / OpenAPI (no detectada).
+  - ✅ Consumida por el frontend Angular.
+
+- Frontend cliente (SPA):
+  - ✅ Token almacenado en `localStorage` (`api_token`, `current_user`).
+  - ❌ Manejo de errores en peticiones HTTP (`try/catch` o `catchError`) a nivel de `ApiService`. (solo interceptor trata 401)
+
+- Roles y permisos:
+  - ✅ Mínimo dos roles: `admin`, `gerente`, `vendedor` (roles detectados in seeders/migrations).
+  - ✅ Módulo de administración accesible por rol (guards/middleware presentes).
+  - ❌ Diferenciación Admin → Blade (no implementado; admin en Angular).
+
+- Panel de administración:
+  - ❌ Uso de Blade (layouts, components, slots). (no implementado)
+  - ⚠️ Paginación en listados (`paginate()`) — no verificada en todos los endpoints (parcial).
+  - ✅ CRUD desde la interfaz (Angular) disponible para entidades principales.
+
+- Pruebas y CI:
+  - ❌ Tests backend (PHPUnit) completos — sólo tests ejemplo/placeholder detectados.
+  - ❌ Tests frontend (Angular) — no se encontraron `.spec.ts`.
+  - ❌ Ejecución de tests en CI (GitHub Actions) antes del deploy — workflow no verificado en lectura estática.
+
+- Despliegue e infra:
+  - ✅ Infraestructura descrita en Terraform (`despliegue/`).
+  - ✅ Despliegue en AWS (EC2) definido en Terraform.
+  - ✅ IP elástica (`aws_eip`) para Bastion en Terraform.
+  - ✅ HTTPS con Certbot/Let's Encrypt en plantillas de despliegue (user-data templates).
+  - ⚠️ Pipelines CI/CD para deploy automatizado (referenciado en README; workflow no comprobado en repo durante análisis estático).
+
+- Diseño (DIW):
+  - ✅ Principios de diseño y buenas prácticas CSS señaladas como cumplidas en el repositorio.
+
+- IPE2 (empresa):
+  - ❌ Documentación de marca, slogan y plan legal financiera (no encontrada).
+
+- Presentación:
+  - ❌ Introducción y conclusión en inglés preparadas (material no incluido en el repo).
