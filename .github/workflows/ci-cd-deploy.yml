@@ -35,8 +35,10 @@ jobs:
       - name: Preparar entorno de test
         working-directory: backend
         run: |
+          set -e
+          # copy env example inside backend and generate key
           cp .env.example .env
-          php artisan key:generate
+          php artisan key:generate --force
 
       - name: Ejecutar tests
         working-directory: backend
