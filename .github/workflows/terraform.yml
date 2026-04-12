@@ -14,12 +14,24 @@ jobs:
         with:
           terraform_version: "1.5.7"
 
+      - name: Ensure AWS region is set
+        run: |
+          if [ -z "${{ secrets.AWS_DEFAULT_REGION }}" ]; then
+            echo "AWS_REGION=us-east-1" >> $GITHUB_ENV
+          else
+            echo "AWS_REGION=${{ secrets.AWS_DEFAULT_REGION }}" >> $GITHUB_ENV
+          fi
+
       - name: Configure AWS credentials for Terraform
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Verify AWS identity (for debug)
+        run: |
+          aws sts get-caller-identity || true
 
       - name: Terraform Init
         run: |
