@@ -33,12 +33,24 @@ jobs:
         run: composer install --no-interaction --prefer-dist --no-progress
 
       - name: Preparar entorno de test
+        env:
+          APP_KEY_VALUE: ${{ secrets.APP_KEY }}
         run: |
           set -e
-          # copy env example from backend and generate APP_KEY inside backend
-          cp backend/.env.example backend/.env
+          # Crear un .env mínimo para tests usando sqlite en memoria
+          mkdir -p backend
+          cat > backend/.env <<'ENV'
+          APP_NAME=JJ-Proyecto
+          APP_ENV=testing
+          APP_KEY=${APP_KEY_VALUE}
+          APP_DEBUG=true
+          APP_URL=http://localhost
+
+          DB_CONNECTION=sqlite
+          DB_DATABASE=:memory:
+          ENV
           pushd backend
-          php artisan key:generate --force
+          php artisan key:generate --force || true
           popd
 
       - name: Ejecutar tests
