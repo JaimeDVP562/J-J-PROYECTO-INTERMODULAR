@@ -1,0 +1,474 @@
+openapi: 3.0.3
+info:
+  title: J-J ERP API
+  version: "1.0.0"
+  description: >
+    API REST del sistema ERP J-J. Desarrollada con **Laravel 12** y
+    autenticada mediante **Laravel Sanctum** (Bearer Token).
+    Permite gestionar productos, ventas, facturas, empleados, clientes,
+    jornadas laborales y más.
+  contact:
+    email: admin@negocio.test
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8000
+    description: Desarrollo local
+  - url: https://api.negocio.test
+    description: Producción AWS
+
+security:
+  - sanctum: []
+
+components:
+  securitySchemes:
+    sanctum:
+      type: http
+      scheme: bearer
+      bearerFormat: Token
+      description: Token Sanctum obtenido en POST /api/login
+
+  schemas:
+    Producto:
+      type: object
+      properties:
+        id:             { type: integer, example: 1 }
+        nombre:         { type: string,  example: "Café Espresso" }
+        sku:            { type: string,  example: "CAF-001" }
+        descripcion:    { type: string,  example: "Café de especialidad" }
+        precio:         { type: number,  format: float, example: 2.50 }
+        stock_quantity: { type: integer, example: 100 }
+        categoria_id:   { type: integer, example: 3 }
+        proveedor_id:   { type: integer, example: 2 }
+
+    Cliente:
+      type: object
+      properties:
+        id:      { type: integer, example: 1 }
+        nombre:  { type: string,  example: "María García" }
+        email:   { type: string,  format: email }
+        phone:   { type: string,  example: "+34 600 000 000" }
+        address: { type: string,  example: "Calle Mayor 1, Madrid" }
+
+    Venta:
+      type: object
+      properties:
+        id:           { type: integer }
+        user_id:      { type: integer }
+        cliente_id:   { type: integer }
+        total:        { type: number, format: float }
+        fecha_venta:  { type: string, format: date-time }
+        metodo_pago:  { type: string, enum: [efectivo, tarjeta, transferencia] }
+        devuelta:     { type: boolean }
+        tipo:         { type: string, enum: [venta, pago_proveedor] }
+
+    Factura:
+      type: object
+      properties:
+        id:             { type: integer }
+        cliente_id:     { type: integer }
+        series:         { type: string,  example: "A" }
+        number:         { type: integer, example: 1 }
+        total_amount:   { type: number,  format: float }
+        status:         { type: string,  enum: [pending, paid, cancelled] }
+        payment_method: { type: string }
+
+    Jornada:
+      type: object
+      properties:
+        id:      { type: integer }
+        user_id: { type: integer }
+        inicio:  { type: string, format: date-time }
+        fin:     { type: string, format: date-time, nullable: true }
+
+    User:
+      type: object
+      properties:
+        id:     { type: integer }
+        nombre: { type: string }
+        email:  { type: string, format: email }
+        rol:    { type: string, enum: [admin, gerente, vendedor] }
+
+    Error:
+      type: object
+      properties:
+        message: { type: string }
+
+tags:
+  - name: Autenticación
+    description: Login y logout con Sanctum
+  - name: Productos
+    description: Catálogo de productos (CRUD)
+  - name: Clientes
+    description: Gestión de clientes (CRUD)
+  - name: Proveedores
+    description: Gestión de proveedores (CRUD)
+  - name: Facturas
+    description: Facturación electrónica y Verifactu
+  - name: Ventas
+    description: Punto de venta y gestión de ventas
+  - name: Empleados
+    description: Gestión de empleados (CRUD)
+  - name: Jornadas
+    description: Control de jornada laboral
+  - name: Estadísticas
+    description: Panel de estadísticas del negocio
+  - name: Usuarios
+    description: Gestión de usuarios del sistema
+  - name: Categorías
+    description: Categorías de productos
+  - name: Inventario
+    description: Control de inventario y stock
+
+paths:
+
+  # ────────────────────────────────────────────────
+  # AUTENTICACIÓN
+  # ────────────────────────────────────────────────
+  /api/login:
+    post:
+      tags: [Autenticación]
+      summary: Iniciar sesión y obtener token Sanctum
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:    { type: string, format: email, example: "admin@negocio.test" }
+                password: { type: string, format: password, example: "password" }
+      responses:
+        '200':
+          description: Login correcto
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string, example: "1|abc123xyz..." }
+                  user:  { $ref: '#/components/schemas/User' }
+        '401': { description: Credenciales inválidas }
+        '422': { description: Datos inválidos }
+
+  /api/logout:
+    post:
+      tags: [Autenticación]
+      summary: Cerrar sesión (revocar token actual)
+      responses:
+        '200': { description: Sesión cerrada }
+        '401': { description: No autenticado }
+
+  # ────────────────────────────────────────────────
+  # PRODUCTOS
+  # ────────────────────────────────────────────────
+  /api/productos:
+    get:
+      tags: [Productos]
+      summary: Listar todos los productos
+      responses:
+        '200':
+          description: Lista de productos
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Producto' }
+        '401': { description: No autenticado }
+    post:
+      tags: [Productos]
+      summary: Crear un nuevo producto
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Producto'
+      responses:
+        '201': { description: Producto creado }
+        '422': { description: Datos inválidos }
+        '401': { description: No autenticado }
+
+  /api/productos/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer }
+    get:
+      tags: [Productos]
+      summary: Obtener producto por ID
+      responses:
+        '200':
+          description: Producto
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Producto' }
+        '404': { description: No encontrado }
+    put:
+      tags: [Productos]
+      summary: Actualizar producto
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Producto' }
+      responses:
+        '200': { description: Actualizado }
+        '404': { description: No encontrado }
+    delete:
+      tags: [Productos]
+      summary: Eliminar producto
+      responses:
+        '200': { description: Eliminado }
+        '404': { description: No encontrado }
+
+  # ────────────────────────────────────────────────
+  # CLIENTES
+  # ────────────────────────────────────────────────
+  /api/clientes:
+    get:
+      tags: [Clientes]
+      summary: Listar clientes
+      responses:
+        '200':
+          description: Lista de clientes
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Cliente' }
+    post:
+      tags: [Clientes]
+      summary: Crear cliente
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Cliente' }
+      responses:
+        '201': { description: Cliente creado }
+
+  /api/clientes/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+    get:
+      tags: [Clientes]
+      summary: Obtener cliente
+      responses:
+        '200': { description: Cliente }
+        '404': { description: No encontrado }
+    put:
+      tags: [Clientes]
+      summary: Actualizar cliente
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Cliente' }
+      responses:
+        '200': { description: Actualizado }
+    delete:
+      tags: [Clientes]
+      summary: Eliminar cliente
+      responses:
+        '200': { description: Eliminado }
+
+  # ────────────────────────────────────────────────
+  # VENTAS
+  # ────────────────────────────────────────────────
+  /api/ventas:
+    get:
+      tags: [Ventas]
+      summary: Listar ventas paginadas
+      parameters:
+        - { name: page,  in: query, schema: { type: integer, default: 1 } }
+        - { name: limit, in: query, schema: { type: integer, default: 10 } }
+      responses:
+        '200': { description: Lista paginada de ventas }
+    post:
+      tags: [Ventas]
+      summary: Crear venta (POS)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Venta' }
+      responses:
+        '201': { description: Venta creada }
+
+  /api/ventas/mis-hoy:
+    get:
+      tags: [Ventas]
+      summary: Ventas del usuario autenticado hoy
+      responses:
+        '200': { description: Lista de ventas de hoy }
+
+  /api/ventas/pago-proveedor:
+    post:
+      tags: [Ventas]
+      summary: Registrar pago a proveedor
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [importe, concepto, metodo_pago]
+              properties:
+                proveedor_id: { type: integer }
+                importe:      { type: number }
+                concepto:     { type: string }
+                metodo_pago:  { type: string }
+      responses:
+        '201': { description: Pago registrado }
+
+  # ────────────────────────────────────────────────
+  # FACTURAS
+  # ────────────────────────────────────────────────
+  /api/facturas:
+    get:
+      tags: [Facturas]
+      summary: Listar facturas
+      responses:
+        '200': { description: Lista de facturas }
+    post:
+      tags: [Facturas]
+      summary: Crear factura
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Factura' }
+      responses:
+        '201': { description: Factura creada }
+
+  /api/facturas/next-number:
+    get:
+      tags: [Facturas]
+      summary: Siguiente número de factura disponible
+      parameters:
+        - { name: series, in: query, schema: { type: string, example: "A" } }
+      responses:
+        '200':
+          description: Siguiente número
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  series: { type: string }
+                  next:   { type: integer }
+
+  /api/facturas/{id}/resend-verifactu:
+    post:
+      tags: [Facturas]
+      summary: Reenviar factura a Verifactu
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: Reenviado }
+
+  # ────────────────────────────────────────────────
+  # JORNADAS
+  # ────────────────────────────────────────────────
+  /api/jornadas:
+    get:
+      tags: [Jornadas]
+      summary: Listar jornadas
+      responses:
+        '200': { description: Lista de jornadas }
+    post:
+      tags: [Jornadas]
+      summary: Iniciar jornada
+      responses:
+        '201': { description: Jornada iniciada }
+
+  /api/jornadas/activa:
+    get:
+      tags: [Jornadas]
+      summary: Jornada activa del usuario autenticado
+      responses:
+        '200': { description: Jornada activa o null }
+
+  /api/jornadas/resumen-hoy:
+    get:
+      tags: [Jornadas]
+      summary: Resumen de jornadas de hoy (admin/gerente)
+      responses:
+        '200': { description: Resumen de jornadas }
+
+  /api/jornadas/resumen-mensual:
+    get:
+      tags: [Jornadas]
+      summary: Resumen mensual de jornadas
+      parameters:
+        - { name: mes, in: query, required: true, schema: { type: integer } }
+        - { name: ano, in: query, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: Resumen mensual }
+
+  /api/jornadas/{id}/fin:
+    patch:
+      tags: [Jornadas]
+      summary: Marcar fin de jornada
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: Jornada finalizada }
+
+  # ────────────────────────────────────────────────
+  # EMPLEADOS
+  # ────────────────────────────────────────────────
+  /api/empleados:
+    get:
+      tags: [Empleados]
+      summary: Listar empleados
+      responses:
+        '200': { description: Lista de empleados }
+    post:
+      tags: [Empleados]
+      summary: Crear empleado
+      responses:
+        '201': { description: Empleado creado }
+
+  # ────────────────────────────────────────────────
+  # ESTADÍSTICAS
+  # ────────────────────────────────────────────────
+  /api/estadisticas:
+    get:
+      tags: [Estadísticas]
+      summary: Estadísticas del negocio en un rango de fechas
+      parameters:
+        - { name: desde, in: query, required: true, schema: { type: string, format: date } }
+        - { name: hasta, in: query, required: true, schema: { type: string, format: date } }
+      responses:
+        '200': { description: Estadísticas calculadas }
+
+  # ────────────────────────────────────────────────
+  # USUARIOS (admin)
+  # ────────────────────────────────────────────────
+  /api/usuarios:
+    get:
+      tags: [Usuarios]
+      summary: Listar usuarios del sistema
+      responses:
+        '200': { description: Lista de usuarios }
+    post:
+      tags: [Usuarios]
+      summary: Crear usuario
+      responses:
+        '201': { description: Usuario creado }
+
+  /api/perfil:
+    get:
+      tags: [Usuarios]
+      summary: Perfil del usuario autenticado
+      responses:
+        '200': { description: Datos del perfil }
+    post:
+      tags: [Usuarios]
+      summary: Actualizar perfil (soporta multipart/form-data para foto)
+      responses:
+        '200': { description: Perfil actualizado }

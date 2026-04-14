@@ -9,11 +9,13 @@ return new class() extends Migration
 {
     public function up()
     {
-        Schema::create('invoice_counters', function (Blueprint $table) {
-            $table->string('series')->primary();
-            $table->unsignedBigInteger('last')->default(0);
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('invoice_counters')) {
+            Schema::create('invoice_counters', function (Blueprint $table) {
+                $table->string('series')->primary();
+                $table->unsignedBigInteger('last')->default(0);
+                $table->timestamps();
+            });
+        }
 
         // Seed counters from existing facturas (if any)
         if (Schema::hasTable('facturas')) {

@@ -66,7 +66,7 @@ services:
       - frontend_node_modules:/workspaces/J-J-PROYECTO-INTERMODULAR/frontend/node_modules
     environment:
       - CHOKIDAR_USEPOLLING=true
-    command: bash -c "npm install && npm install -g @angular/cli && ng serve --host 0.0.0.0 --port 4200 --poll 2000"
+    command: bash -c "npm install --legacy-peer-deps && npm install -g @angular/cli && ng serve --host 0.0.0.0 --port 4200 --poll 2000"
     networks:
       - jj_network
 

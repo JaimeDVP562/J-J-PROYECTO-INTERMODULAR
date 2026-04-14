@@ -103,11 +103,12 @@
         </table>
 
         <!-- Paginación -->
-        <div class="pagination">
-          <button class="page-btn" (click)="irAPagina(paginaActual - 1)" [disabled]="totalPaginas <= 1 || paginaActual === 1">‹</button>
-          <span class="page-info">Página {{ paginaActual }} / {{ totalPaginas || 1 }}</span>
-          <button class="page-btn" (click)="irAPagina(paginaActual + 1)" [disabled]="totalPaginas <= 1 || paginaActual === totalPaginas">›</button>
-        </div>
+        <app-paginador
+          [paginaActual]="paginaActual"
+          [totalPaginas]="totalPaginas || 1"
+          etiqueta="usuarios"
+          (paginaCambiada)="irAPagina($event)"
+        />
 
       } @else {
         <p class="empty">No hay usuarios creados.</p>

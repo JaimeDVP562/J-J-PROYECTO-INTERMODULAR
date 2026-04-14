@@ -8,7 +8,7 @@ set -e
 APP_USER="laravel-api"
 APP_DIR="/var/www/laravel-api"
 DOMAIN="${domain}"
-PHP_VERSION="8.2"
+PHP_VERSION="8.3"
 
 #################################
 # SISTEMA BASE
@@ -33,7 +33,8 @@ apt-get install -y \
   php$${PHP_VERSION}-mbstring \
   php$${PHP_VERSION}-bcmath \
   php$${PHP_VERSION}-curl \
-  php$${PHP_VERSION}-zip
+  php$${PHP_VERSION}-zip \
+  php$${PHP_VERSION}-mysql
 
 #################################
 # HOSTNAME
