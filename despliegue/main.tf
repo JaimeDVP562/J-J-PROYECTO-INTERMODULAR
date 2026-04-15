@@ -146,7 +146,7 @@ resource "aws_instance" "bastion" {
   key_name               = var.key_name
   vpc_security_group_ids = [aws_security_group.bastion.id]
   user_data = templatefile("${path.module}/templates/bastion.sh.tftpl", {
-    domain = var.domain
+    internal_domain = var.internal_domain
   })
   tags = { Name = "Bastion" }
 }
@@ -159,7 +159,8 @@ resource "aws_instance" "frontend" {
   key_name               = var.key_name
   vpc_security_group_ids = [aws_security_group.frontend.id]
   user_data = templatefile("${path.module}/templates/frontend.sh.tftpl", {
-    domain = var.domain
+    public_domain   = var.public_domain
+    internal_domain = var.internal_domain
   })
   tags = { Name = "Frontend" }
 }
@@ -172,7 +173,7 @@ resource "aws_instance" "api" {
   key_name               = var.key_name
   vpc_security_group_ids = [aws_security_group.api.id]
   user_data = templatefile("${path.module}/templates/api.sh.tftpl", {
-    domain = var.domain
+    internal_domain = var.internal_domain
   })
   tags = { Name = "API" }
 }
@@ -185,14 +186,14 @@ resource "aws_instance" "database" {
   key_name               = var.key_name
   vpc_security_group_ids = [aws_security_group.database.id]
   user_data = templatefile("${path.module}/templates/database.sh.tftpl", {
-    domain = var.domain
+    internal_domain = var.internal_domain
   })
   tags = { Name = "Database" }
 }
 
 
 #################################
-# IP ELÁSTICA (BASTION)
+# IP ELÁSTICA (BASTION + FRONTEND)
 #################################
 
 resource "aws_eip" "bastion" {
@@ -208,16 +209,21 @@ resource "aws_eip" "frontend" {
 }
 
 #################################
-# ZONA DNS ROUTE53
+# ZONA DNS PRIVADA ROUTE53
+# Resuelve solo dentro de la VPC (comunicación interna entre EC2)
 #################################
 
 resource "aws_route53_zone" "zona_privada" {
-  name = var.domain
+  name = var.internal_domain
+
+  vpc {
+    vpc_id = data.aws_vpc.default.id
+  }
 }
 
 resource "aws_route53_record" "bastion" {
   zone_id = aws_route53_zone.zona_privada.zone_id
-  name    = "bastion.${var.domain}"
+  name    = "bastion.${var.internal_domain}"
   type    = "A"
   ttl     = 300
   records = [aws_instance.bastion.private_ip]
@@ -225,16 +231,15 @@ resource "aws_route53_record" "bastion" {
 
 resource "aws_route53_record" "frontend" {
   zone_id = aws_route53_zone.zona_privada.zone_id
-  name    = "frontend.${var.domain}"
+  name    = "frontend.${var.internal_domain}"
   type    = "A"
   ttl     = 300
-  # Use the public elastic IP so the frontend name is reachable from the Internet
-  records = [aws_eip.frontend.public_ip]
+  records = [aws_instance.frontend.private_ip]
 }
 
 resource "aws_route53_record" "api" {
   zone_id = aws_route53_zone.zona_privada.zone_id
-  name    = "api.${var.domain}"
+  name    = "api.${var.internal_domain}"
   type    = "A"
   ttl     = 300
   records = [aws_instance.api.private_ip]
@@ -242,7 +247,7 @@ resource "aws_route53_record" "api" {
 
 resource "aws_route53_record" "database" {
   zone_id = aws_route53_zone.zona_privada.zone_id
-  name    = "database.${var.domain}"
+  name    = "database.${var.internal_domain}"
   type    = "A"
   ttl     = 300
   records = [aws_instance.database.private_ip]

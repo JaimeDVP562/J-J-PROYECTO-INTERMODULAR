@@ -10,7 +10,7 @@ exec > >(tee -a "$${LOGFILE}") 2>&1
 
 APP_USER="laravel-api"
 APP_DIR="/var/www/laravel-api"
-DOMAIN="${domain}"
+DOMAIN="${internal_domain}"
 PHP_VERSION="8.3"
 
 retry() {

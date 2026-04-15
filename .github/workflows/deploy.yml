@@ -134,7 +134,7 @@ jobs:
           APP_ENV=production
           APP_KEY=$APP_KEY_VALUE
           APP_DEBUG=false
-          APP_URL=https://api.j-j-proyect.com
+          APP_URL=https://j-j-proyect.duckdns.org
 
           DB_CONNECTION=mysql
           DB_HOST=$DB_HOST_VALUE
@@ -143,8 +143,8 @@ jobs:
           DB_USERNAME=laravel_user
           DB_PASSWORD=$DB_PASSWORD_VALUE
 
-          SANCTUM_STATEFUL_DOMAINS=frontend.j-j-proyect.com
-          SESSION_DOMAIN=.j-j-proyect.com
+          SANCTUM_STATEFUL_DOMAINS=j-j-proyect.duckdns.org
+          SESSION_DOMAIN=j-j-proyect.duckdns.org
           ENV
 
             # Permisos correctos
@@ -158,6 +158,7 @@ jobs:
 
             # Comandos artisan
             sudo -u laravel-api php artisan migrate --force
+            sudo -u laravel-api php artisan storage:link
             sudo -u laravel-api php artisan config:cache
             sudo -u laravel-api php artisan route:cache
             sudo -u laravel-api php artisan view:cache

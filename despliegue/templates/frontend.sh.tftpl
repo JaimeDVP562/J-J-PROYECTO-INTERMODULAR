@@ -1,17 +1,18 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
-######################################
-# VARIABLES
-######################################
-# export domain=example.com
-######################################
+LOGFILE=/var/log/user-data-frontend.log
+exec > >(tee -a "$${LOGFILE}") 2>&1
 
-######################################
-# ACTUALIZACIÓN E INSTALACIÓN BASE
-######################################
+PUBLIC_DOMAIN="${public_domain}"
+INTERNAL_DOMAIN="${internal_domain}"
+WEB_DIR="/var/www/frontend"
+
+export DEBIAN_FRONTEND=noninteractive
+
+echo "=== Update apt and install packages ==="
 apt-get update -y
-apt-get install -y apache2 libapache2-mod-security2
+apt-get install -y apache2 libapache2-mod-security2 ufw fail2ban curl vim
 
 ######################################
 # MÓDULOS DE APACHE
@@ -23,7 +24,7 @@ a2dismod autoindex status
 # HARDENING: security.conf
 ######################################
 cp /etc/apache2/conf-available/security.conf \
-   /etc/apache2/conf-available/security.conf.bak
+   /etc/apache2/conf-available/security.conf.bak 2>/dev/null || true
 
 tee /etc/apache2/conf-available/security.conf > /dev/null <<'EOF'
 ServerTokens Prod
@@ -36,7 +37,7 @@ EOF
 ######################################
 # USUARIO DEDICADO PARA APACHE
 ######################################
-useradd -r -s /usr/sbin/nologin apache-sec || true
+useradd -r -s /usr/sbin/nologin apache-sec 2>/dev/null || true
 
 ######################################
 # ENVVARS APACHE
@@ -55,140 +56,108 @@ export LANG=C
 EOF
 
 ######################################
-# PERMISOS
-######################################
-chown -R apache-sec:apache-sec /var/www
-chmod -R 750 /var/www
-
-######################################
-# APACHE BASE
-######################################
-cp /etc/apache2/apache2.conf /etc/apache2/apache2.conf.bak
-
-tee /etc/apache2/apache2.conf > /dev/null <<'EOF'
-DefaultRuntimeDir $${APACHE_RUN_DIR}
-PidFile $${APACHE_PID_FILE}
-
-Timeout 60
-KeepAlive On
-KeepAliveTimeout 5
-MaxRequestWorkers 150
-LimitRequestBody 10485760
-
-User $${APACHE_RUN_USER}
-Group $${APACHE_RUN_GROUP}
-
-HostnameLookups Off
-ErrorLog $${APACHE_LOG_DIR}/error.log
-LogLevel warn
-
-IncludeOptional mods-enabled/*.load
-IncludeOptional mods-enabled/*.conf
-Include ports.conf
-
-<Directory />
-    Require all denied
-</Directory>
-
-<Directory /usr/share>
-    Require all granted
-</Directory>
-
-<Directory /var/www/>
-    AllowOverride None
-    Require all granted
-</Directory>
-
-AccessFileName .htaccess
-
-<FilesMatch "^\.ht">
-    Require all denied
-</FilesMatch>
-
-IncludeOptional conf-enabled/*.conf
-IncludeOptional sites-enabled/*.conf
-EOF
-
-######################################
 # HEADERS DE SEGURIDAD
 ######################################
 tee /etc/apache2/conf-available/security-headers.conf > /dev/null <<'EOF'
 Header always set X-Content-Type-Options "nosniff"
 Header always set X-Frame-Options "DENY"
 Header always set Referrer-Policy "no-referrer"
-Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
-Header always set Content-Security-Policy "default-src 'self'"
 EOF
 
-a2enconf security-headers
+a2enconf security-headers || true
 
 ######################################
-# MODSECURITY
+# MODSECURITY (detección)
 ######################################
-cp /etc/modsecurity/modsecurity.conf-recommended \
-   /etc/modsecurity/modsecurity.conf
-
-sed -i 's/SecRuleEngine DetectionOnly/SecRuleEngine On/' \
-    /etc/modsecurity/modsecurity.conf
+if [ -f /etc/modsecurity/modsecurity.conf-recommended ]; then
+  cp /etc/modsecurity/modsecurity.conf-recommended /etc/modsecurity/modsecurity.conf || true
+  sed -i 's/^SecRuleEngine.*/SecRuleEngine DetectionOnly/' /etc/modsecurity/modsecurity.conf || true
+fi
 
 ######################################
-# FRONTEND
+# DIRECTORIO WEB
 ######################################
-mkdir -p /var/www/frontend
+mkdir -p "$${WEB_DIR}"
+chown -R apache-sec:apache-sec "$${WEB_DIR}"
+chmod -R 750 "$${WEB_DIR}"
 
-tee /var/www/frontend/index.html > /dev/null <<'HTML'
+# Placeholder hasta que el CI/CD despliegue el build real
+tee "$${WEB_DIR}/index.html" > /dev/null <<HTML
 <!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Frontend</title>
-</head>
-<body>
-    <h1>Servidor Frontend</h1>
-</body>
-</html>
+<html><head><meta charset="UTF-8"><title>J-J ERP</title></head>
+<body><h1>Servidor listo — esperando despliegue CI/CD</h1></body></html>
 HTML
 
 ######################################
-# VIRTUALHOST HTTP (REDIRECT)
+# VIRTUALHOST HTTP
+# Sirve Angular + proxía /api al servidor API interno
+# HTTPS se configura manualmente con certbot-setup.sh
 ######################################
+a2dissite 000-default.conf 2>/dev/null || true
+
 tee /etc/apache2/sites-available/frontend.conf > /dev/null <<EOF
 <VirtualHost *:80>
-    ServerName frontend.${domain}
-    Redirect permanent / https://frontend.${domain}/
+    ServerName $${PUBLIC_DOMAIN}
+    DocumentRoot $${WEB_DIR}
+
+    # Proxy /api al servidor API interno
+    ProxyPreserveHost On
+    ProxyPass /api http://api.$${INTERNAL_DOMAIN}/api
+    ProxyPassReverse /api http://api.$${INTERNAL_DOMAIN}/api
+
+    # Angular SPA: todas las rutas desconocidas van a index.html
+    <Directory $${WEB_DIR}>
+        Options -Indexes +FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
+
+    RewriteEngine On
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ /index.html [L]
+
+    ErrorLog $${APACHE_LOG_DIR}/frontend_error.log
+    CustomLog $${APACHE_LOG_DIR}/frontend_access.log combined
 </VirtualHost>
 EOF
 
-a2ensite frontend.conf
-a2dissite 000-default.conf
-
-systemctl reload apache2
+a2ensite frontend.conf || true
 
 ######################################
-# CERTBOT + HTTPS
+# FIREWALL
 ######################################
-apt-get install -y certbot python3-certbot-apache
-
-certbot --apache \
-  -d frontend.${domain} \
-  --non-interactive \
-  --agree-tos \
-  -m admin@${domain} \
-  --redirect
-
-######################################
-# REVERSE PROXY HTTPS
-######################################
-sed -i '/<VirtualHost \*:443>/,/<\/VirtualHost>/{
-/<\/VirtualHost>/i \
-    ProxyPreserveHost On\n\
-    ProxyPass /api http://api.'${domain}'\n\
-    ProxyPassReverse /api http://api.'${domain}'
-}' /etc/apache2/sites-enabled/frontend-le-ssl.conf
+ufw --force reset || true
+ufw default deny incoming
+ufw default allow outgoing
+ufw allow 22/tcp
+ufw allow 80/tcp
+ufw allow 443/tcp
+ufw --force enable || true
 
 ######################################
-# FINAL
+# FAIL2BAN
 ######################################
-hostnamectl set-hostname frontend.${domain}
+tee /etc/fail2ban/jail.local > /dev/null <<'EOF'
+[sshd]
+enabled = true
+port = 22
+filter = sshd
+logpath = /var/log/auth.log
+maxretry = 3
+bantime = 1h
+findtime = 10m
+EOF
+
+systemctl enable fail2ban
+systemctl restart fail2ban || true
+
+######################################
+# ARRANCAR APACHE
+######################################
+hostnamectl set-hostname frontend || true
 systemctl enable apache2
 systemctl restart apache2
+
+echo "=== Bootstrap frontend completado. Logs: $${LOGFILE} ==="
+echo "=== SIGUIENTE PASO: apuntar $${PUBLIC_DOMAIN} a la EIP y ejecutar certbot-setup.sh ==="
