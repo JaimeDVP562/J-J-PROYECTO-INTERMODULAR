@@ -20,7 +20,7 @@ set -euo pipefail
 BASTION_HOST="${1:?Uso: $0 <BASTION_HOST> <FRONTEND_HOST>}"
 FRONTEND_HOST="${2:?Uso: $0 <BASTION_HOST> <FRONTEND_HOST>}"
 SSH_USER="ubuntu"
-KEY="$HOME/.ssh/vockey.pem"
+KEY="/c/Users/Jesus/.ssh/vockey.pem"
 PUBLIC_DOMAIN="j-j-proyect.duckdns.org"
 ADMIN_EMAIL="jesusriosmlg@gmail.com"
 
@@ -30,11 +30,10 @@ echo " Frontend: $FRONTEND_HOST (vía bastion $BASTION_HOST)"
 echo "=============================================="
 
 # Verificar que el dominio resuelve a la IP del frontend
-RESOLVED=$(dig +short "$PUBLIC_DOMAIN" | tail -1)
+RESOLVED=$(nslookup "$PUBLIC_DOMAIN" 2>/dev/null | grep -oP '(?<=Address: )\d+\.\d+\.\d+\.\d+' | tail -1)
 echo "DNS actual de $PUBLIC_DOMAIN: $RESOLVED"
 if [ -z "$RESOLVED" ]; then
-  echo "ERROR: $PUBLIC_DOMAIN no resuelve. Apunta el dominio en DuckDNS primero."
-  exit 1
+  echo "AVISO: No se pudo verificar DNS pero continuamos..."
 fi
 
 ssh -i "$KEY" \

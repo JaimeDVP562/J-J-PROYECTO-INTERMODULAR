@@ -113,8 +113,8 @@ tee /etc/apache2/sites-available/frontend.conf > /dev/null <<EOF
     </Directory>
 
     RewriteEngine On
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %%{REQUEST_FILENAME} !-f
+    RewriteCond %%{REQUEST_FILENAME} !-d
     RewriteRule ^ /index.html [L]
 
     ErrorLog $${APACHE_LOG_DIR}/frontend_error.log
