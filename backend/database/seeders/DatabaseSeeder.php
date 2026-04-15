@@ -10,7 +10,6 @@ use Database\Seeders\ProveedorSeeder;
 use Database\Seeders\CategoriaSeeder;
 use Database\Seeders\ProductoSeeder;
 use Database\Seeders\ClienteSeeder;
-use Database\Seeders\EmpleadoSeeder;
 use Database\Seeders\InventarioSeeder;
 use Database\Seeders\FacturaSeeder;
 use Database\Seeders\VentaSeeder;
@@ -31,7 +30,6 @@ class DatabaseSeeder extends Seeder
         $this->call(CategoriaSeeder::class);
         $this->call(ProductoSeeder::class);
         $this->call(ClienteSeeder::class);
-        $this->call(EmpleadoSeeder::class);
         $this->call(InventarioSeeder::class);
         $this->call(FacturaSeeder::class);
         $this->call(VentaSeeder::class);

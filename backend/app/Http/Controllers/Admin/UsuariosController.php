@@ -24,17 +24,27 @@ class UsuariosController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'nombre'   => ['required', 'string', 'max:255'],
-            'email'    => ['required', 'email', 'unique:users,email'],
-            'password' => ['required', 'confirmed', Password::min(8)],
-            'rol'      => ['required', 'in:admin,gerente,vendedor'],
+            'nombre'             => ['required', 'string', 'max:255'],
+            'apellido'           => ['nullable', 'string', 'max:255'],
+            'email'              => ['required', 'email', 'unique:users,email'],
+            'password'           => ['required', 'confirmed', Password::min(8)],
+            'rol'                => ['required', 'in:admin,gerente,vendedor'],
+            'telefono'           => ['nullable', 'string', 'max:20'],
+            'puesto'             => ['nullable', 'string', 'max:100'],
+            'salario'            => ['nullable', 'numeric', 'min:0'],
+            'fecha_contratacion' => ['nullable', 'date'],
         ]);
 
         User::create([
-            'nombre'   => $data['nombre'],
-            'email'    => $data['email'],
-            'password' => Hash::make($data['password']),
-            'rol'      => $data['rol'],
+            'nombre'             => $data['nombre'],
+            'apellido'           => $data['apellido'] ?? null,
+            'email'              => $data['email'],
+            'password'           => Hash::make($data['password']),
+            'rol'                => $data['rol'],
+            'telefono'           => $data['telefono'] ?? null,
+            'puesto'             => $data['puesto'] ?? null,
+            'salario'            => $data['salario'] ?? null,
+            'fecha_contratacion' => $data['fecha_contratacion'] ?? null,
         ]);
 
         return redirect()->route('admin.usuarios.index')
@@ -52,15 +62,27 @@ class UsuariosController extends Controller
         $usuario = User::findOrFail($id);
 
         $data = $request->validate([
-            'nombre'   => ['required', 'string', 'max:255'],
-            'email'    => ['required', 'email', "unique:users,email,{$id}"],
-            'password' => ['nullable', 'confirmed', Password::min(8)],
-            'rol'      => ['required', 'in:admin,gerente,vendedor'],
+            'nombre'             => ['required', 'string', 'max:255'],
+            'apellido'           => ['nullable', 'string', 'max:255'],
+            'email'              => ['required', 'email', "unique:users,email,{$id}"],
+            'password'           => ['nullable', 'confirmed', Password::min(8)],
+            'rol'                => ['required', 'in:admin,gerente,vendedor'],
+            'telefono'           => ['nullable', 'string', 'max:20'],
+            'puesto'             => ['nullable', 'string', 'max:100'],
+            'salario'            => ['nullable', 'numeric', 'min:0'],
+            'fecha_contratacion' => ['nullable', 'date'],
         ]);
 
-        $usuario->nombre = $data['nombre'];
-        $usuario->email  = $data['email'];
-        $usuario->rol    = $data['rol'];
+        $usuario->fill([
+            'nombre'             => $data['nombre'],
+            'apellido'           => $data['apellido'] ?? null,
+            'email'              => $data['email'],
+            'rol'                => $data['rol'],
+            'telefono'           => $data['telefono'] ?? null,
+            'puesto'             => $data['puesto'] ?? null,
+            'salario'            => $data['salario'] ?? null,
+            'fecha_contratacion' => $data['fecha_contratacion'] ?? null,
+        ]);
 
         if (!empty($data['password'])) {
             $usuario->password = Hash::make($data['password']);

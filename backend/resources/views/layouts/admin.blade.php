@@ -96,6 +96,39 @@
         }
         .stat-label { font-size: .8rem; color: #6c757d; }
         .stat-value { font-size: 1.6rem; font-weight: 700; color: #0a2342; }
+
+        /* ── Quick-action buttons ── */
+        .quick-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: .35rem;
+            padding: .9rem .5rem;
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+            color: #0a2342;
+            font-size: .8rem;
+            font-weight: 500;
+            text-decoration: none;
+            text-align: center;
+            transition: background .15s, border-color .15s, color .15s;
+        }
+        .quick-btn i { font-size: 1.3rem; color: #17375e; }
+        .quick-btn:hover {
+            background: #0a2342;
+            border-color: #0a2342;
+            color: #fff;
+        }
+        .quick-btn:hover i { color: #fff; }
+
+        /* ── Tables ── */
+        .table thead th { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: #495057; }
+        .table td { font-size: .9rem; }
+
+        /* ── Badges legibles ── */
+        .badge { font-size: .75rem; font-weight: 600; }
     </style>
 </head>
 <body>
@@ -108,21 +141,53 @@
            class="nav-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
             <i class="bi bi-speedometer2"></i> Dashboard
         </a>
+
+        <div class="nav-link text-uppercase" style="font-size:.7rem;opacity:.5;letter-spacing:.08em;padding-bottom:.25rem;cursor:default;">
+            Personas
+        </div>
         <a href="{{ route('admin.usuarios.index') }}"
            class="nav-link {{ request()->routeIs('admin.usuarios.*') ? 'active' : '' }}">
             <i class="bi bi-people"></i> Usuarios
         </a>
+        <a href="{{ route('admin.clientes.index') }}"
+           class="nav-link {{ request()->routeIs('admin.clientes.*') ? 'active' : '' }}">
+            <i class="bi bi-person-lines-fill"></i> Clientes
+        </a>
+
+        <div class="nav-link text-uppercase" style="font-size:.7rem;opacity:.5;letter-spacing:.08em;padding-bottom:.25rem;cursor:default;">
+            Inventario
+        </div>
         <a href="{{ route('admin.productos.index') }}"
            class="nav-link {{ request()->routeIs('admin.productos.*') ? 'active' : '' }}">
             <i class="bi bi-box-seam"></i> Productos
         </a>
-        <a href="{{ route('admin.empleados.index') }}"
-           class="nav-link {{ request()->routeIs('admin.empleados.*') ? 'active' : '' }}">
-            <i class="bi bi-person-badge"></i> Empleados
+        <a href="{{ route('admin.categorias.index') }}"
+           class="nav-link {{ request()->routeIs('admin.categorias.*') ? 'active' : '' }}">
+            <i class="bi bi-tag"></i> Categorías
         </a>
-        <a href="{{ route('admin.clientes.index') }}"
-           class="nav-link {{ request()->routeIs('admin.clientes.*') ? 'active' : '' }}">
-            <i class="bi bi-person-lines-fill"></i> Clientes
+        <a href="{{ route('admin.proveedores.index') }}"
+           class="nav-link {{ request()->routeIs('admin.proveedores.*') ? 'active' : '' }}">
+            <i class="bi bi-truck"></i> Proveedores
+        </a>
+
+        <div class="nav-link text-uppercase" style="font-size:.7rem;opacity:.5;letter-spacing:.08em;padding-bottom:.25rem;cursor:default;">
+            Facturación
+        </div>
+        <a href="{{ route('admin.ventas.index') }}"
+           class="nav-link {{ request()->routeIs('admin.ventas.*') ? 'active' : '' }}">
+            <i class="bi bi-cart-check"></i> Ventas
+        </a>
+        <a href="{{ route('admin.facturas.index') }}"
+           class="nav-link {{ request()->routeIs('admin.facturas.*') ? 'active' : '' }}">
+            <i class="bi bi-receipt"></i> Facturas
+        </a>
+
+        <div class="nav-link text-uppercase" style="font-size:.7rem;opacity:.5;letter-spacing:.08em;padding-bottom:.25rem;cursor:default;">
+            RRHH
+        </div>
+        <a href="{{ route('admin.jornadas.index') }}"
+           class="nav-link {{ request()->routeIs('admin.jornadas.*') ? 'active' : '' }}">
+            <i class="bi bi-clock-history"></i> Jornadas
         </a>
     </nav>
     <div class="sidebar-footer">

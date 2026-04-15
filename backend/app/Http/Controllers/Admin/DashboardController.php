@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Cliente;
-use App\Models\Empleado;
 use App\Models\Producto;
 use App\Models\User;
 use App\Models\Venta;
@@ -17,8 +16,8 @@ class DashboardController extends Controller
             'totalUsuarios'  => User::count(),
             'totalProductos' => Producto::count(),
             'totalClientes'  => Cliente::count(),
-            'totalEmpleados' => Empleado::count(),
-            'ultimasVentas'  => Venta::latest('fecha_venta')->take(10)->get(),
+            'totalVendedores' => User::where('rol', 'vendedor')->count(),
+            'ultimasVentas'  => Venta::with('user')->latest('fecha_venta')->take(10)->get(),
         ]);
     }
 }

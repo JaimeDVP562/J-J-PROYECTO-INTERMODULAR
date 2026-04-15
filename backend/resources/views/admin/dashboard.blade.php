@@ -44,8 +44,8 @@
                 <i class="bi bi-person-badge-fill"></i>
             </div>
             <div>
-                <div class="stat-label">Empleados</div>
-                <div class="stat-value">{{ $totalEmpleados }}</div>
+                <div class="stat-label">Vendedores</div>
+                <div class="stat-value">{{ $totalVendedores }}</div>
             </div>
         </div>
     </div>
@@ -103,19 +103,45 @@
             <div class="card-header bg-white border-0 fw-semibold py-3">
                 <i class="bi bi-lightning-charge me-2 text-warning"></i>Accesos rápidos
             </div>
-            <div class="card-body d-flex flex-column gap-2">
-                <a href="{{ route('admin.usuarios.create') }}" class="btn btn-outline-primary text-start">
-                    <i class="bi bi-person-plus me-2"></i>Añadir usuario
-                </a>
-                <a href="{{ route('admin.productos.create') }}" class="btn btn-outline-success text-start">
-                    <i class="bi bi-plus-circle me-2"></i>Nuevo producto
-                </a>
-                <a href="{{ route('admin.empleados.create') }}" class="btn btn-outline-info text-start">
-                    <i class="bi bi-person-badge me-2"></i>Nuevo empleado
-                </a>
-                <a href="{{ route('admin.clientes.index') }}" class="btn btn-outline-warning text-start">
-                    <i class="bi bi-person-lines-fill me-2"></i>Ver clientes
-                </a>
+            <div class="card-body">
+                <div class="row g-2">
+                    <div class="col-6">
+                        <a href="{{ route('admin.usuarios.create') }}" class="quick-btn">
+                            <i class="bi bi-person-plus"></i>
+                            <span>Nuevo usuario</span>
+                        </a>
+                    </div>
+                    <div class="col-6">
+                        <a href="{{ route('admin.clientes.create') }}" class="quick-btn">
+                            <i class="bi bi-people"></i>
+                            <span>Nuevo cliente</span>
+                        </a>
+                    </div>
+                    <div class="col-6">
+                        <a href="{{ route('admin.productos.create') }}" class="quick-btn">
+                            <i class="bi bi-box-seam"></i>
+                            <span>Nuevo producto</span>
+                        </a>
+                    </div>
+                    <div class="col-6">
+                        <a href="{{ route('admin.proveedores.create') }}" class="quick-btn">
+                            <i class="bi bi-truck"></i>
+                            <span>Nuevo proveedor</span>
+                        </a>
+                    </div>
+                    <div class="col-6">
+                        <a href="{{ route('admin.ventas.index') }}" class="quick-btn">
+                            <i class="bi bi-cart-check"></i>
+                            <span>Ver ventas</span>
+                        </a>
+                    </div>
+                    <div class="col-6">
+                        <a href="{{ route('admin.facturas.index') }}" class="quick-btn">
+                            <i class="bi bi-receipt"></i>
+                            <span>Ver facturas</span>
+                        </a>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

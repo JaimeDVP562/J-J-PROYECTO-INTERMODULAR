@@ -8,6 +8,9 @@
         <h5 class="mb-0 fw-bold">Clientes</h5>
         <small class="text-muted">{{ $clientes->total() }} registros</small>
     </div>
+    <a href="{{ route('admin.clientes.create') }}" class="btn btn-primary btn-sm">
+        <i class="bi bi-plus-lg me-1"></i> Nuevo cliente
+    </a>
 </div>
 
 <div class="card border-0 shadow-sm">
@@ -15,7 +18,7 @@
         <table class="table table-hover align-middle mb-0">
             <thead class="table-light">
                 <tr>
-                    <th>#</th><th>Nombre</th><th>Email</th><th>Teléfono</th><th>Dirección</th>
+                    <th>#</th><th>Nombre</th><th>Email</th><th>Teléfono</th><th>Dirección</th><th class="text-end">Acciones</th>
                 </tr>
             </thead>
             <tbody>
@@ -23,12 +26,22 @@
                 <tr>
                     <td class="text-muted small">{{ $c->id }}</td>
                     <td class="fw-semibold">{{ $c->nombre }}</td>
-                    <td>{{ $c->email }}</td>
+                    <td>{{ $c->email ?? '—' }}</td>
                     <td>{{ $c->phone ?? '—' }}</td>
                     <td class="small text-muted">{{ Str::limit($c->address, 40) ?? '—' }}</td>
+                    <td class="text-end">
+                        <a href="{{ route('admin.clientes.edit', $c->id) }}" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        <form method="POST" action="{{ route('admin.clientes.destroy', $c->id) }}" class="d-inline"
+                              onsubmit="return confirm('¿Eliminar este cliente?')">
+                            @csrf @method('DELETE')
+                            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </td>
                 </tr>
                 @empty
-                <tr><td colspan="5" class="text-center text-muted py-4">Sin clientes.</td></tr>
+                <tr><td colspan="6" class="text-center text-muted py-4">Sin clientes.</td></tr>
                 @endforelse
             </tbody>
         </table>

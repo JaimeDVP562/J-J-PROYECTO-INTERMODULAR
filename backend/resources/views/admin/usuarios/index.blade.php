@@ -1,5 +1,4 @@
 @extends('layouts.admin')
-
 @section('title', 'Usuarios')
 @section('page-title', 'Gestión de Usuarios')
 
@@ -23,8 +22,10 @@
                         <th>#</th>
                         <th>Nombre</th>
                         <th>Email</th>
+                        <th>Puesto</th>
+                        <th>Salario</th>
+                        <th>Contratación</th>
                         <th>Rol</th>
-                        <th>Alta</th>
                         <th class="text-end">Acciones</th>
                     </tr>
                 </thead>
@@ -32,8 +33,16 @@
                     @forelse ($usuarios as $usuario)
                     <tr>
                         <td class="text-muted small">{{ $usuario->id }}</td>
-                        <td class="fw-semibold">{{ $usuario->nombre ?? $usuario->name }}</td>
+                        <td class="fw-semibold">
+                            {{ $usuario->nombre }}
+                            @if($usuario->apellido)
+                                {{ $usuario->apellido }}
+                            @endif
+                        </td>
                         <td>{{ $usuario->email }}</td>
+                        <td class="small">{{ $usuario->puesto ?? '—' }}</td>
+                        <td class="small">{{ $usuario->salario ? number_format($usuario->salario, 0, ',', '.') . ' €' : '—' }}</td>
+                        <td class="small text-muted">{{ $usuario->fecha_contratacion ? \Carbon\Carbon::parse($usuario->fecha_contratacion)->format('d/m/Y') : '—' }}</td>
                         <td>
                             <span class="badge
                                 @if($usuario->rol === 'admin') bg-danger
@@ -42,7 +51,6 @@
                                 {{ ucfirst($usuario->rol) }}
                             </span>
                         </td>
-                        <td class="small text-muted">{{ $usuario->created_at?->format('d/m/Y') }}</td>
                         <td class="text-end">
                             <a href="{{ route('admin.usuarios.edit', $usuario->id) }}"
                                class="btn btn-sm btn-outline-primary me-1">
@@ -60,14 +68,12 @@
                         </td>
                     </tr>
                     @empty
-                    <tr><td colspan="6" class="text-center text-muted py-4">No hay usuarios registrados.</td></tr>
+                    <tr><td colspan="8" class="text-center text-muted py-4">No hay usuarios registrados.</td></tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
     </div>
-    <div class="card-footer bg-white border-0">
-        {{ $usuarios->links() }}
-    </div>
+    <div class="card-footer bg-white border-0">{{ $usuarios->links() }}</div>
 </div>
 @endsection

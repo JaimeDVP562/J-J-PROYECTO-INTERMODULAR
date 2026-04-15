@@ -20,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'auth.apitoken' => \App\Http\Middleware\AuthenticateWithApiToken::class,
         ]);
+
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
