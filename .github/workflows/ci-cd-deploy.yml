@@ -33,26 +33,10 @@ jobs:
         run: composer install --no-interaction --prefer-dist --no-progress
 
       - name: Preparar entorno de test
+        working-directory: backend
         run: |
-          set -e
-          # Crear un .env mínimo para tests usando sqlite en memoria
-          mkdir -p backend
-          cat > backend/.env <<ENV
-APP_NAME=JJ-Proyecto
-APP_ENV=testing
-APP_DEBUG=true
-APP_URL=http://localhost
-
-DB_CONNECTION=sqlite
-DB_DATABASE=:memory:
-ENV
-          # Si existe .env.example, lo usamos como base (mantener compatibilidad local)
-          if [ -f backend/.env.example ]; then
-            cp backend/.env.example backend/.env
-          fi
-          pushd backend
+          cp .env.example .env
           php artisan key:generate --force
-          popd
 
       - name: Ejecutar tests
         working-directory: backend
