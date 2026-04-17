@@ -14,7 +14,7 @@
 #   bash certbot-setup.sh <BASTION_HOST> <FRONTEND_PRIVATE_IP>
 #
 # Ejemplo:
-#   bash certbot-setup.sh 100.24.132.201 172.31.22.196
+#   bash certbot-setup.sh 100.24.132.201 172.31.19.165
 # =============================================================================
 
 set -euo pipefail
@@ -35,21 +35,21 @@ echo "=============================================="
 
 ssh -i "$KEY" \
     -o StrictHostKeyChecking=no \
-    -o ProxyJump="$SSH_USER@$BASTION_HOST" \
+    -o "ProxyCommand=ssh -i $KEY -o StrictHostKeyChecking=no -W %h:%p $SSH_USER@$BASTION_HOST" \
     "$SSH_USER@$FRONTEND_HOST" << ENDSSH
 set -e
 
 echo "=== Instalando certbot y plugin DuckDNS ==="
-apt-get install -y python3-pip certbot
-pip3 install certbot-dns-duckdns
+sudo apt-get install -y python3-pip certbot
+sudo pip3 install certbot-dns-duckdns
 
 echo "=== Guardando token DuckDNS ==="
-mkdir -p /etc/letsencrypt/secrets
-echo "dns_duckdns_token=$DUCKDNS_TOKEN" > /etc/letsencrypt/secrets/duckdns.ini
-chmod 600 /etc/letsencrypt/secrets/duckdns.ini
+sudo mkdir -p /etc/letsencrypt/secrets
+echo "dns_duckdns_token=$DUCKDNS_TOKEN" | sudo tee /etc/letsencrypt/secrets/duckdns.ini > /dev/null
+sudo chmod 600 /etc/letsencrypt/secrets/duckdns.ini
 
 echo "=== Obteniendo certificado via DNS challenge ==="
-certbot certonly \
+sudo certbot certonly \
   --authenticator dns-duckdns \
   --dns-duckdns-token="$DUCKDNS_TOKEN" \
   --dns-duckdns-propagation-seconds=60 \
@@ -57,14 +57,14 @@ certbot certonly \
   --non-interactive --agree-tos -m "$ADMIN_EMAIL"
 
 echo "=== Habilitando módulos Apache necesarios ==="
-a2enmod proxy proxy_http rewrite headers ssl
-a2enmod socache_shmcb
+sudo a2enmod proxy proxy_http rewrite headers ssl
+sudo a2enmod socache_shmcb
 
 echo "=== Creando VirtualHost HTTP (frontend.conf) ==="
-a2dissite 000-default.conf 2>/dev/null || true
-mkdir -p /var/www/frontend
+sudo a2dissite 000-default.conf 2>/dev/null || true
+sudo mkdir -p /var/www/frontend
 
-cat > /etc/apache2/sites-available/frontend.conf << 'APACHEEOF'
+sudo tee /etc/apache2/sites-available/frontend.conf > /dev/null << 'APACHEEOF'
 <VirtualHost *:80>
     ServerName j-j-proyect.duckdns.org
     RewriteEngine On
@@ -73,7 +73,7 @@ cat > /etc/apache2/sites-available/frontend.conf << 'APACHEEOF'
 APACHEEOF
 
 echo "=== Creando VirtualHost HTTPS (frontend-ssl.conf) ==="
-cat > /etc/apache2/sites-available/frontend-ssl.conf << 'APACHEEOF'
+sudo tee /etc/apache2/sites-available/frontend-ssl.conf > /dev/null << 'APACHEEOF'
 <VirtualHost *:443>
     ServerName j-j-proyect.duckdns.org
     DocumentRoot /var/www/frontend
@@ -109,12 +109,12 @@ cat > /etc/apache2/sites-available/frontend-ssl.conf << 'APACHEEOF'
 </VirtualHost>
 APACHEEOF
 
-a2ensite frontend.conf frontend-ssl.conf
-chown -R www-data:www-data /var/www/frontend
-chmod -R 755 /var/www/frontend
+sudo a2ensite frontend.conf frontend-ssl.conf
+sudo chown -R www-data:www-data /var/www/frontend
+sudo chmod -R 755 /var/www/frontend
 
 echo "=== Reiniciando Apache ==="
-systemctl restart apache2
+sudo systemctl restart apache2
 
 echo ""
 echo "✓ HTTPS configurado en https://$PUBLIC_DOMAIN"
