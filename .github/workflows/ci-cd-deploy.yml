@@ -155,6 +155,11 @@ jobs:
             sudo chmod -R 750 "$APP_DIR"
             sudo chmod -R 775 "$APP_DIR/storage" "$APP_DIR/bootstrap/cache"
 
+            # Instalar Composer si no existe
+            if ! command -v composer &>/dev/null; then
+              curl -sS https://getcomposer.org/installer | sudo php -- --install-dir=/usr/local/bin --filename=composer
+            fi
+
             # Instalar dependencias PHP
             sudo -u laravel-api composer install --no-dev --optimize-autoloader --no-interaction --working-dir="$APP_DIR"
 
