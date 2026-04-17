@@ -194,9 +194,9 @@ jobs:
               ${{ env.SSH_USER }}@${{ secrets.FRONTEND_HOST }} \
               "set -e;
                WEB_DIR=/var/www/frontend;
-               sudo mkdir -p \$WEB_DIR/browser;
-               sudo rm -rf \$WEB_DIR/browser/*;
-               sudo cp -r /tmp/frontend-dist/browser/* \$WEB_DIR/browser/ 2>/dev/null || sudo cp -r /tmp/frontend-dist/* \$WEB_DIR/browser/;
+               sudo mkdir -p \$WEB_DIR;
+               sudo rm -rf \$WEB_DIR/*;
+               sudo cp -r /tmp/frontend-dist/frontend/browser/. \$WEB_DIR/ 2>/dev/null || sudo cp -r /tmp/frontend-dist/. \$WEB_DIR/;
                sudo rm -rf /tmp/frontend-dist;
                sudo chown -R www-data:www-data \$WEB_DIR;
                sudo chmod -R 755 \$WEB_DIR;
