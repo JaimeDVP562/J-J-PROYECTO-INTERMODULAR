@@ -221,6 +221,11 @@
           >Mostrando: <strong>{{ productosFiltrados.length }}</strong> de
           {{ productos.length }} productos</span
         >
+        @if (auth.isAdminOrGerente()) {
+          <button class="btn-add tab-like" (click)="abrirFormProducto()">
+            + Añadir producto
+          </button>
+        }
       </div>
 
       <div class="table-wrapper">

@@ -7,15 +7,15 @@ on:
 
 env:
   SSH_USER: ubuntu
-  PHP_VERSION: "8.2"
+  PHP_VERSION: "8.3"
   NODE_VERSION: "20"
 
 jobs:
   ##############################################
-  # JOB 1: Tests del backend Laravel
+  # JOB 1 — Tests del backend Laravel
   ##############################################
   test-backend:
-    name: Tests Backend (Laravel)
+    name: Tests Backend (PHPUnit)
     runs-on: ubuntu-latest
 
     steps:
@@ -59,7 +59,7 @@ ENV
         run: php artisan test --stop-on-failure
 
   ##############################################
-  # JOB 2: Build del frontend Angular
+  # JOB 2 — Build de producción del frontend
   ##############################################
   build-frontend:
     name: Build Frontend (Angular)
@@ -78,7 +78,7 @@ ENV
 
       - name: Instalar dependencias npm
         working-directory: frontend
-        run: npm ci
+        run: npm ci --legacy-peer-deps
 
       - name: Build de producción
         working-directory: frontend
@@ -92,7 +92,7 @@ ENV
           retention-days: 1
 
   ##############################################
-  # JOB 3: Deploy backend a EC2 API
+  # JOB 3 — Deploy backend a EC2 API
   ##############################################
   deploy-backend:
     name: Deploy Backend → EC2 API
@@ -136,7 +136,6 @@ ENV
               ${{ env.SSH_USER }}@${{ secrets.API_HOST }} << 'ENDSSH'
             set -e
             APP_DIR="/var/www/laravel-api"
-            APP_USER="laravel-api"
 
             # Copiar archivos al directorio de la app
             sudo rsync -a --delete \
@@ -146,11 +145,11 @@ ENV
 
             # Crear/actualizar .env de producción
             sudo tee "$APP_DIR/.env" > /dev/null <<ENV
-          APP_NAME=JJ-Proyecto
+          APP_NAME=JJ-ERP
           APP_ENV=production
           APP_KEY=$APP_KEY_VALUE
           APP_DEBUG=false
-          APP_URL=https://$FRONTEND_HOST_VALUE
+          APP_URL=https://j-j-proyect.duckdns.org
 
           DB_CONNECTION=mysql
           DB_HOST=$DB_HOST_VALUE
@@ -158,34 +157,37 @@ ENV
           DB_DATABASE=laravel_db
           DB_USERNAME=laravel_user
           DB_PASSWORD=$DB_PASSWORD_VALUE
+
+          SANCTUM_STATEFUL_DOMAINS=j-j-proyect.duckdns.org
+          SESSION_DOMAIN=j-j-proyect.duckdns.org
           ENV
 
             # Permisos correctos
-            sudo chown -R "$APP_USER":www-data "$APP_DIR"
+            sudo chown -R laravel-api:www-data "$APP_DIR"
             sudo chmod -R 750 "$APP_DIR"
             sudo chmod -R 775 "$APP_DIR/storage" "$APP_DIR/bootstrap/cache"
 
             # Instalar dependencias PHP
             cd "$APP_DIR"
-            sudo -u "$APP_USER" composer install --no-dev --optimize-autoloader --no-interaction
+            sudo -u laravel-api composer install --no-dev --optimize-autoloader --no-interaction
 
             # Comandos artisan
-            sudo -u "$APP_USER" php artisan migrate --force
-            sudo -u "$APP_USER" php artisan config:cache
-            sudo -u "$APP_USER" php artisan route:cache
-            sudo -u "$APP_USER" php artisan view:cache
+            sudo -u laravel-api php artisan migrate --force
+            sudo -u laravel-api php artisan storage:link
+            sudo -u laravel-api php artisan config:cache
+            sudo -u laravel-api php artisan route:cache
+            sudo -u laravel-api php artisan view:cache
 
             # Reiniciar servicios
-            sudo systemctl restart php8.2-fpm apache2
+            sudo systemctl restart php${{ env.PHP_VERSION }}-fpm apache2
           ENDSSH
         env:
           APP_KEY_VALUE: ${{ secrets.APP_KEY }}
           DB_HOST_VALUE: ${{ secrets.DB_HOST }}
           DB_PASSWORD_VALUE: ${{ secrets.DB_PASSWORD }}
-          FRONTEND_HOST_VALUE: ${{ secrets.FRONTEND_HOST }}
 
   ##############################################
-  # JOB 4: Deploy frontend a EC2 Frontend
+  # JOB 4 — Deploy frontend a EC2 Frontend
   ##############################################
   deploy-frontend:
     name: Deploy Frontend → EC2 Frontend
@@ -235,7 +237,7 @@ ENV
               sudo cp -r /tmp/frontend-dist/* "$WEB_DIR/"
             sudo rm -rf /tmp/frontend-dist
 
-            # Permisos para Apache (usuario apache-sec según configuración del servidor)
+            # Permisos para Apache
             sudo chown -R apache-sec:apache-sec "$WEB_DIR"
             sudo chmod -R 750 "$WEB_DIR"
 

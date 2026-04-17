@@ -132,4 +132,6 @@ despliegue/.terraform/
 *.tfstate
 *.tfstate.*
 .terraform.lock.hcl
+despliegue/tfplan
+despliegue/*.tfvars
 

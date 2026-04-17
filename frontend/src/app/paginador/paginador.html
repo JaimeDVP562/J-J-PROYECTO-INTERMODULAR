@@ -1,0 +1,29 @@
+<nav class="paginador" *ngIf="totalPaginas > 1" aria-label="Paginación {{ etiqueta }}">
+  <button
+    class="paginador__btn"
+    (click)="anterior()"
+    [disabled]="paginaActual === 1"
+    aria-label="Página anterior"
+  >
+    ‹
+  </button>
+
+  <button
+    *ngFor="let p of paginas"
+    class="paginador__btn"
+    [class.paginador__btn--activo]="p === paginaActual"
+    (click)="irA(p)"
+    [attr.aria-current]="p === paginaActual ? 'page' : null"
+  >
+    {{ p }}
+  </button>
+
+  <button
+    class="paginador__btn"
+    (click)="siguiente()"
+    [disabled]="paginaActual === totalPaginas"
+    aria-label="Página siguiente"
+  >
+    ›
+  </button>
+</nav>

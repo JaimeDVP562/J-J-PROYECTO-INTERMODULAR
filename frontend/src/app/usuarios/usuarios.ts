@@ -4,11 +4,12 @@ import { FormsModule } from '@angular/forms';
 import { ApiService } from '../services/api.service';
 import { AuthService } from '../auth/auth.service';
 import { User } from '../models/models';
+import { PaginadorComponent } from '../paginador/paginador';
 
 @Component({
   selector: 'app-usuarios',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, PaginadorComponent],
   templateUrl: './usuarios.html',
   styleUrl: './usuarios.css',
 })
