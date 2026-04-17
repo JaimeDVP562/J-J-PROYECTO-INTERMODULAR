@@ -156,15 +156,14 @@ jobs:
             sudo chmod -R 775 "$APP_DIR/storage" "$APP_DIR/bootstrap/cache"
 
             # Instalar dependencias PHP
-            cd "$APP_DIR"
-            sudo -u laravel-api composer install --no-dev --optimize-autoloader --no-interaction
+            sudo -u laravel-api composer install --no-dev --optimize-autoloader --no-interaction --working-dir="$APP_DIR"
 
             # Comandos artisan
-            sudo -u laravel-api php artisan migrate --force
-            sudo -u laravel-api php artisan storage:link
-            sudo -u laravel-api php artisan config:cache
-            sudo -u laravel-api php artisan route:cache
-            sudo -u laravel-api php artisan view:cache
+            sudo -u laravel-api php "$APP_DIR/artisan" migrate --force
+            sudo -u laravel-api php "$APP_DIR/artisan" storage:link
+            sudo -u laravel-api php "$APP_DIR/artisan" config:cache
+            sudo -u laravel-api php "$APP_DIR/artisan" route:cache
+            sudo -u laravel-api php "$APP_DIR/artisan" view:cache
 
             # Reiniciar servicios
             sudo systemctl restart php${{ env.PHP_VERSION }}-fpm apache2
