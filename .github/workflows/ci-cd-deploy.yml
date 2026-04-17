@@ -222,8 +222,8 @@ jobs:
             sudo rm -rf /tmp/frontend-dist
 
             # Permisos para Apache
-            sudo chown -R apache-sec:apache-sec "$WEB_DIR"
-            sudo chmod -R 750 "$WEB_DIR"
+            sudo chown -R www-data:www-data "$WEB_DIR"
+            sudo chmod -R 755 "$WEB_DIR"
 
             sudo systemctl restart apache2
           ENDSSH
