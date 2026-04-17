@@ -113,66 +113,42 @@ jobs:
             backend/ \
             ${{ env.SSH_USER }}@${{ secrets.API_HOST }}:/tmp/laravel-deploy/
 
+      - name: Preparar servidor API
+        run: |
+          ssh -o StrictHostKeyChecking=no \
+              -o ProxyJump=${{ env.SSH_USER }}@${{ secrets.BASTION_HOST }} \
+              ${{ env.SSH_USER }}@${{ secrets.API_HOST }} \
+              "sudo id -u laravel-api &>/dev/null || sudo useradd -r -s /usr/sbin/nologin laravel-api; sudo mkdir -p /var/www/laravel-api; sudo rsync -a --delete --exclude=.env --exclude='storage/logs/' /tmp/laravel-deploy/ /var/www/laravel-api/"
+
+      - name: Escribir .env de producción
+        run: |
+          printf 'APP_NAME=JJ-ERP\nAPP_ENV=production\nAPP_KEY=%s\nAPP_DEBUG=false\nAPP_URL=https://j-j-proyect.duckdns.org\n\nDB_CONNECTION=mysql\nDB_HOST=%s\nDB_PORT=3306\nDB_DATABASE=laravel_db\nDB_USERNAME=laravel_user\nDB_PASSWORD=%s\n\nSANCTUM_STATEFUL_DOMAINS=j-j-proyect.duckdns.org\nSESSION_DOMAIN=j-j-proyect.duckdns.org\n' \
+            '${{ secrets.APP_KEY }}' \
+            '${{ secrets.DB_HOST }}' \
+            '${{ secrets.DB_PASSWORD }}' \
+            | ssh -o StrictHostKeyChecking=no \
+                  -o ProxyJump=${{ env.SSH_USER }}@${{ secrets.BASTION_HOST }} \
+                  ${{ env.SSH_USER }}@${{ secrets.API_HOST }} \
+                  "sudo tee /var/www/laravel-api/.env > /dev/null"
+
       - name: Instalar dependencias y desplegar
         run: |
           ssh -o StrictHostKeyChecking=no \
               -o ProxyJump=${{ env.SSH_USER }}@${{ secrets.BASTION_HOST }} \
-              ${{ env.SSH_USER }}@${{ secrets.API_HOST }} << ENDSSH
-            set -e
-            APP_DIR="/var/www/laravel-api"
-
-            # Crear usuario y directorio si el bootstrap no los creó
-            sudo id -u laravel-api &>/dev/null || sudo useradd -r -s /usr/sbin/nologin laravel-api
-            sudo mkdir -p "\$APP_DIR"
-
-            # Copiar archivos al directorio de la app
-            sudo rsync -a --delete \
-              --exclude='.env' \
-              --exclude='storage/logs/*' \
-              /tmp/laravel-deploy/ "\$APP_DIR/"
-
-            # Crear/actualizar .env de producción
-            printf '%s\n' \
-              'APP_NAME=JJ-ERP' \
-              'APP_ENV=production' \
-              'APP_KEY=${{ secrets.APP_KEY }}' \
-              'APP_DEBUG=false' \
-              'APP_URL=https://j-j-proyect.duckdns.org' \
-              '' \
-              'DB_CONNECTION=mysql' \
-              'DB_HOST=${{ secrets.DB_HOST }}' \
-              'DB_PORT=3306' \
-              'DB_DATABASE=laravel_db' \
-              'DB_USERNAME=laravel_user' \
-              'DB_PASSWORD=${{ secrets.DB_PASSWORD }}' \
-              '' \
-              'SANCTUM_STATEFUL_DOMAINS=j-j-proyect.duckdns.org' \
-              'SESSION_DOMAIN=j-j-proyect.duckdns.org' \
-              | sudo tee "\$APP_DIR/.env" > /dev/null
-
-            # Permisos correctos
-            sudo chown -R laravel-api:www-data "\$APP_DIR"
-            sudo chmod -R 750 "\$APP_DIR"
-            sudo chmod -R 775 "\$APP_DIR/storage" "\$APP_DIR/bootstrap/cache"
-
-            # Instalar Composer si no existe
-            if ! command -v composer &>/dev/null; then
-              curl -sS https://getcomposer.org/installer | sudo php -- --install-dir=/usr/local/bin --filename=composer
-            fi
-
-            # Instalar dependencias PHP
-            sudo -u laravel-api composer install --no-dev --optimize-autoloader --no-interaction --working-dir="\$APP_DIR"
-
-            # Comandos artisan
-            sudo -u laravel-api php "\$APP_DIR/artisan" migrate --force
-            sudo -u laravel-api php "\$APP_DIR/artisan" storage:link
-            sudo -u laravel-api php "\$APP_DIR/artisan" config:cache
-            sudo -u laravel-api php "\$APP_DIR/artisan" route:cache
-            sudo -u laravel-api php "\$APP_DIR/artisan" view:cache
-
-            # Reiniciar servicios
-            sudo systemctl restart php${{ env.PHP_VERSION }}-fpm apache2
-ENDSSH
+              ${{ env.SSH_USER }}@${{ secrets.API_HOST }} \
+              "set -e;
+               APP_DIR=/var/www/laravel-api;
+               sudo chown -R laravel-api:www-data \$APP_DIR;
+               sudo chmod -R 750 \$APP_DIR;
+               sudo chmod -R 775 \$APP_DIR/storage \$APP_DIR/bootstrap/cache;
+               command -v composer || (curl -sS https://getcomposer.org/installer | sudo php -- --install-dir=/usr/local/bin --filename=composer);
+               sudo -u laravel-api composer install --no-dev --optimize-autoloader --no-interaction --working-dir=\$APP_DIR;
+               sudo -u laravel-api php \$APP_DIR/artisan migrate --force;
+               sudo -u laravel-api php \$APP_DIR/artisan storage:link;
+               sudo -u laravel-api php \$APP_DIR/artisan config:cache;
+               sudo -u laravel-api php \$APP_DIR/artisan route:cache;
+               sudo -u laravel-api php \$APP_DIR/artisan view:cache;
+               sudo systemctl restart php${{ env.PHP_VERSION }}-fpm apache2"
 
   ##############################################
   # JOB 4 — Deploy frontend a EC2 Frontend
@@ -215,19 +191,12 @@ ENDSSH
         run: |
           ssh -o StrictHostKeyChecking=no \
               -o ProxyJump=${{ env.SSH_USER }}@${{ secrets.BASTION_HOST }} \
-              ${{ env.SSH_USER }}@${{ secrets.FRONTEND_HOST }} << 'ENDSSH'
-            set -e
-            WEB_DIR="/var/www/frontend"
-
-            # Limpiar directorio web y copiar nuevo build
-            sudo rm -rf "$WEB_DIR"/*
-            sudo cp -r /tmp/frontend-dist/*/* "$WEB_DIR/" 2>/dev/null || \
-              sudo cp -r /tmp/frontend-dist/* "$WEB_DIR/"
-            sudo rm -rf /tmp/frontend-dist
-
-            # Permisos para Apache
-            sudo chown -R www-data:www-data "$WEB_DIR"
-            sudo chmod -R 755 "$WEB_DIR"
-
-            sudo systemctl restart apache2
-          ENDSSH
+              ${{ env.SSH_USER }}@${{ secrets.FRONTEND_HOST }} \
+              "set -e;
+               WEB_DIR=/var/www/frontend;
+               sudo rm -rf \$WEB_DIR/*;
+               sudo cp -r /tmp/frontend-dist/*/* \$WEB_DIR/ 2>/dev/null || sudo cp -r /tmp/frontend-dist/* \$WEB_DIR/;
+               sudo rm -rf /tmp/frontend-dist;
+               sudo chown -R www-data:www-data \$WEB_DIR;
+               sudo chmod -R 755 \$WEB_DIR;
+               sudo systemctl restart apache2"
