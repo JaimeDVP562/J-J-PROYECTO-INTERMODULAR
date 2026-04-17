@@ -117,43 +117,43 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no \
               -o ProxyJump=${{ env.SSH_USER }}@${{ secrets.BASTION_HOST }} \
-              ${{ env.SSH_USER }}@${{ secrets.API_HOST }} << 'ENDSSH'
+              ${{ env.SSH_USER }}@${{ secrets.API_HOST }} << ENDSSH
             set -e
             APP_DIR="/var/www/laravel-api"
 
             # Crear usuario y directorio si el bootstrap no los creó
             sudo id -u laravel-api &>/dev/null || sudo useradd -r -s /usr/sbin/nologin laravel-api
-            sudo mkdir -p "$APP_DIR"
+            sudo mkdir -p "\$APP_DIR"
 
             # Copiar archivos al directorio de la app
             sudo rsync -a --delete \
               --exclude='.env' \
               --exclude='storage/logs/*' \
-              /tmp/laravel-deploy/ "$APP_DIR/"
+              /tmp/laravel-deploy/ "\$APP_DIR/"
 
             # Crear/actualizar .env de producción
-            sudo tee "$APP_DIR/.env" > /dev/null <<ENV
-          APP_NAME=JJ-ERP
-          APP_ENV=production
-          APP_KEY=$APP_KEY_VALUE
-          APP_DEBUG=false
-          APP_URL=https://j-j-proyect.duckdns.org
+            sudo tee "\$APP_DIR/.env" > /dev/null << 'ENVEOF'
+APP_NAME=JJ-ERP
+APP_ENV=production
+APP_KEY=${{ secrets.APP_KEY }}
+APP_DEBUG=false
+APP_URL=https://j-j-proyect.duckdns.org
 
-          DB_CONNECTION=mysql
-          DB_HOST=$DB_HOST_VALUE
-          DB_PORT=3306
-          DB_DATABASE=laravel_db
-          DB_USERNAME=laravel_user
-          DB_PASSWORD=$DB_PASSWORD_VALUE
+DB_CONNECTION=mysql
+DB_HOST=${{ secrets.DB_HOST }}
+DB_PORT=3306
+DB_DATABASE=laravel_db
+DB_USERNAME=laravel_user
+DB_PASSWORD=${{ secrets.DB_PASSWORD }}
 
-          SANCTUM_STATEFUL_DOMAINS=j-j-proyect.duckdns.org
-          SESSION_DOMAIN=j-j-proyect.duckdns.org
-          ENV
+SANCTUM_STATEFUL_DOMAINS=j-j-proyect.duckdns.org
+SESSION_DOMAIN=j-j-proyect.duckdns.org
+ENVEOF
 
             # Permisos correctos
-            sudo chown -R laravel-api:www-data "$APP_DIR"
-            sudo chmod -R 750 "$APP_DIR"
-            sudo chmod -R 775 "$APP_DIR/storage" "$APP_DIR/bootstrap/cache"
+            sudo chown -R laravel-api:www-data "\$APP_DIR"
+            sudo chmod -R 750 "\$APP_DIR"
+            sudo chmod -R 775 "\$APP_DIR/storage" "\$APP_DIR/bootstrap/cache"
 
             # Instalar Composer si no existe
             if ! command -v composer &>/dev/null; then
@@ -161,22 +161,18 @@ jobs:
             fi
 
             # Instalar dependencias PHP
-            sudo -u laravel-api composer install --no-dev --optimize-autoloader --no-interaction --working-dir="$APP_DIR"
+            sudo -u laravel-api composer install --no-dev --optimize-autoloader --no-interaction --working-dir="\$APP_DIR"
 
             # Comandos artisan
-            sudo -u laravel-api php "$APP_DIR/artisan" migrate --force
-            sudo -u laravel-api php "$APP_DIR/artisan" storage:link
-            sudo -u laravel-api php "$APP_DIR/artisan" config:cache
-            sudo -u laravel-api php "$APP_DIR/artisan" route:cache
-            sudo -u laravel-api php "$APP_DIR/artisan" view:cache
+            sudo -u laravel-api php "\$APP_DIR/artisan" migrate --force
+            sudo -u laravel-api php "\$APP_DIR/artisan" storage:link
+            sudo -u laravel-api php "\$APP_DIR/artisan" config:cache
+            sudo -u laravel-api php "\$APP_DIR/artisan" route:cache
+            sudo -u laravel-api php "\$APP_DIR/artisan" view:cache
 
             # Reiniciar servicios
             sudo systemctl restart php${{ env.PHP_VERSION }}-fpm apache2
-          ENDSSH
-        env:
-          APP_KEY_VALUE: ${{ secrets.APP_KEY }}
-          DB_HOST_VALUE: ${{ secrets.DB_HOST }}
-          DB_PASSWORD_VALUE: ${{ secrets.DB_PASSWORD }}
+ENDSSH
 
   ##############################################
   # JOB 4 — Deploy frontend a EC2 Frontend
