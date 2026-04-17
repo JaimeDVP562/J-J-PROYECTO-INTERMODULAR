@@ -132,23 +132,23 @@ jobs:
               /tmp/laravel-deploy/ "\$APP_DIR/"
 
             # Crear/actualizar .env de producción
-            sudo tee "\$APP_DIR/.env" > /dev/null << 'ENVEOF'
-APP_NAME=JJ-ERP
-APP_ENV=production
-APP_KEY=${{ secrets.APP_KEY }}
-APP_DEBUG=false
-APP_URL=https://j-j-proyect.duckdns.org
-
-DB_CONNECTION=mysql
-DB_HOST=${{ secrets.DB_HOST }}
-DB_PORT=3306
-DB_DATABASE=laravel_db
-DB_USERNAME=laravel_user
-DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-
-SANCTUM_STATEFUL_DOMAINS=j-j-proyect.duckdns.org
-SESSION_DOMAIN=j-j-proyect.duckdns.org
-ENVEOF
+            printf '%s\n' \
+              'APP_NAME=JJ-ERP' \
+              'APP_ENV=production' \
+              'APP_KEY=${{ secrets.APP_KEY }}' \
+              'APP_DEBUG=false' \
+              'APP_URL=https://j-j-proyect.duckdns.org' \
+              '' \
+              'DB_CONNECTION=mysql' \
+              'DB_HOST=${{ secrets.DB_HOST }}' \
+              'DB_PORT=3306' \
+              'DB_DATABASE=laravel_db' \
+              'DB_USERNAME=laravel_user' \
+              'DB_PASSWORD=${{ secrets.DB_PASSWORD }}' \
+              '' \
+              'SANCTUM_STATEFUL_DOMAINS=j-j-proyect.duckdns.org' \
+              'SESSION_DOMAIN=j-j-proyect.duckdns.org' \
+              | sudo tee "\$APP_DIR/.env" > /dev/null
 
             # Permisos correctos
             sudo chown -R laravel-api:www-data "\$APP_DIR"
