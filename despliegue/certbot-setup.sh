@@ -76,7 +76,7 @@ echo "=== Creando VirtualHost HTTPS (frontend-ssl.conf) ==="
 sudo tee /etc/apache2/sites-available/frontend-ssl.conf > /dev/null << 'APACHEEOF'
 <VirtualHost *:443>
     ServerName j-j-proyect.duckdns.org
-    DocumentRoot /var/www/frontend
+    DocumentRoot /var/www/frontend/browser
 
     SSLEngine on
     SSLCertificateFile /etc/letsencrypt/live/j-j-proyect.duckdns.org/fullchain.pem
@@ -87,7 +87,7 @@ sudo tee /etc/apache2/sites-available/frontend-ssl.conf > /dev/null << 'APACHEEO
     ProxyPass /api http://api.jj.internal/api
     ProxyPassReverse /api http://api.jj.internal/api
 
-    <Directory /var/www/frontend>
+    <Directory /var/www/frontend/browser>
         Options -Indexes +FollowSymLinks
         AllowOverride All
         Require all granted
