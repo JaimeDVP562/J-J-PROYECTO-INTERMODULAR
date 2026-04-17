@@ -121,6 +121,10 @@ jobs:
             set -e
             APP_DIR="/var/www/laravel-api"
 
+            # Crear usuario y directorio si el bootstrap no los creó
+            sudo id -u laravel-api &>/dev/null || sudo useradd -r -s /usr/sbin/nologin laravel-api
+            sudo mkdir -p "$APP_DIR"
+
             # Copiar archivos al directorio de la app
             sudo rsync -a --delete \
               --exclude='.env' \
