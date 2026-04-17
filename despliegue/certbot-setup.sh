@@ -2,39 +2,36 @@
 # =============================================================================
 # certbot-setup.sh — Configurar HTTPS en el servidor frontend
 #
-# Ejecutar DESPUÉS de:
-#   1. terraform apply   (servidor frontend arrancado, EIP asignada)
-#   2. Apuntar j-j-proyect.duckdns.org a la EIP del frontend en DuckDNS
-#   3. Verificar que el dominio resuelve: ping j-j-proyect.duckdns.org
+# Requisitos previos:
+#   1. terraform apply completado (EIP asignada)
+#   2. j-j-proyect.duckdns.org apuntando a la EIP del frontend en DuckDNS
+#   3. vockey.pem disponible en ~/.ssh/vockey.pem
+#   4. SSH agent activo con la clave cargada:
+#        eval $(ssh-agent -s)
+#        ssh-add ~/.ssh/vockey.pem
 #
 # Uso:
-#   chmod +x certbot-setup.sh
-#   ./certbot-setup.sh <BASTION_HOST> <FRONTEND_HOST>
+#   bash certbot-setup.sh <BASTION_HOST> <FRONTEND_PRIVATE_IP>
 #
 # Ejemplo:
-#   ./certbot-setup.sh 54.123.45.67 10.0.1.50
+#   bash certbot-setup.sh 100.24.132.201 172.31.22.196
 # =============================================================================
 
 set -euo pipefail
 
-BASTION_HOST="${1:?Uso: $0 <BASTION_HOST> <FRONTEND_HOST>}"
-FRONTEND_HOST="${2:?Uso: $0 <BASTION_HOST> <FRONTEND_HOST>}"
+BASTION_HOST="${1:?Uso: $0 <BASTION_HOST> <FRONTEND_PRIVATE_IP>}"
+FRONTEND_HOST="${2:?Uso: $0 <BASTION_HOST> <FRONTEND_PRIVATE_IP>}"
 SSH_USER="ubuntu"
 KEY="/c/Users/Jesus/.ssh/vockey.pem"
 PUBLIC_DOMAIN="j-j-proyect.duckdns.org"
+INTERNAL_DOMAIN="jj.internal"
 ADMIN_EMAIL="jesusriosmlg@gmail.com"
+DUCKDNS_TOKEN="055a4b49-c08a-4d50-88c7-0c97d1cea7d6"
 
 echo "=============================================="
 echo " Configurando HTTPS en $PUBLIC_DOMAIN"
 echo " Frontend: $FRONTEND_HOST (vía bastion $BASTION_HOST)"
 echo "=============================================="
-
-# Verificar que el dominio resuelve a la IP del frontend
-RESOLVED=$(nslookup "$PUBLIC_DOMAIN" 2>/dev/null | grep -oP '(?<=Address: )\d+\.\d+\.\d+\.\d+' | tail -1)
-echo "DNS actual de $PUBLIC_DOMAIN: $RESOLVED"
-if [ -z "$RESOLVED" ]; then
-  echo "AVISO: No se pudo verificar DNS pero continuamos..."
-fi
 
 ssh -i "$KEY" \
     -o StrictHostKeyChecking=no \
@@ -42,39 +39,88 @@ ssh -i "$KEY" \
     "$SSH_USER@$FRONTEND_HOST" << ENDSSH
 set -e
 
-echo "=== Instalando Certbot ==="
-apt-get install -y certbot python3-certbot-apache
+echo "=== Instalando certbot y plugin DuckDNS ==="
+apt-get install -y python3-pip certbot
+pip3 install certbot-dns-duckdns
 
-echo "=== Emitiendo certificado para $PUBLIC_DOMAIN ==="
-certbot --apache \
-  -d $PUBLIC_DOMAIN \
-  --non-interactive \
-  --agree-tos \
-  -m $ADMIN_EMAIL \
-  --redirect
+echo "=== Guardando token DuckDNS ==="
+mkdir -p /etc/letsencrypt/secrets
+echo "dns_duckdns_token=$DUCKDNS_TOKEN" > /etc/letsencrypt/secrets/duckdns.ini
+chmod 600 /etc/letsencrypt/secrets/duckdns.ini
 
-echo "=== Añadiendo proxy al VirtualHost HTTPS generado por Certbot ==="
-# Certbot genera /etc/apache2/sites-enabled/*-le-ssl.conf
-SSL_CONF=\$(ls /etc/apache2/sites-enabled/*-le-ssl.conf 2>/dev/null | head -1)
+echo "=== Obteniendo certificado via DNS challenge ==="
+certbot certonly \
+  --authenticator dns-duckdns \
+  --dns-duckdns-token="$DUCKDNS_TOKEN" \
+  --dns-duckdns-propagation-seconds=60 \
+  -d "$PUBLIC_DOMAIN" \
+  --non-interactive --agree-tos -m "$ADMIN_EMAIL"
 
-if [ -n "\$SSL_CONF" ] && ! grep -q "ProxyPass /api" "\$SSL_CONF"; then
-  sed -i '/<\/VirtualHost>/i \    ProxyPreserveHost On\n    ProxyPass /api http://api.jj.internal/api\n    ProxyPassReverse /api http://api.jj.internal/api' "\$SSL_CONF"
-  echo "Proxy añadido a \$SSL_CONF"
-fi
+echo "=== Habilitando módulos Apache necesarios ==="
+a2enmod proxy proxy_http rewrite headers ssl
+a2enmod socache_shmcb
 
-echo "=== Añadiendo HSTS al VirtualHost HTTPS ==="
-if ! grep -q "Strict-Transport-Security" /etc/apache2/conf-available/security-headers.conf 2>/dev/null; then
-  echo 'Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"' \
-    >> /etc/apache2/conf-available/security-headers.conf
-fi
+echo "=== Creando VirtualHost HTTP (frontend.conf) ==="
+a2dissite 000-default.conf 2>/dev/null || true
+mkdir -p /var/www/frontend
+
+cat > /etc/apache2/sites-available/frontend.conf << 'APACHEEOF'
+<VirtualHost *:80>
+    ServerName j-j-proyect.duckdns.org
+    RewriteEngine On
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+</VirtualHost>
+APACHEEOF
+
+echo "=== Creando VirtualHost HTTPS (frontend-ssl.conf) ==="
+cat > /etc/apache2/sites-available/frontend-ssl.conf << 'APACHEEOF'
+<VirtualHost *:443>
+    ServerName j-j-proyect.duckdns.org
+    DocumentRoot /var/www/frontend
+
+    SSLEngine on
+    SSLCertificateFile /etc/letsencrypt/live/j-j-proyect.duckdns.org/fullchain.pem
+    SSLCertificateKeyFile /etc/letsencrypt/live/j-j-proyect.duckdns.org/privkey.pem
+
+    ProxyPreserveHost On
+    ProxyPass /.well-known !
+    ProxyPass /api http://api.jj.internal/api
+    ProxyPassReverse /api http://api.jj.internal/api
+
+    <Directory /var/www/frontend>
+        Options -Indexes +FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
+
+    RewriteEngine On
+    RewriteRule ^/\.well-known - [L]
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ /index.html [L]
+
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "DENY"
+    Header always set Referrer-Policy "no-referrer"
+
+    ErrorLog \${APACHE_LOG_DIR}/frontend_error.log
+    CustomLog \${APACHE_LOG_DIR}/frontend_access.log combined
+</VirtualHost>
+APACHEEOF
+
+a2ensite frontend.conf frontend-ssl.conf
+chown -R www-data:www-data /var/www/frontend
+chmod -R 755 /var/www/frontend
 
 echo "=== Reiniciando Apache ==="
 systemctl restart apache2
 
 echo ""
-echo "✓ HTTPS configurado correctamente en https://$PUBLIC_DOMAIN"
-echo "✓ El certificado se renovará automáticamente vía cron de Certbot"
+echo "✓ HTTPS configurado en https://$PUBLIC_DOMAIN"
+echo "✓ Renovación automática gestionada por el cron de certbot"
 ENDSSH
 
 echo ""
-echo "Hecho. Verifica: curl -I https://$PUBLIC_DOMAIN"
+echo "Hecho. Verifica desde tu máquina:"
+echo "  curl -I https://$PUBLIC_DOMAIN"
