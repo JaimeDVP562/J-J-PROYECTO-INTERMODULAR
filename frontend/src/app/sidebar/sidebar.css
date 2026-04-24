@@ -53,17 +53,6 @@
     text-transform: capitalize;
 }
 
-@media (max-width: 768px) {
-  .sidebar {
-    height: auto;
-    padding: 1rem 0 0.5rem 0;
-  }
-
-  .menu button {
-    padding: 0.5rem 1rem;
-  }
-}
-
 .menu {
     list-style: none;
     padding: 0;
@@ -125,4 +114,80 @@
 .logout:focus {
     background: #ffeaea;
     color: #a93226;
+}
+
+/* ── Mobile overlay ─────────────────────────────────── */
+
+.sidebar-backdrop {
+    position: fixed;
+    inset: 60px 0 0 0;
+    z-index: 199;
+    background: rgba(0, 0, 0, 0.45);
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        position: fixed;
+        top: 60px;
+        left: 0;
+        right: 0;
+        width: 100%;
+        height: auto;
+        max-height: calc(100vh - 60px);
+        overflow-y: auto;
+        flex-direction: column;
+        padding: 1rem 0 1.5rem;
+        z-index: 200;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        transform: translateY(-110%);
+        opacity: 0;
+        pointer-events: none;
+        transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                    opacity 0.2s ease;
+    }
+
+    .sidebar.open {
+        transform: translateY(0);
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .user-info {
+        display: flex;
+    }
+
+    .menu {
+        flex-direction: column;
+        height: auto;
+        overflow: visible;
+    }
+
+    .menu li {
+        margin: 0;
+        flex: unset;
+        min-width: unset;
+        display: block;
+    }
+
+    .menu button {
+        flex-direction: row;
+        padding: 0.9rem 1.5rem;
+        font-size: 1rem;
+        gap: 1rem;
+        border-radius: 0 2rem 2rem 0;
+        justify-content: flex-start;
+        align-items: center;
+        white-space: normal;
+        margin-bottom: 0.25rem;
+    }
+
+    .icon {
+        font-size: 1.3rem;
+        width: 2rem;
+        display: inline-block;
+    }
+
+    .logout-section {
+        display: block;
+    }
 }

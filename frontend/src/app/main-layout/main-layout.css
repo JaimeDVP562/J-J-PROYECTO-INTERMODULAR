@@ -6,15 +6,17 @@
 
 app-main-content {
   flex: 1;
+  min-width: 0;
 }
 
 @media (max-width: 768px) {
-  :host {
-    flex-direction: column;
-  }
+    :host {
+        flex-direction: row;
+    }
 
-  app-sidebar {
-    width: 100%;
-    height: auto;
-  }
+    app-sidebar {
+        width: 0;
+        overflow: visible;
+        flex-shrink: 0;
+    }
 }

@@ -101,18 +101,17 @@
             }
           </tbody>
         </table>
-
-        <!-- Paginación -->
-        <app-paginador
-          [paginaActual]="paginaActual"
-          [totalPaginas]="totalPaginas || 1"
-          etiqueta="usuarios"
-          (paginaCambiada)="irAPagina($event)"
-        />
-
       } @else {
         <p class="empty">No hay usuarios creados.</p>
       }
     </div>
+    @if (usuarios.length > 0) {
+      <app-paginador
+        [paginaActual]="paginaActual"
+        [totalPaginas]="totalPaginas || 1"
+        etiqueta="usuarios"
+        (paginaCambiada)="irAPagina($event)"
+      />
+    }
   }
 </div>

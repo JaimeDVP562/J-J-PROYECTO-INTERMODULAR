@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 import { ApiService } from '../services/api.service';
 import { AuthService } from '../auth/auth.service';
-import { Inventario, Producto, Proveedor, Categoria } from '../models/models';
+import { Producto, Proveedor, Categoria } from '../models/models';
 
 @Component({
   selector: 'app-stock',
@@ -17,17 +17,15 @@ export class StockComponent implements OnInit {
   private api = inject(ApiService);
   public auth = inject(AuthService);
 
-  inventarios: Inventario[] = [];
   productos: Producto[] = [];
   productosFiltrados: Producto[] = [];
-  inventariosFiltrados: Inventario[] = [];
   proveedoresFiltrados: Proveedor[] = [];
   proveedores: Proveedor[] = [];
   categorias: Categoria[] = [];
   cargando = true;
   error = '';
 
-  vistaActiva: 'inventario' | 'productos' | 'proveedores' = 'inventario';
+  vistaActiva: 'productos' | 'proveedores' = 'productos';
 
   // Filters (productos)
   busquedaProducto = '';
@@ -57,17 +55,8 @@ export class StockComponent implements OnInit {
 
   // Paginación
   readonly porPagina = 10;
-  paginaInventario = 1;
   paginaProductos = 1;
   paginaProveedores = 1;
-
-  get inventariosPaginados(): Inventario[] {
-    const i = (this.paginaInventario - 1) * this.porPagina;
-    return this.inventariosFiltrados.slice(i, i + this.porPagina);
-  }
-  get totalPaginasInventario(): number {
-    return Math.ceil(this.inventariosFiltrados.length / this.porPagina);
-  }
 
   get productosPaginados(): Producto[] {
     const i = (this.paginaProductos - 1) * this.porPagina;
@@ -85,10 +74,8 @@ export class StockComponent implements OnInit {
     return Math.ceil(this.proveedoresFiltrados.length / this.porPagina);
   }
 
-  irAPagina(pagina: 'inventario' | 'productos' | 'proveedores', p: number): void {
-    if (pagina === 'inventario') {
-      if (p >= 1 && p <= this.totalPaginasInventario) this.paginaInventario = p;
-    } else if (pagina === 'productos') {
+  irAPagina(pagina: 'productos' | 'proveedores', p: number): void {
+    if (pagina === 'productos') {
       if (p >= 1 && p <= this.totalPaginasProductos) this.paginaProductos = p;
     } else {
       if (p >= 1 && p <= this.totalPaginasProveedores) this.paginaProveedores = p;
@@ -109,26 +96,6 @@ export class StockComponent implements OnInit {
     const pages: number[] = [];
     for (let n = start; n <= end; n++) pages.push(n);
     return pages;
-  }
-
-  /* Inventario pagination helpers */
-  get inventariosPages(): number[] {
-    return Array.from({ length: Math.max(1, this.totalPaginasInventario) }, (_, i) => i + 1);
-  }
-  get inventariosVisiblePages(): number[] {
-    return this.visiblePages(this.totalPaginasInventario, this.paginaInventario, 3);
-  }
-  prevInventario() {
-    if (this.paginaInventario > 1) this.paginaInventario--;
-  }
-  nextInventario() {
-    if (this.paginaInventario < this.totalPaginasInventario) this.paginaInventario++;
-  }
-  goToInventarioFirst() {
-    this.paginaInventario = 1;
-  }
-  goToInventarioLast() {
-    this.paginaInventario = this.totalPaginasInventario || 1;
   }
 
   /* Productos pagination helpers */
@@ -177,16 +144,13 @@ export class StockComponent implements OnInit {
 
   cargar(): void {
     forkJoin({
-      inventarios: this.api.getInventarios(),
       productos: this.api.getProductos(),
       proveedores: this.api.getProveedores(),
       categorias: this.api.getCategorias(),
     }).subscribe({
-      next: ({ inventarios, productos, proveedores, categorias }) => {
-        this.inventarios = inventarios;
+      next: ({ productos, proveedores, categorias }) => {
         this.productos = productos;
         this.productosFiltrados = productos;
-        this.inventariosFiltrados = inventarios;
         this.proveedoresFiltrados = proveedores;
         this.proveedores = proveedores;
         this.categorias = categorias;
@@ -223,24 +187,6 @@ export class StockComponent implements OnInit {
       return matchQ && matchCat && matchProv;
     });
     this.paginaProductos = 1;
-
-    // Inventarios (filter by producto fields)
-    this.inventariosFiltrados = this.inventarios.filter((inv) => {
-      const p = this.productos.find((x) => x.id === inv.producto_id);
-      if (!p) return false;
-      const matchQ =
-        !q ||
-        p.nombre.toLowerCase().includes(q) ||
-        (p.sku ?? '').toLowerCase().includes(q) ||
-        (p.descripcion ?? '').toLowerCase().includes(q) ||
-        String(p.proveedor_id ?? '')
-          .toLowerCase()
-          .includes(q);
-      const matchCat = !this.filtroCategoria || p.categoria_id === Number(this.filtroCategoria);
-      const matchProv = !this.filtroProveedor || p.proveedor_id === Number(this.filtroProveedor);
-      return matchQ && matchCat && matchProv;
-    });
-    this.paginaInventario = 1;
 
     // Proveedores
     this.proveedoresFiltrados = this.proveedores.filter((prov) => {
@@ -293,7 +239,6 @@ export class StockComponent implements OnInit {
     this.api.deleteProducto(id).subscribe({
       next: () => {
         this.productos = this.productos.filter((p) => p.id !== id);
-        this.inventarios = this.inventarios.filter((i) => i.producto_id !== id);
         this.filtrarProductos();
       },
     });
@@ -454,14 +399,4 @@ export class StockComponent implements OnInit {
     });
   }
 
-  get stockBajo(): number {
-    return this.inventarios.filter((i) => i.cantidad_disponible <= i.cantidad_minima).length;
-  }
-
-  proveedorNombrePorProducto(productoId: number): string | null {
-    const prod = this.productos.find((p) => p.id === productoId);
-    if (prod?.proveedor && prod.proveedor.nombre) return prod.proveedor.nombre;
-    const prov = this.proveedores.find((pv) => pv.id === prod?.proveedor_id);
-    return prov ? prov.nombre : null;
-  }
 }

@@ -69,3 +69,14 @@
 .info-icon { font-size: 2rem; display: block; margin-bottom: 0.5rem; }
 .help-info-card h4 { font-size: 0.9rem; color: #0a2342; margin-bottom: 0.25rem; }
 .help-info-card p { font-size: 0.83rem; color: #64748b; margin: 0; }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .help {
+    padding: 1rem;
+  }
+
+  .help h2 {
+    font-size: 1.3rem;
+  }
+}

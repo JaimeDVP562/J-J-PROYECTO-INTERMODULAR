@@ -92,3 +92,25 @@
 }
 .btn-guardar:hover:not(:disabled) { background: #17375e; }
 .btn-guardar:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .perfil {
+    padding: 1rem;
+  }
+
+  .perfil h2 {
+    font-size: 1.3rem;
+    margin-bottom: 1rem;
+  }
+
+  .perfil-layout {
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .avatar-section {
+    min-width: unset;
+    width: 100%;
+  }
+}

@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
+import { SidebarStateService } from './sidebar-state.service';
 
 @Component({
   selector: 'app-sidebar',
@@ -14,13 +15,16 @@ export class Sidebar {
   constructor(
     private router: Router,
     public auth: AuthService,
+    public sidebarState: SidebarStateService,
   ) {}
 
   navigateTo(path: string) {
+    this.sidebarState.close();
     this.router.navigate([path]);
   }
 
   logout() {
+    this.sidebarState.close();
     this.auth.logout().subscribe({
       next: () => this.router.navigate(['/login']),
       error: () => {

@@ -59,16 +59,11 @@
   color: #0a2342;
 }
 
-.alerta {
-  color: #b45309;
-  font-weight: 600;
-}
-
 .table-wrapper {
   background: #fff;
   border: 1px solid #e2e8f0;
   border-radius: 0.75rem;
-  overflow: hidden;
+  overflow-x: auto;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 }
 
@@ -100,25 +95,12 @@ tr:hover td {
   background: #f8fafc;
 }
 
-tr.stock-bajo td {
-  background: #fffbeb;
-}
-
-tr.stock-bajo:hover td {
-  background: #fef3c7;
-}
-
 tr.stock-alerta td {
   background: #fee2e2;
 }
 
 tr.stock-alerta:hover td {
   background: #fecaca;
-}
-
-.valor-bajo {
-  color: #dc2626;
-  font-weight: 700;
 }
 
 .empty {
@@ -491,4 +473,42 @@ tr.stock-alerta:hover td {
   border-radius: 0.3rem;
   font-size: 0.75rem;
   font-family: monospace;
+}
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .stock {
+    padding: 1rem;
+  }
+
+  .stock h2 {
+    font-size: 1.3rem;
+    margin-bottom: 1rem;
+  }
+
+  .tabs {
+    flex-wrap: wrap;
+  }
+
+  .summary-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .table-wrapper {
+    overflow-x: auto;
+  }
+
+  .filter-bar {
+    flex-wrap: wrap;
+  }
+
+  .search-input {
+    width: 100%;
+    min-width: unset;
+  }
+
+  .form-actions {
+    flex-wrap: wrap;
+  }
 }

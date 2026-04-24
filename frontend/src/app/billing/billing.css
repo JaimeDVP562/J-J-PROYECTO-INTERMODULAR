@@ -227,7 +227,7 @@
 }
 
 /* Table footer pagination alignment (match pos) */
-.table-wrapper .table-footer .pagination {
+.table-footer .pagination {
   display: flex;
   gap: 0.35rem;
   align-items: center;
@@ -235,19 +235,18 @@
   padding: 0.4rem 0;
 }
 
-.table-wrapper .table-footer .pagination .page-btn {
-  /* ensure consistent sizing inside table footer */
+.table-footer .pagination .page-btn {
   min-width: 36px;
   height: 36px;
 }
 
-.table-wrapper .table-footer .pagination .page-btn.icon {
+.table-footer .pagination .page-btn.icon {
   width: 36px;
   padding: 0;
   border-radius: 50%;
 }
 
-.table-wrapper .table-footer .pagination .page-btn.active {
+.table-footer .pagination .page-btn.active {
   background: linear-gradient(180deg, #0a2342, #07304a);
   color: #fff;
 }
@@ -293,7 +292,7 @@
   background: #fff;
   border: 1px solid #e2e8f0;
   border-radius: 0.75rem;
-  overflow: hidden;
+  overflow-x: auto;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 }
 
@@ -303,15 +302,8 @@ table {
   font-size: 0.9rem;
 }
 
-/* Keep table layout stable when editing rows */
-.table-wrapper table {
-  table-layout: fixed;
-}
-
 th,
 td {
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -664,4 +656,40 @@ tr:hover td {
 .btn-resend[disabled] {
   opacity: 0.6;
   cursor: not-allowed;
+}
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .billing {
+    padding: 1rem;
+  }
+
+  .billing h2 {
+    font-size: 1.3rem;
+    margin-bottom: 1rem;
+  }
+
+  .tabs {
+    flex-wrap: wrap;
+  }
+
+  .summary-bar {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .table-wrapper {
+    overflow-x: auto;
+  }
+
+  .form-actions {
+    flex-wrap: wrap;
+  }
+
+  .cierre-detalle-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .factura-detalle-grid {
+    grid-template-columns: 1fr;
+  }
 }

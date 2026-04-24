@@ -1,5 +1,8 @@
 <header class="header">
   <div class="header-left">
+    <button class="hamburger-btn" (click)="sidebarState.toggle()" [attr.aria-expanded]="sidebarState.isOpen()" aria-label="Menú">
+      <i class="bi" [class.bi-list]="!sidebarState.isOpen()" [class.bi-x-lg]="sidebarState.isOpen()"></i>
+    </button>
     <span class="brand">J-J-PROYECT</span>
   </div>
   <div class="header-center">

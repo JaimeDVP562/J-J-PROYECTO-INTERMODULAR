@@ -1,4 +1,7 @@
-<aside class="sidebar">
+@if (sidebarState.isOpen()) {
+  <div class="sidebar-backdrop" (click)="sidebarState.close()"></div>
+}
+<aside class="sidebar" [class.open]="sidebarState.isOpen()">
   <div class="user-info">
     <span class="user-avatar">{{ nombreUsuario.charAt(0).toUpperCase() }}</span>
     <div class="user-meta">

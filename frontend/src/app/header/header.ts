@@ -2,6 +2,7 @@ import { Component, inject, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
+import { SidebarStateService } from '../sidebar/sidebar-state.service';
 
 @Component({
   selector: 'app-header',
@@ -13,6 +14,7 @@ import { AuthService } from '../auth/auth.service';
 export class Header {
   public auth = inject(AuthService);
   private router = inject(Router);
+  public sidebarState = inject(SidebarStateService);
 
   dropdownOpen = false;
 
@@ -25,6 +27,9 @@ export class Header {
     const target = event.target as HTMLElement;
     if (!target.closest('.avatar-wrapper')) {
       this.dropdownOpen = false;
+    }
+    if (!target.closest('.hamburger-btn') && !target.closest('app-sidebar')) {
+      this.sidebarState.close();
     }
   }
 

@@ -11,9 +11,6 @@
   @if (!cargando && !error) {
     <!-- Tabs -->
     <div class="tabs">
-      <button [class.active]="vistaActiva === 'inventario'" (click)="vistaActiva = 'inventario'">
-        📦 Inventario
-      </button>
       <button [class.active]="vistaActiva === 'productos'" (click)="vistaActiva = 'productos'">
         🗂️ Productos
       </button>
@@ -45,105 +42,6 @@
       </select>
       <button class="btn-clear tab-like" (click)="limpiarFiltrosStock()">Limpiar filtros</button>
     </div>
-
-    <!-- ── INVENTARIO ──────────────────────────────────────── -->
-    @if (vistaActiva === 'inventario') {
-      <div class="summary-bar">
-        <span
-          >Mostrando: <strong>{{ inventariosFiltrados.length }}</strong> de
-          {{ inventarios.length }} registros</span
-        >
-        @if (stockBajo > 0) {
-          <span class="alerta">⚠️ {{ stockBajo }} con stock bajo</span>
-        }
-      </div>
-      <div class="table-wrapper">
-        @if (inventariosFiltrados.length > 0) {
-          <table>
-            <thead>
-              <tr>
-                <th>Producto</th>
-                <th>SKU</th>
-                <th>Proveedor</th>
-                <th>Categoría</th>
-                <th>Disponible</th>
-                <th>Ubicación</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (inv of inventariosPaginados; track inv.id) {
-                <tr
-                  [class.stock-alerta]="inv.cantidad_disponible < 10"
-                  [class.stock-bajo]="
-                    inv.cantidad_disponible >= 10 && inv.cantidad_disponible <= inv.cantidad_minima
-                  "
-                >
-                  <td>{{ inv.producto?.nombre ?? '—' }}</td>
-                  <td>
-                    <span class="sku-badge">{{ inv.producto?.sku ?? '—' }}</span>
-                  </td>
-                  <td>
-                    {{
-                      inv.producto?.proveedor?.nombre ??
-                        proveedorNombrePorProducto(inv.producto_id) ??
-                        '—'
-                    }}
-                  </td>
-                  <td>{{ inv.producto?.categoria?.nombre ?? '—' }}</td>
-                  <td>
-                    <span [class.valor-bajo]="inv.cantidad_disponible <= inv.cantidad_minima">{{
-                      inv.cantidad_disponible
-                    }}</span>
-                  </td>
-                  <td>{{ inv.ubicacion ?? '—' }}</td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        } @else {
-          <p class="empty">No hay registros de inventario.</p>
-        }
-        <div class="pagination table-footer">
-          <button
-            class="page-btn icon"
-            (click)="goToInventarioFirst()"
-            [disabled]="paginaInventario === 1"
-          >
-            ⏮
-          </button>
-          <button
-            class="page-btn icon"
-            (click)="prevInventario()"
-            [disabled]="paginaInventario === 1"
-          >
-            ◀
-          </button>
-          @for (p of inventariosVisiblePages; track p) {
-            <button
-              class="page-btn"
-              [class.active]="paginaInventario === p"
-              (click)="irAPagina('inventario', p)"
-            >
-              {{ p }}
-            </button>
-          }
-          <button
-            class="page-btn icon"
-            (click)="nextInventario()"
-            [disabled]="paginaInventario === totalPaginasInventario"
-          >
-            ▶
-          </button>
-          <button
-            class="page-btn icon"
-            (click)="goToInventarioLast()"
-            [disabled]="paginaInventario === totalPaginasInventario"
-          >
-            ⏭
-          </button>
-        </div>
-      </div>
-    }
 
     <!-- ── PRODUCTOS ──────────────────────────────────────── -->
     @if (vistaActiva === 'productos') {

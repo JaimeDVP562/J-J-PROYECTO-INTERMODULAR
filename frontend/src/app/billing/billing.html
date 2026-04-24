@@ -350,8 +350,9 @@
         </tbody>
       </table>
       <ng-template #sinFacturas><p class="empty">No hay facturas registradas.</p></ng-template>
+    </div>
 
-      <div class="table-footer" *ngIf="facturas.length > 0">
+    <div class="table-footer" *ngIf="facturas.length > 0">
         <div class="pagination">
           <button
             class="page-btn icon"
@@ -387,7 +388,6 @@
           </button>
         </div>
       </div>
-    </div>
   </ng-container>
 
   <ng-container *ngIf="vistaActiva === 'clientes'">

@@ -106,8 +106,6 @@ export class PosComponent implements OnInit {
   // UI toggles to show/hide lists
   // show ventas list by default so edit buttons are visible in the summary
   showVentasList = false;
-  // show/hide carrito and resizable width
-  showCarrito = true;
   private resizing = false;
   private lastCartWidth = 380;
 
@@ -453,20 +451,6 @@ export class PosComponent implements OnInit {
 
   toggleShowCierres(): void {
     this.showCierresList = !this.showCierresList;
-  }
-
-  toggleCarrito(): void {
-    this.showCarrito = !this.showCarrito;
-    if (!this.showCarrito) {
-      // collapse visually by setting CSS var to 0
-      try {
-        document.documentElement.style.setProperty('--cart-width', '0px');
-      } catch (e) {}
-    } else {
-      try {
-        document.documentElement.style.setProperty('--cart-width', this.lastCartWidth + 'px');
-      } catch (e) {}
-    }
   }
 
   startResizeCart(e: MouseEvent): void {

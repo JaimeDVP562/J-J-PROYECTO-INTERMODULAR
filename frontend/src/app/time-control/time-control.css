@@ -233,7 +233,7 @@ tfoot .fila-total td {
   background: #fff;
   border: 1px solid #e2e8f0;
   border-radius: 0.75rem;
-  overflow: hidden;
+  overflow-x: auto;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 }
 
@@ -666,4 +666,46 @@ tr:hover td {
 .page-info {
   font-size: 0.82rem;
   color: #64748b;
+}
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .time-control {
+    padding: 1rem;
+  }
+
+  .time-control h2 {
+    font-size: 1.3rem;
+    margin-bottom: 1rem;
+  }
+
+  .jornada-card {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .jornada-center {
+    flex: 0 0 100%;
+    order: -1;
+  }
+
+  .tabs {
+    flex-wrap: wrap;
+  }
+
+  .mensual-filter {
+    flex-wrap: wrap;
+  }
+
+  .mes-select {
+    flex: 1;
+  }
+
+  .summary-bar {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .table-wrapper {
+    overflow-x: auto;
+  }
 }

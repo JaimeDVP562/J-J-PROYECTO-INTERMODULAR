@@ -528,25 +528,21 @@ textarea.pos-input {
   gap: 0.5rem;
 }
 
-/* Allow resumen tables to expand and show all rows (no internal scrollbar) */
-.ventas-wrapper .table-wrapper,
-.devoluciones-wrapper .table-wrapper,
-.cierres-wrapper .table-wrapper {
+/* Ventas/devoluciones/cierres wrappers: no height cap, horizontal scroll when needed */
+.ventas-wrapper,
+.devoluciones-wrapper,
+.cierres-wrapper {
   max-height: none;
-  /* allow table to expand to show all rows */
-  overflow: visible !important;
-  /* show all rows without internal scrollbar */
-  height: auto !important;
+  height: auto;
+  overflow-x: auto;
 }
 
-/* Make tables use fixed layout so columns respect widths and buttons stay visible */
 .table-wrapper {
   overflow: auto;
 }
 
 .table-wrapper table {
   width: 100%;
-  table-layout: fixed;
   border-collapse: collapse;
 }
 
@@ -554,51 +550,9 @@ textarea.pos-input {
 .table-wrapper td {
   padding: 0.6rem 0.8rem;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   vertical-align: middle;
 }
 
-/* Column widths for Resumen de ventas (ensure edit button visible) */
-.ventas-wrapper table th:nth-child(1),
-.ventas-wrapper table td:nth-child(1) {
-  width: 30px;
-}
-
-.ventas-wrapper table th:nth-child(2),
-.ventas-wrapper table td:nth-child(2) {
-  width: 100px;
-}
-
-.ventas-wrapper table th:nth-child(3),
-.ventas-wrapper table td:nth-child(3) {
-  width: 100px;
-}
-
-.ventas-wrapper table th:nth-child(4),
-.ventas-wrapper table td:nth-child(4) {
-  width: 80px;
-}
-
-.ventas-wrapper table th:nth-child(5),
-.ventas-wrapper table td:nth-child(5) {
-  width: 80px;
-}
-
-.ventas-wrapper table th:nth-child(6),
-.ventas-wrapper table td:nth-child(6) {
-  width: 100px;
-}
-
-.ventas-wrapper table th:nth-child(7),
-.ventas-wrapper table td:nth-child(7) {
-  width: 80px;
-}
-
-.ventas-wrapper table th:nth-child(8),
-.ventas-wrapper table td:nth-child(8) {
-  width: 170px;
-}
 
 .ventas-wrapper .acciones {
   display: flex;
@@ -904,32 +858,6 @@ textarea.pos-input {
   background: #f8fafc;
 }
 
-/* Toggle carrito button */
-.btn-toggle-carrito {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  color: #0a2342;
-  padding: 0.45rem 0.8rem;
-  border-radius: 0.5rem;
-  font-size: 0.9rem;
-  cursor: pointer;
-}
-
-.btn-toggle-carrito:hover {
-  background: #eef2ff;
-}
-
-.carrito-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
-}
-
-.carrito-header .carrito-titulo {
-  margin: 0;
-}
 
 .btn-devolucion-confirm {
   background: #dc2626;
@@ -1189,16 +1117,12 @@ tr:hover td {
 .devoluciones-wrapper,
 .cierres-wrapper {
   max-height: none;
-  /* allow wrapper to grow/shrink with content */
-  overflow: visible;
-  /* show all rows without internal scrollbar */
 }
 
 .ventas-wrapper table,
 .devoluciones-wrapper table,
 .cierres-wrapper table {
   width: 100%;
-  table-layout: fixed;
 }
 
 .ventas-wrapper th,
@@ -1214,34 +1138,11 @@ tr:hover td {
 .devoluciones-wrapper td,
 .cierres-wrapper td {
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-/* Column size hints for ventas table */
-.ventas-wrapper th:first-child,
-.ventas-wrapper td:first-child {
-  width: 48px;
-}
-
-.ventas-wrapper th:nth-child(2),
-.ventas-wrapper td:nth-child(2) {
-  width: 90px;
-}
-
-.ventas-wrapper th:nth-child(5),
-.ventas-wrapper td:nth-child(5) {
-  width: 110px;
+.ventas-wrapper th:nth-child(4),
+.ventas-wrapper td:nth-child(4) {
   text-align: right;
-}
-
-/* Make actions column narrower */
-.ventas-wrapper th:last-child,
-.ventas-wrapper td:last-child {
-  /* aumentar ancho y permitir overflow para mostrar botones apilados */
-  width: 220px;
-  white-space: nowrap;
-  overflow: visible;
 }
 
 /* Slightly darker hover for rows in the scroll area */
@@ -1249,4 +1150,94 @@ tr:hover td {
 .devoluciones-wrapper tr:hover td,
 .cierres-wrapper tr:hover td {
   background: #f1f5f9;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .pos-container,
+  .pos-container.full-width {
+    display: flex;
+    flex-direction: column;
+    grid-template-columns: unset;
+    min-height: unset;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .pos-catalogo,
+  .pos-container.full-width .pos-catalogo {
+    grid-column: unset;
+    flex: 1;
+    padding: 0.75rem;
+  }
+
+  .splitter {
+    display: none;
+  }
+
+  .pos-carrito {
+    grid-column: unset;
+    border-left: none;
+    border-top: 2px solid #e2e8f0;
+    max-height: 45vh;
+    overflow-y: auto;
+  }
+
+  .productos-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    padding-bottom: 0.5rem;
+  }
+
+  .producto-card {
+    width: 100%;
+    height: auto;
+    min-height: 80px;
+  }
+
+  .tabs {
+    flex-wrap: wrap;
+  }
+
+  .pos-search-bar {
+    flex-wrap: wrap;
+  }
+
+  .pos-cat-select {
+    width: 100%;
+  }
+
+  .ventas-wrapper,
+  .devoluciones-wrapper,
+  .cierres-wrapper {
+    overflow-x: auto !important;
+  }
+
+  .ventas-filter-bar,
+  .devoluciones-filter-bar,
+  .cierres-filter-bar {
+    flex-wrap: wrap !important;
+  }
+
+  .ventas-filter-bar select,
+  .ventas-filter-bar input,
+  .ventas-filter-bar button,
+  .devoluciones-filter-bar select,
+  .devoluciones-filter-bar input,
+  .devoluciones-filter-bar button,
+  .cierres-filter-bar select,
+  .cierres-filter-bar input,
+  .cierres-filter-bar button {
+    min-width: 0 !important;
+    flex: 1 1 140px !important;
+  }
+
+  .pos-columns {
+    flex-direction: column !important;
+    gap: 0 !important;
+  }
+
+  .pos-carrito-wrapper {
+    width: 100% !important;
+    flex: 0 0 auto !important;
+  }
 }

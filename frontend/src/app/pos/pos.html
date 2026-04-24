@@ -37,17 +37,6 @@
         >
           🔒 Cierres
         </button>
-        <!-- Botón de ocultar lista eliminado según petición -->
-        <!-- BOTÓN PARA MOSTRAR CARRITO (visible solo cuando está oculto) -->
-        <button
-          *ngIf="!showCarrito"
-          title="Mostrar carrito"
-          (click)="toggleCarrito()"
-          class="btn-toggle-carrito"
-          style="margin-left: 0.5rem"
-        >
-          🛒 Mostrar carrito
-        </button>
       </div>
 
       <!-- ── RESUMEN DE VENTAS ── -->
@@ -157,6 +146,7 @@
             </div>
           </div>
 
+          <ng-template #sinVentas><p class="empty">No hay ventas registradas.</p></ng-template>
           <div class="table-wrapper ventas-wrapper" *ngIf="showVentasList">
             <table
               *ngIf="
@@ -241,42 +231,41 @@
                 </tr>
               </tbody>
             </table>
-            <div class="table-footer">
-              <div class="pagination">
-                <button
-                  class="page-btn icon"
-                  (click)="goToVentasFirst()"
-                  [disabled]="ventasPage === 1"
-                >
-                  ⏮
-                </button>
-                <button class="page-btn icon" (click)="prevVentas()" [disabled]="ventasPage === 1">
-                  ◀
-                </button>
-                <button
-                  class="page-btn"
-                  *ngFor="let p of ventasVisiblePages"
-                  (click)="goToVentasPage(p)"
-                  [class.active]="ventasPage === p"
-                >
-                  {{ p }}
-                </button>
-                <button
-                  class="page-btn icon"
-                  (click)="nextVentas()"
-                  [disabled]="ventasPage === ventasTotalPages"
-                >
-                  ▶
-                </button>
-                <button
-                  class="page-btn icon"
-                  (click)="goToVentasLast()"
-                  [disabled]="ventasPage === ventasTotalPages"
-                >
-                  ⏭
-                </button>
-              </div>
-              <ng-template #sinVentas><p class="empty">No hay ventas registradas.</p></ng-template>
+          </div>
+          <div class="table-footer" *ngIf="showVentasList">
+            <div class="pagination">
+              <button
+                class="page-btn icon"
+                (click)="goToVentasFirst()"
+                [disabled]="ventasPage === 1"
+              >
+                ⏮
+              </button>
+              <button class="page-btn icon" (click)="prevVentas()" [disabled]="ventasPage === 1">
+                ◀
+              </button>
+              <button
+                class="page-btn"
+                *ngFor="let p of ventasVisiblePages"
+                (click)="goToVentasPage(p)"
+                [class.active]="ventasPage === p"
+              >
+                {{ p }}
+              </button>
+              <button
+                class="page-btn icon"
+                (click)="nextVentas()"
+                [disabled]="ventasPage === ventasTotalPages"
+              >
+                ▶
+              </button>
+              <button
+                class="page-btn icon"
+                (click)="goToVentasLast()"
+                [disabled]="ventasPage === ventasTotalPages"
+              >
+                ⏭
+              </button>
             </div>
           </div>
         </ng-container>
@@ -335,6 +324,7 @@
               ♻️ Limpiar
             </button>
           </div>
+          <ng-template #sinDevoluciones><p class="empty">No hay devoluciones registradas.</p></ng-template>
           <div class="table-wrapper devoluciones-wrapper" *ngIf="!cargandoDevoluciones">
             <table *ngIf="devoluciones.length > 0; else sinDevoluciones">
               <thead>
@@ -358,48 +348,45 @@
                 </tr>
               </tbody>
             </table>
-            <div class="table-footer">
-              <div class="pagination">
-                <button
-                  class="page-btn icon"
-                  (click)="goToDevolucionesFirst()"
-                  [disabled]="devolucionesPage === 1"
-                >
-                  ⏮
-                </button>
-                <button
-                  class="page-btn icon"
-                  (click)="prevDevoluciones()"
-                  [disabled]="devolucionesPage === 1"
-                >
-                  ◀
-                </button>
-                <button
-                  class="page-btn"
-                  *ngFor="let p of devolucionesVisiblePages"
-                  (click)="goToDevolucionesPage(p)"
-                  [class.active]="devolucionesPage === p"
-                >
-                  {{ p }}
-                </button>
-                <button
-                  class="page-btn icon"
-                  (click)="nextDevoluciones()"
-                  [disabled]="devolucionesPage === devolucionesTotalPages"
-                >
-                  ▶
-                </button>
-                <button
-                  class="page-btn icon"
-                  (click)="goToDevolucionesLast()"
-                  [disabled]="devolucionesPage === devolucionesTotalPages"
-                >
-                  ⏭
-                </button>
-              </div>
-              <ng-template #sinDevoluciones
-                ><p class="empty">No hay devoluciones registradas.</p></ng-template
+          </div>
+          <div class="table-footer" *ngIf="!cargandoDevoluciones">
+            <div class="pagination">
+              <button
+                class="page-btn icon"
+                (click)="goToDevolucionesFirst()"
+                [disabled]="devolucionesPage === 1"
               >
+                ⏮
+              </button>
+              <button
+                class="page-btn icon"
+                (click)="prevDevoluciones()"
+                [disabled]="devolucionesPage === 1"
+              >
+                ◀
+              </button>
+              <button
+                class="page-btn"
+                *ngFor="let p of devolucionesVisiblePages"
+                (click)="goToDevolucionesPage(p)"
+                [class.active]="devolucionesPage === p"
+              >
+                {{ p }}
+              </button>
+              <button
+                class="page-btn icon"
+                (click)="nextDevoluciones()"
+                [disabled]="devolucionesPage === devolucionesTotalPages"
+              >
+                ▶
+              </button>
+              <button
+                class="page-btn icon"
+                (click)="goToDevolucionesLast()"
+                [disabled]="devolucionesPage === devolucionesTotalPages"
+              >
+                ⏭
+              </button>
             </div>
           </div>
         </ng-container>
@@ -634,45 +621,45 @@
                 </ng-container>
               </tbody>
             </table>
-            <div class="table-footer">
-              <div class="pagination">
-                <button
-                  class="page-btn icon"
-                  (click)="goToCierresFirst()"
-                  [disabled]="cierresPage === 1"
-                >
-                  ⏮
-                </button>
-                <button
-                  class="page-btn icon"
-                  (click)="prevCierres()"
-                  [disabled]="cierresPage === 1"
-                >
-                  ◀
-                </button>
-                <button
-                  class="page-btn"
-                  *ngFor="let p of cierresVisiblePages"
-                  (click)="goToCierresPage(p)"
-                  [class.active]="cierresPage === p"
-                >
-                  {{ p }}
-                </button>
-                <button
-                  class="page-btn icon"
-                  (click)="nextCierres()"
-                  [disabled]="cierresPage === cierresTotalPages"
-                >
-                  ▶
-                </button>
-                <button
-                  class="page-btn icon"
-                  (click)="goToCierresLast()"
-                  [disabled]="cierresPage === cierresTotalPages"
-                >
-                  ⏭
-                </button>
-              </div>
+          </div>
+          <div class="table-footer" *ngIf="showCierresList && cierres.length > 0">
+            <div class="pagination">
+              <button
+                class="page-btn icon"
+                (click)="goToCierresFirst()"
+                [disabled]="cierresPage === 1"
+              >
+                ⏮
+              </button>
+              <button
+                class="page-btn icon"
+                (click)="prevCierres()"
+                [disabled]="cierresPage === 1"
+              >
+                ◀
+              </button>
+              <button
+                class="page-btn"
+                *ngFor="let p of cierresVisiblePages"
+                (click)="goToCierresPage(p)"
+                [class.active]="cierresPage === p"
+              >
+                {{ p }}
+              </button>
+              <button
+                class="page-btn icon"
+                (click)="nextCierres()"
+                [disabled]="cierresPage === cierresTotalPages"
+              >
+                ▶
+              </button>
+              <button
+                class="page-btn icon"
+                (click)="goToCierresLast()"
+                [disabled]="cierresPage === cierresTotalPages"
+              >
+                ⏭
+              </button>
             </div>
           </div>
           <ng-template #sinCierres
@@ -761,9 +748,8 @@
             </div>
           </div>
 
-          <div style="width: var(--cart-width, 380px); flex: 0 0 var(--cart-width, 380px)">
+          <div class="pos-carrito-wrapper" style="width: var(--cart-width, 380px); flex: 0 0 var(--cart-width, 380px)">
             <div
-              *ngIf="showCarrito && vistaActiva === 'venta'"
               class="splitter"
               (mousedown)="startResizeCart($event)"
               title="Arrastrar para redimensionar carrito"
@@ -771,13 +757,8 @@
             ></div>
 
             <!-- ── Panel derecho: Carrito (admin/gerente/empleado) ─── -->
-            <div *ngIf="showCarrito && vistaActiva === 'venta'" class="pos-carrito">
-              <div class="carrito-header">
-                <h3 class="carrito-titulo">🛒 Carrito</h3>
-                <button class="btn-toggle-carrito" (click)="toggleCarrito()">
-                  🛒 Ocultar carrito
-                </button>
-              </div>
+            <div class="pos-carrito">
+              <h3 class="carrito-titulo">🛒 Carrito</h3>
 
               <div class="carrito-lista" [class.vacio]="carrito.length === 0">
                 <p *ngIf="carrito.length === 0" class="carrito-vacio">

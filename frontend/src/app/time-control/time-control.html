@@ -157,41 +157,41 @@
         } @else {
           <p class="empty">Ningún usuario ha registrado jornada hoy.</p>
         }
-        <div class="pagination table-footer">
+      </div>
+      <div class="pagination table-footer">
+        <button
+          class="page-btn icon"
+          (click)="goToResumenFirst()"
+          [disabled]="paginaResumenHoy === 1"
+        >
+          ⏮
+        </button>
+        <button class="page-btn icon" (click)="prevResumen()" [disabled]="paginaResumenHoy === 1">
+          ◀
+        </button>
+        @for (p of resumenVisiblePages; track p) {
           <button
-            class="page-btn icon"
-            (click)="goToResumenFirst()"
-            [disabled]="paginaResumenHoy === 1"
+            class="page-btn"
+            [class.active]="paginaResumenHoy === p"
+            (click)="paginaResumenHoy = p"
           >
-            ⏮
+            {{ p }}
           </button>
-          <button class="page-btn icon" (click)="prevResumen()" [disabled]="paginaResumenHoy === 1">
-            ◀
-          </button>
-          @for (p of resumenVisiblePages; track p) {
-            <button
-              class="page-btn"
-              [class.active]="paginaResumenHoy === p"
-              (click)="paginaResumenHoy = p"
-            >
-              {{ p }}
-            </button>
-          }
-          <button
-            class="page-btn icon"
-            (click)="nextResumen()"
-            [disabled]="paginaResumenHoy === totalPaginasResumen"
-          >
-            ▶
-          </button>
-          <button
-            class="page-btn icon"
-            (click)="goToResumenLast()"
-            [disabled]="paginaResumenHoy === totalPaginasResumen"
-          >
-            ⏭
-          </button>
-        </div>
+        }
+        <button
+          class="page-btn icon"
+          (click)="nextResumen()"
+          [disabled]="paginaResumenHoy === totalPaginasResumen"
+        >
+          ▶
+        </button>
+        <button
+          class="page-btn icon"
+          (click)="goToResumenLast()"
+          [disabled]="paginaResumenHoy === totalPaginasResumen"
+        >
+          ⏭
+        </button>
       </div>
     }
   }
@@ -592,33 +592,33 @@
               }
             </tbody>
           </table>
-          <div class="pagination table-footer">
-            <button class="page-btn icon" (click)="goToDiasFirst()" [disabled]="paginaDias === 1">
-              ⏮
+        </div>
+        <div class="pagination table-footer">
+          <button class="page-btn icon" (click)="goToDiasFirst()" [disabled]="paginaDias === 1">
+            ⏮
+          </button>
+          <button class="page-btn icon" (click)="prevDias()" [disabled]="paginaDias === 1">
+            ◀
+          </button>
+          @for (p of diasVisiblePages; track p) {
+            <button class="page-btn" [class.active]="paginaDias === p" (click)="paginaDias = p">
+              {{ p }}
             </button>
-            <button class="page-btn icon" (click)="prevDias()" [disabled]="paginaDias === 1">
-              ◀
-            </button>
-            @for (p of diasVisiblePages; track p) {
-              <button class="page-btn" [class.active]="paginaDias === p" (click)="paginaDias = p">
-                {{ p }}
-              </button>
-            }
-            <button
-              class="page-btn icon"
-              (click)="nextDias()"
-              [disabled]="paginaDias === totalPaginasDias"
-            >
-              ▶
-            </button>
-            <button
-              class="page-btn icon"
-              (click)="goToDiasLast()"
-              [disabled]="paginaDias === totalPaginasDias"
-            >
-              ⏭
-            </button>
-          </div>
+          }
+          <button
+            class="page-btn icon"
+            (click)="nextDias()"
+            [disabled]="paginaDias === totalPaginasDias"
+          >
+            ▶
+          </button>
+          <button
+            class="page-btn icon"
+            (click)="goToDiasLast()"
+            [disabled]="paginaDias === totalPaginasDias"
+          >
+            ⏭
+          </button>
         </div>
       } @else {
         <p class="empty">Sin jornadas en el período seleccionado.</p>
