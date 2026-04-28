@@ -81,6 +81,7 @@ Header always set Referrer-Policy "no-referrer"
 # HSTS se habilitará cuando HTTPS esté activo
 EOF
 
+a2enmod headers rewrite || true
 a2enconf security-headers || true
 
 echo "=== ModSecurity setup (detection mode) ==="
