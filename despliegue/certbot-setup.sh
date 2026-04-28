@@ -84,6 +84,8 @@ sudo tee /etc/apache2/sites-available/frontend-ssl.conf > /dev/null << 'APACHEEO
 
     ProxyPreserveHost On
     ProxyPass /.well-known !
+    ProxyPass /admin http://api.jj.internal/admin
+    ProxyPassReverse /admin http://api.jj.internal/admin
     ProxyPass /api http://api.jj.internal/api
     ProxyPassReverse /api http://api.jj.internal/api
 
@@ -95,6 +97,7 @@ sudo tee /etc/apache2/sites-available/frontend-ssl.conf > /dev/null << 'APACHEEO
 
     RewriteEngine On
     RewriteRule ^/\.well-known - [L]
+    RewriteRule ^/admin - [L]
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^ /index.html [L]
