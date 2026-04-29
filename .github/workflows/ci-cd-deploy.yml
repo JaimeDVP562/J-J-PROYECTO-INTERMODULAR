@@ -131,6 +131,18 @@ jobs:
                   ${{ env.SSH_USER }}@${{ secrets.API_HOST }} \
                   "sudo tee /var/www/laravel-api/.env > /dev/null"
 
+      - name: Esperar servicios API (Apache, PHP-FPM, MySQL)
+        timeout-minutes: 8
+        run: |
+          for i in $(seq 1 48); do
+            ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 \
+                -o ProxyJump=${{ env.SSH_USER }}@${{ secrets.BASTION_HOST }} \
+                ${{ env.SSH_USER }}@${{ secrets.API_HOST }} \
+                "sudo systemctl is-active apache2 && sudo systemctl is-active php8.3-fpm" \
+                && echo "Servicios API listos" && break \
+                || { echo "Intento $i/48 — esperando..."; sleep 10; }
+          done
+
       - name: Instalar dependencias y desplegar
         run: |
           ssh -o StrictHostKeyChecking=no \
@@ -139,15 +151,6 @@ jobs:
               -o ProxyJump=${{ env.SSH_USER }}@${{ secrets.BASTION_HOST }} \
               ${{ env.SSH_USER }}@${{ secrets.API_HOST }} \
               "set -e;
-               echo 'Esperando Apache y PHP-FPM...';
-               until sudo systemctl is-active apache2 >/dev/null 2>&1; do sleep 5; done;
-               until sudo systemctl is-active php8.3-fpm >/dev/null 2>&1; do sleep 5; done;
-               echo 'Esperando conexión MySQL...';
-               until sudo -u laravel-api php -r \"new PDO('mysql:host=\$DB_HOST;port=3306;dbname=laravel_db','laravel_user','\$DB_PASS');\" 2>/dev/null; do
-                 DB_HOST=\$(sudo grep DB_HOST /var/www/laravel-api/.env | cut -d= -f2);
-                 DB_PASS=\$(sudo grep DB_PASSWORD /var/www/laravel-api/.env | cut -d= -f2);
-                 sleep 5;
-               done;
                APP_DIR=/var/www/laravel-api;
                sudo chown -R laravel-api:www-data \$APP_DIR;
                sudo chmod -R 750 \$APP_DIR;
@@ -199,6 +202,18 @@ jobs:
             dist/ \
             ${{ env.SSH_USER }}@${{ secrets.FRONTEND_HOST }}:/tmp/frontend-dist/
 
+      - name: Esperar Apache frontend
+        timeout-minutes: 8
+        run: |
+          for i in $(seq 1 48); do
+            ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 \
+                -o ProxyJump=${{ env.SSH_USER }}@${{ secrets.BASTION_HOST }} \
+                ${{ env.SSH_USER }}@${{ secrets.FRONTEND_HOST }} \
+                "sudo systemctl is-active apache2" \
+                && echo "Apache listo" && break \
+                || { echo "Intento $i/48 — esperando..."; sleep 10; }
+          done
+
       - name: Mover archivos al directorio web
         run: |
           ssh -o StrictHostKeyChecking=no \
@@ -207,8 +222,6 @@ jobs:
               -o ProxyJump=${{ env.SSH_USER }}@${{ secrets.BASTION_HOST }} \
               ${{ env.SSH_USER }}@${{ secrets.FRONTEND_HOST }} \
               "set -e;
-               echo 'Esperando Apache...';
-               until sudo systemctl is-active apache2 >/dev/null 2>&1; do sleep 5; done;
                WEB_DIR=/var/www/frontend;
                sudo mkdir -p \$WEB_DIR;
                sudo rm -rf \$WEB_DIR/*;
