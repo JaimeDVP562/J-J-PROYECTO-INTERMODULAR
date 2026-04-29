@@ -18,7 +18,7 @@ apt-get install -y apache2 libapache2-mod-security2 ufw fail2ban curl vim
 # MÓDULOS DE APACHE
 ######################################
 a2enmod proxy proxy_http rewrite headers ssl
-a2dismod autoindex status
+a2dismod -f autoindex status 2>/dev/null || true
 
 ######################################
 # HARDENING: security.conf
