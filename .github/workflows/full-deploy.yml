@@ -3,9 +3,6 @@ name: Full Deploy (Infra + App)
 on:
   workflow_dispatch:
 
-permissions:
-  contents: read
-  secrets: write
 
 env:
   SSH_USER: ubuntu
@@ -142,14 +139,14 @@ jobs:
 
       - name: Actualizar GitHub Secrets automáticamente
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
-          gh secret set BASTION_HOST          --body "${{ steps.outputs.outputs.bastion_ip }}"          --repo "${{ env.GH_REPO }}"
-          gh secret set FRONTEND_HOST         --body "${{ steps.outputs.outputs.frontend_private_ip }}"  --repo "${{ env.GH_REPO }}"
-          gh secret set API_HOST              --body "${{ steps.outputs.outputs.api_ip }}"               --repo "${{ env.GH_REPO }}"
-          gh secret set DB_HOST               --body "${{ steps.outputs.outputs.db_ip }}"               --repo "${{ env.GH_REPO }}"
-          gh secret set DB_PASSWORD           --body "${{ steps.db_password.outputs.db_password }}"     --repo "${{ env.GH_REPO }}"
-          gh secret set APP_KEY               --body "${{ steps.app_key.outputs.app_key }}"             --repo "${{ env.GH_REPO }}"
+          gh secret set BASTION_HOST  --body "${{ steps.outputs.outputs.bastion_ip }}"           --repo "${{ env.GH_REPO }}"
+          gh secret set FRONTEND_HOST --body "${{ steps.outputs.outputs.frontend_private_ip }}"   --repo "${{ env.GH_REPO }}"
+          gh secret set API_HOST      --body "${{ steps.outputs.outputs.api_ip }}"                --repo "${{ env.GH_REPO }}"
+          gh secret set DB_HOST       --body "${{ steps.outputs.outputs.db_ip }}"                --repo "${{ env.GH_REPO }}"
+          gh secret set DB_PASSWORD   --body "${{ steps.db_password.outputs.db_password }}"      --repo "${{ env.GH_REPO }}"
+          gh secret set APP_KEY       --body "${{ steps.app_key.outputs.app_key }}"              --repo "${{ env.GH_REPO }}"
           echo "Todos los secrets actualizados."
 
   ##############################################
