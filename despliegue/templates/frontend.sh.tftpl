@@ -100,25 +100,29 @@ tee /etc/apache2/sites-available/frontend.conf > /dev/null <<EOF
     ServerName $${PUBLIC_DOMAIN}
     DocumentRoot $${WEB_DIR}
 
-    # Proxy /api al servidor API interno
     ProxyPreserveHost On
+    ProxyPass /.well-known !
+    ProxyPass /admin http://api.$${INTERNAL_DOMAIN}/admin
+    ProxyPassReverse /admin http://api.$${INTERNAL_DOMAIN}/admin
     ProxyPass /api http://api.$${INTERNAL_DOMAIN}/api
     ProxyPassReverse /api http://api.$${INTERNAL_DOMAIN}/api
 
-    # Angular SPA: todas las rutas desconocidas van a index.html
     <Directory $${WEB_DIR}>
         Options -Indexes +FollowSymLinks
-        AllowOverride All
+        AllowOverride None
         Require all granted
+        RewriteEngine On
+        RewriteBase /
+        RewriteRule ^\.well-known - [L]
+        RewriteRule ^admin - [L]
+        RewriteRule ^api - [L]
+        RewriteCond %%{REQUEST_FILENAME} !-f
+        RewriteCond %%{REQUEST_FILENAME} !-d
+        RewriteRule ^ /index.html [L]
     </Directory>
 
-    RewriteEngine On
-    RewriteCond %%{REQUEST_FILENAME} !-f
-    RewriteCond %%{REQUEST_FILENAME} !-d
-    RewriteRule ^ /index.html [L]
-
-    ErrorLog $${APACHE_LOG_DIR}/frontend_error.log
-    CustomLog $${APACHE_LOG_DIR}/frontend_access.log combined
+    ErrorLog /var/log/apache2/frontend_error.log
+    CustomLog /var/log/apache2/frontend_access.log combined
 </VirtualHost>
 EOF
 

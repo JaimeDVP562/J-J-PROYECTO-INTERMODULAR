@@ -137,6 +137,15 @@ jobs:
               -o ProxyJump=${{ env.SSH_USER }}@${{ secrets.BASTION_HOST }} \
               ${{ env.SSH_USER }}@${{ secrets.API_HOST }} \
               "set -e;
+               echo 'Esperando Apache y PHP-FPM...';
+               until sudo systemctl is-active apache2 >/dev/null 2>&1; do sleep 5; done;
+               until sudo systemctl is-active php8.3-fpm >/dev/null 2>&1; do sleep 5; done;
+               echo 'Esperando conexión MySQL...';
+               until sudo -u laravel-api php -r \"new PDO('mysql:host=\$DB_HOST;port=3306;dbname=laravel_db','laravel_user','\$DB_PASS');\" 2>/dev/null; do
+                 DB_HOST=\$(sudo grep DB_HOST /var/www/laravel-api/.env | cut -d= -f2);
+                 DB_PASS=\$(sudo grep DB_PASSWORD /var/www/laravel-api/.env | cut -d= -f2);
+                 sleep 5;
+               done;
                APP_DIR=/var/www/laravel-api;
                sudo chown -R laravel-api:www-data \$APP_DIR;
                sudo chmod -R 750 \$APP_DIR;
@@ -149,7 +158,7 @@ jobs:
                sudo -u laravel-api php \$APP_DIR/artisan route:cache;
                sudo -u laravel-api php \$APP_DIR/artisan view:cache;
                sudo -u laravel-api php \$APP_DIR/artisan l5-swagger:generate;
-               sudo systemctl restart php${{ env.PHP_VERSION }}-fpm apache2"
+               sudo systemctl restart php8.3-fpm apache2"
 
   ##############################################
   # JOB 4 — Deploy frontend a EC2 Frontend
@@ -194,6 +203,8 @@ jobs:
               -o ProxyJump=${{ env.SSH_USER }}@${{ secrets.BASTION_HOST }} \
               ${{ env.SSH_USER }}@${{ secrets.FRONTEND_HOST }} \
               "set -e;
+               echo 'Esperando Apache...';
+               until sudo systemctl is-active apache2 >/dev/null 2>&1; do sleep 5; done;
                WEB_DIR=/var/www/frontend;
                sudo mkdir -p \$WEB_DIR;
                sudo rm -rf \$WEB_DIR/*;
