@@ -120,13 +120,7 @@ jobs:
               --query "ResourceRecordSets[?Type != 'NS' && Type != 'SOA']" \
               --output json 2>/dev/null || echo "[]")
             if [ "$RECORDS" != "[]" ] && [ "$RECORDS" != "null" ]; then
-              CHANGE_BATCH=$(echo "$RECORDS" | python3 -c "
-import json, sys
-records = json.load(sys.stdin)
-if records:
-    changes = [{'Action': 'DELETE', 'ResourceRecordSet': r} for r in records]
-    print(json.dumps({'Changes': changes}))
-")
+              CHANGE_BATCH=$(echo "$RECORDS" | jq '{"Changes": [.[] | {"Action": "DELETE", "ResourceRecordSet": .}]}')
               aws route53 change-resource-record-sets \
                 --hosted-zone-id "$ZONE_ID" \
                 --change-batch "$CHANGE_BATCH" 2>/dev/null || true
