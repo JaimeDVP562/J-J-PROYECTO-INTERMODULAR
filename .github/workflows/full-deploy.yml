@@ -54,7 +54,7 @@ jobs:
           echo "=== Terminando instancias EC2 existentes ==="
           INSTANCE_IDS=$(aws ec2 describe-instances \
             --filters "Name=tag:Name,Values=Bastion,Frontend,API,Database" \
-                      "Name=instance-state-name,Values=running,stopped,pending,stopping" \
+                      "Name=instance-state-name,Values=running,stopped,pending,stopping,shutting-down" \
             --query 'Reservations[].Instances[].InstanceId' \
             --output text 2>/dev/null || echo "")
           if [ -n "$INSTANCE_IDS" ]; then
@@ -62,7 +62,6 @@ jobs:
             aws ec2 terminate-instances --instance-ids $INSTANCE_IDS
             echo "Esperando terminación completa..."
             aws ec2 wait instance-terminated --instance-ids $INSTANCE_IDS || true
-            sleep 15
           else
             echo "No hay instancias activas."
           fi
@@ -74,38 +73,70 @@ jobs:
               --query 'Addresses[0].AllocationId' \
               --output text 2>/dev/null || echo "")
             if [ -n "$ALLOC_ID" ] && [ "$ALLOC_ID" != "None" ]; then
-              aws ec2 release-address --allocation-id "$ALLOC_ID" 2>/dev/null || true
-              echo "EIP $TAG_NAME liberada."
+              aws ec2 release-address --allocation-id "$ALLOC_ID" 2>/dev/null && \
+                echo "EIP $TAG_NAME liberada." || true
             fi
           done
 
           echo "=== Eliminando Security Groups ==="
           VPC_ID=$(aws ec2 describe-vpcs --filters "Name=isDefault,Values=true" \
             --query 'Vpcs[0].VpcId' --output text 2>/dev/null || echo "")
+          echo "VPC: ${VPC_ID:-no encontrado}"
+
           if [ -n "$VPC_ID" ] && [ "$VPC_ID" != "None" ]; then
+            # Esperar hasta que los ENIs de las instancias terminadas se liberen (max 5 min)
+            echo "Esperando liberacion de ENIs..."
+            for attempt in $(seq 1 30); do
+              TOTAL_ENIS=0
+              for SG_NAME in bastion frontend api database; do
+                SG_ID=$(aws ec2 describe-security-groups \
+                  --filters "Name=group-name,Values=${SG_NAME}" "Name=vpc-id,Values=${VPC_ID}" \
+                  --query 'SecurityGroups[0].GroupId' --output text 2>/dev/null || echo "")
+                if [ -n "$SG_ID" ] && [ "$SG_ID" != "None" ]; then
+                  COUNT=$(aws ec2 describe-network-interfaces \
+                    --filters "Name=group-id,Values=${SG_ID}" \
+                    --query 'length(NetworkInterfaces)' --output text 2>/dev/null || echo "0")
+                  COUNT=${COUNT//[^0-9]/}
+                  COUNT=${COUNT:-0}
+                  TOTAL_ENIS=$((TOTAL_ENIS + COUNT))
+                fi
+              done
+              if [ "$TOTAL_ENIS" -eq 0 ]; then
+                echo "Todos los ENIs liberados."
+                break
+              fi
+              echo "Intento $attempt/30 — $TOTAL_ENIS ENIs pendientes..."
+              sleep 10
+            done
+
+            # Revocar reglas de ingress con referencias cruzadas entre SGs
             for SG_NAME in database api frontend bastion; do
               SG_ID=$(aws ec2 describe-security-groups \
                 --filters "Name=group-name,Values=${SG_NAME}" "Name=vpc-id,Values=${VPC_ID}" \
                 --query 'SecurityGroups[0].GroupId' --output text 2>/dev/null || echo "")
               if [ -n "$SG_ID" ] && [ "$SG_ID" != "None" ]; then
+                echo "SG $SG_NAME = $SG_ID — revocando ingress..."
                 RULE_IDS=$(aws ec2 describe-security-group-rules \
                   --filters "Name=group-id,Values=${SG_ID}" \
                   --query 'SecurityGroupRules[?IsEgress==`false`].SecurityGroupRuleId' \
-                  --output text 2>/dev/null || echo "")
+                  --output text 2>/dev/null | tr '\n\t' '  ' || echo "")
                 if [ -n "$RULE_IDS" ]; then
                   aws ec2 revoke-security-group-ingress \
                     --group-id "$SG_ID" \
-                    --security-group-rule-ids $RULE_IDS 2>/dev/null || true
+                    --security-group-rule-ids $RULE_IDS 2>&1 || true
                 fi
               fi
             done
+
+            # Eliminar SGs
             for SG_NAME in database api frontend bastion; do
               SG_ID=$(aws ec2 describe-security-groups \
                 --filters "Name=group-name,Values=${SG_NAME}" "Name=vpc-id,Values=${VPC_ID}" \
                 --query 'SecurityGroups[0].GroupId' --output text 2>/dev/null || echo "")
               if [ -n "$SG_ID" ] && [ "$SG_ID" != "None" ]; then
-                aws ec2 delete-security-group --group-id "$SG_ID" 2>/dev/null && \
-                  echo "SG $SG_NAME eliminado." || echo "No se pudo eliminar SG $SG_NAME"
+                echo "Eliminando $SG_NAME ($SG_ID)..."
+                aws ec2 delete-security-group --group-id "$SG_ID" 2>&1 && \
+                  echo "OK: $SG_NAME eliminado." || echo "WARN: no se pudo eliminar $SG_NAME"
               fi
             done
           fi
@@ -114,6 +145,7 @@ jobs:
           ZONE_ID=$(aws route53 list-hosted-zones \
             --query "HostedZones[?Config.PrivateZone==\`true\` && Name=='jj.internal.'].[Id]" \
             --output text 2>/dev/null | sed 's|/hostedzone/||' || echo "")
+          echo "Route53 Zone: ${ZONE_ID:-none}"
           if [ -n "$ZONE_ID" ] && [ "$ZONE_ID" != "None" ]; then
             RECORDS=$(aws route53 list-resource-record-sets \
               --hosted-zone-id "$ZONE_ID" \
@@ -123,11 +155,11 @@ jobs:
               CHANGE_BATCH=$(echo "$RECORDS" | jq '{"Changes": [.[] | {"Action": "DELETE", "ResourceRecordSet": .}]}')
               aws route53 change-resource-record-sets \
                 --hosted-zone-id "$ZONE_ID" \
-                --change-batch "$CHANGE_BATCH" 2>/dev/null || true
+                --change-batch "$CHANGE_BATCH" 2>&1 || true
               sleep 5
             fi
-            aws route53 delete-hosted-zone --id "$ZONE_ID" 2>/dev/null && \
-              echo "Zona Route53 eliminada." || echo "No se pudo eliminar zona Route53"
+            aws route53 delete-hosted-zone --id "$ZONE_ID" 2>&1 && \
+              echo "OK: Zona Route53 eliminada." || echo "WARN: no se pudo eliminar zona Route53"
           fi
           echo "=== Limpieza completada ==="
 
