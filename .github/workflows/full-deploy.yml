@@ -1,0 +1,339 @@
+name: Full Deploy (Infra + App)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  secrets: write
+
+env:
+  SSH_USER: ubuntu
+  PHP_VERSION: "8.3"
+  NODE_VERSION: "20"
+  TF_DIR: despliegue
+  DUCKDNS_DOMAIN: j-j-proyect
+  GH_REPO: ${{ github.repository }}
+
+jobs:
+  ##############################################
+  # JOB 1 — Infraestructura con Terraform
+  ##############################################
+  infrastructure:
+    name: Terraform — Destroy + Apply
+    runs-on: ubuntu-latest
+
+    outputs:
+      bastion_ip:          ${{ steps.outputs.outputs.bastion_ip }}
+      frontend_public_ip:  ${{ steps.outputs.outputs.frontend_public_ip }}
+      frontend_private_ip: ${{ steps.outputs.outputs.frontend_private_ip }}
+      api_ip:              ${{ steps.outputs.outputs.api_ip }}
+      db_ip:               ${{ steps.outputs.outputs.db_ip }}
+      app_key:             ${{ steps.app_key.outputs.app_key }}
+      db_password:         ${{ steps.db_password.outputs.db_password }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: "1.5.7"
+          terraform_wrapper: false
+
+      - name: Configurar credenciales AWS
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token:     ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region:            us-east-1
+
+      - name: Terraform Init
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform init
+
+      - name: Terraform Destroy (si existe infraestructura)
+        working-directory: ${{ env.TF_DIR }}
+        run: |
+          if terraform state list 2>/dev/null | grep -q 'aws_instance'; then
+            echo "Infraestructura existente detectada — destruyendo..."
+            terraform destroy -auto-approve
+          else
+            echo "No hay infraestructura existente — saltando destroy."
+          fi
+
+      - name: Terraform Apply
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform apply -auto-approve
+
+      - name: Leer outputs de Terraform
+        id: outputs
+        working-directory: ${{ env.TF_DIR }}
+        run: |
+          BASTION_IP=$(terraform output -raw bastion_elastic_ip)
+          FRONTEND_PUBLIC_IP=$(terraform output -raw frontend_public_ip)
+          FRONTEND_PRIVATE_IP=$(terraform output -raw frontend_private_ip)
+          API_IP=$(terraform output -raw api_private_ip)
+          DB_IP=$(terraform output -raw database_private_ip)
+
+          echo "bastion_ip=$BASTION_IP"               >> $GITHUB_OUTPUT
+          echo "frontend_public_ip=$FRONTEND_PUBLIC_IP" >> $GITHUB_OUTPUT
+          echo "frontend_private_ip=$FRONTEND_PRIVATE_IP" >> $GITHUB_OUTPUT
+          echo "api_ip=$API_IP"                        >> $GITHUB_OUTPUT
+          echo "db_ip=$DB_IP"                          >> $GITHUB_OUTPUT
+
+          echo "Bastion EIP:        $BASTION_IP"
+          echo "Frontend público:   $FRONTEND_PUBLIC_IP"
+          echo "Frontend privado:   $FRONTEND_PRIVATE_IP"
+          echo "API privada:        $API_IP"
+          echo "DB privada:         $DB_IP"
+
+      - name: Actualizar DuckDNS
+        run: |
+          RESP=$(curl -s "https://www.duckdns.org/update?domains=${{ env.DUCKDNS_DOMAIN }}&token=${{ secrets.DUCKDNS_TOKEN }}&ip=${{ steps.outputs.outputs.frontend_public_ip }}")
+          echo "DuckDNS: $RESP"
+
+      - name: Configurar clave SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+      - name: Esperar y obtener DB_PASSWORD
+        id: db_password
+        run: |
+          BASTION_IP="${{ steps.outputs.outputs.bastion_ip }}"
+          DB_IP="${{ steps.outputs.outputs.db_ip }}"
+
+          echo "Esperando bootstrap de la base de datos (hasta 8 min)..."
+          DB_PASS=""
+          for i in $(seq 1 48); do
+            DB_PASS=$(ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 \
+              -o ProxyCommand="ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -W %h:%p ubuntu@${BASTION_IP}" \
+              ubuntu@${DB_IP} \
+              "sudo grep 'Password:' /var/log/user-data-db.log 2>/dev/null | awk '{print \$2}'" 2>/dev/null || true)
+            if [ -n "$DB_PASS" ]; then
+              echo "Password de DB obtenido en intento $i."
+              break
+            fi
+            echo "Intento $i/48 — DB aún arrancando..."
+            sleep 10
+          done
+
+          if [ -z "$DB_PASS" ]; then
+            echo "Log no disponible — generando y reseteando password..."
+            DB_PASS=$(openssl rand -base64 24)
+            ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 \
+              -o ProxyCommand="ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -W %h:%p ubuntu@${BASTION_IP}" \
+              ubuntu@${DB_IP} \
+              "sudo mysql -u root -e \"ALTER USER 'laravel_user'@'%' IDENTIFIED BY '${DB_PASS}'; FLUSH PRIVILEGES;\""
+            echo "Password de DB reseteado."
+          fi
+
+          echo "::add-mask::$DB_PASS"
+          echo "db_password=$DB_PASS" >> $GITHUB_OUTPUT
+
+      - name: Generar APP_KEY
+        id: app_key
+        run: |
+          APP_KEY="base64:$(openssl rand -base64 32)"
+          echo "::add-mask::$APP_KEY"
+          echo "app_key=$APP_KEY" >> $GITHUB_OUTPUT
+
+      - name: Actualizar GitHub Secrets automáticamente
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh secret set BASTION_HOST          --body "${{ steps.outputs.outputs.bastion_ip }}"          --repo "${{ env.GH_REPO }}"
+          gh secret set FRONTEND_HOST         --body "${{ steps.outputs.outputs.frontend_private_ip }}"  --repo "${{ env.GH_REPO }}"
+          gh secret set API_HOST              --body "${{ steps.outputs.outputs.api_ip }}"               --repo "${{ env.GH_REPO }}"
+          gh secret set DB_HOST               --body "${{ steps.outputs.outputs.db_ip }}"               --repo "${{ env.GH_REPO }}"
+          gh secret set DB_PASSWORD           --body "${{ steps.db_password.outputs.db_password }}"     --repo "${{ env.GH_REPO }}"
+          gh secret set APP_KEY               --body "${{ steps.app_key.outputs.app_key }}"             --repo "${{ env.GH_REPO }}"
+          echo "Todos los secrets actualizados."
+
+  ##############################################
+  # JOB 2 — Tests backend
+  ##############################################
+  test-backend:
+    name: Tests Backend (PHPUnit)
+    runs-on: ubuntu-latest
+    needs: infrastructure
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: mbstring, pdo_mysql, xml, bcmath, zip, curl
+
+      - name: Instalar dependencias
+        working-directory: backend
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Preparar entorno de test
+        working-directory: backend
+        run: |
+          cp .env.example .env
+          php artisan key:generate --force
+
+      - name: Ejecutar tests
+        working-directory: backend
+        run: php artisan test --stop-on-failure
+
+  ##############################################
+  # JOB 3 — Build frontend
+  ##############################################
+  build-frontend:
+    name: Build Frontend (Angular)
+    runs-on: ubuntu-latest
+    needs: infrastructure
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Instalar dependencias
+        working-directory: frontend
+        run: npm ci --legacy-peer-deps
+
+      - name: Build de producción
+        working-directory: frontend
+        run: npm run build -- --configuration production
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist/
+          retention-days: 1
+
+  ##############################################
+  # JOB 4 — Deploy backend
+  ##############################################
+  deploy-backend:
+    name: Deploy Backend → EC2 API
+    runs-on: ubuntu-latest
+    needs: [infrastructure, test-backend]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar clave SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "${{ needs.infrastructure.outputs.bastion_ip }}" >> ~/.ssh/known_hosts
+
+      - name: Añadir API a known_hosts
+        run: |
+          ssh -o StrictHostKeyChecking=no \
+              -o ProxyJump=${{ env.SSH_USER }}@${{ needs.infrastructure.outputs.bastion_ip }} \
+              ${{ env.SSH_USER }}@${{ needs.infrastructure.outputs.api_ip }} \
+              "echo 'Conexión OK'"
+
+      - name: Copiar código backend
+        run: |
+          rsync -avz --delete \
+            --exclude='.git' --exclude='vendor' --exclude='.env' --exclude='storage/logs/*' \
+            -e "ssh -o StrictHostKeyChecking=no -J ${{ env.SSH_USER }}@${{ needs.infrastructure.outputs.bastion_ip }}" \
+            backend/ \
+            ${{ env.SSH_USER }}@${{ needs.infrastructure.outputs.api_ip }}:/tmp/laravel-deploy/
+
+      - name: Preparar directorio en API
+        run: |
+          ssh -o StrictHostKeyChecking=no \
+              -o ProxyJump=${{ env.SSH_USER }}@${{ needs.infrastructure.outputs.bastion_ip }} \
+              ${{ env.SSH_USER }}@${{ needs.infrastructure.outputs.api_ip }} \
+              "sudo id -u laravel-api &>/dev/null || sudo useradd -r -s /usr/sbin/nologin laravel-api;
+               sudo mkdir -p /var/www/laravel-api;
+               sudo rsync -a --delete --exclude=.env --exclude='storage/logs/' /tmp/laravel-deploy/ /var/www/laravel-api/"
+
+      - name: Escribir .env de producción
+        run: |
+          printf 'APP_NAME=JJ-ERP\nAPP_ENV=production\nAPP_KEY=%s\nAPP_DEBUG=false\nAPP_URL=https://j-j-proyect.duckdns.org\n\nDB_CONNECTION=mysql\nDB_HOST=%s\nDB_PORT=3306\nDB_DATABASE=laravel_db\nDB_USERNAME=laravel_user\nDB_PASSWORD=%s\n\nSANCTUM_STATEFUL_DOMAINS=j-j-proyect.duckdns.org\nSESSION_DOMAIN=j-j-proyect.duckdns.org\n' \
+            '${{ needs.infrastructure.outputs.app_key }}' \
+            '${{ needs.infrastructure.outputs.db_ip }}' \
+            '${{ needs.infrastructure.outputs.db_password }}' \
+            | ssh -o StrictHostKeyChecking=no \
+                  -o ProxyJump=${{ env.SSH_USER }}@${{ needs.infrastructure.outputs.bastion_ip }} \
+                  ${{ env.SSH_USER }}@${{ needs.infrastructure.outputs.api_ip }} \
+                  "sudo tee /var/www/laravel-api/.env > /dev/null"
+
+      - name: Instalar dependencias y desplegar
+        run: |
+          ssh -o StrictHostKeyChecking=no \
+              -o ServerAliveInterval=20 -o ServerAliveCountMax=30 \
+              -o ProxyJump=${{ env.SSH_USER }}@${{ needs.infrastructure.outputs.bastion_ip }} \
+              ${{ env.SSH_USER }}@${{ needs.infrastructure.outputs.api_ip }} \
+              "set -e;
+               APP_DIR=/var/www/laravel-api;
+               sudo chown -R laravel-api:www-data \$APP_DIR;
+               sudo chmod -R 750 \$APP_DIR;
+               sudo chmod -R 775 \$APP_DIR/storage \$APP_DIR/bootstrap/cache;
+               command -v composer || (curl -sS https://getcomposer.org/installer | sudo php -- --install-dir=/usr/local/bin --filename=composer);
+               sudo -u laravel-api composer install --no-dev --optimize-autoloader --no-interaction --working-dir=\$APP_DIR;
+               sudo -u laravel-api php \$APP_DIR/artisan migrate --force;
+               sudo -u laravel-api php \$APP_DIR/artisan storage:link;
+               sudo -u laravel-api php \$APP_DIR/artisan config:cache;
+               sudo -u laravel-api php \$APP_DIR/artisan route:cache;
+               sudo -u laravel-api php \$APP_DIR/artisan view:cache;
+               sudo -u laravel-api php \$APP_DIR/artisan l5-swagger:generate;
+               sudo systemctl restart php8.3-fpm apache2"
+
+  ##############################################
+  # JOB 5 — Deploy frontend
+  ##############################################
+  deploy-frontend:
+    name: Deploy Frontend → EC2 Frontend
+    runs-on: ubuntu-latest
+    needs: [infrastructure, build-frontend]
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: dist/
+
+      - name: Configurar clave SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "${{ needs.infrastructure.outputs.bastion_ip }}" >> ~/.ssh/known_hosts
+
+      - name: Añadir Frontend a known_hosts
+        run: |
+          ssh -o StrictHostKeyChecking=no \
+              -o ProxyJump=${{ env.SSH_USER }}@${{ needs.infrastructure.outputs.bastion_ip }} \
+              ${{ env.SSH_USER }}@${{ needs.infrastructure.outputs.frontend_private_ip }} \
+              "echo 'Conexión OK'"
+
+      - name: Copiar build al servidor frontend
+        run: |
+          rsync -avz --delete \
+            -e "ssh -o StrictHostKeyChecking=no -J ${{ env.SSH_USER }}@${{ needs.infrastructure.outputs.bastion_ip }}" \
+            dist/ \
+            ${{ env.SSH_USER }}@${{ needs.infrastructure.outputs.frontend_private_ip }}:/tmp/frontend-dist/
+
+      - name: Mover archivos al directorio web
+        run: |
+          ssh -o StrictHostKeyChecking=no \
+              -o ServerAliveInterval=20 -o ServerAliveCountMax=30 \
+              -o ProxyJump=${{ env.SSH_USER }}@${{ needs.infrastructure.outputs.bastion_ip }} \
+              ${{ env.SSH_USER }}@${{ needs.infrastructure.outputs.frontend_private_ip }} \
+              "set -e;
+               WEB_DIR=/var/www/frontend;
+               sudo mkdir -p \$WEB_DIR;
+               sudo rm -rf \$WEB_DIR/*;
+               sudo cp -r /tmp/frontend-dist/frontend/browser/. \$WEB_DIR/ 2>/dev/null || sudo cp -r /tmp/frontend-dist/. \$WEB_DIR/;
+               sudo rm -rf /tmp/frontend-dist;
+               sudo chown -R www-data:www-data \$WEB_DIR;
+               sudo chmod -R 755 \$WEB_DIR;
+               sudo systemctl reload apache2"
