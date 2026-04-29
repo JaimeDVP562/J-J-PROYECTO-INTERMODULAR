@@ -135,7 +135,7 @@ jobs:
         timeout-minutes: 8
         run: |
           for i in $(seq 1 48); do
-            ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 \
+            ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 \
                 -o ProxyJump=${{ env.SSH_USER }}@${{ secrets.BASTION_HOST }} \
                 ${{ env.SSH_USER }}@${{ secrets.API_HOST }} \
                 "sudo systemctl is-active apache2 && sudo systemctl is-active php8.3-fpm" \
@@ -206,7 +206,7 @@ jobs:
         timeout-minutes: 8
         run: |
           for i in $(seq 1 48); do
-            ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 \
+            ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 \
                 -o ProxyJump=${{ env.SSH_USER }}@${{ secrets.BASTION_HOST }} \
                 ${{ env.SSH_USER }}@${{ secrets.FRONTEND_HOST }} \
                 "sudo systemctl is-active apache2" \
