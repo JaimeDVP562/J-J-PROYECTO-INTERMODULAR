@@ -9,6 +9,11 @@ output "frontend_public_ip" {
   value = coalesce(aws_eip.frontend.public_ip, aws_instance.frontend.public_ip)
 }
 
+output "frontend_private_ip" {
+  description = "IP privada del servidor Frontend (usar como GitHub Secret FRONTEND_HOST)"
+  value       = aws_instance.frontend.private_ip
+}
+
 output "api_private_ip" {
   description = "IP privada del servidor API (usar como GITHUB Secret API_HOST)"
   value       = aws_instance.api.private_ip
