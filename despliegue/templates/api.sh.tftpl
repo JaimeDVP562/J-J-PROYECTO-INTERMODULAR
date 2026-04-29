@@ -102,11 +102,12 @@ cat > /etc/apache2/sites-available/laravel-api.conf <<EOF
     Require all granted
   </Directory>
 
-  ErrorLog $${APACHE_LOG_DIR}/laravel-api_error.log
-  CustomLog $${APACHE_LOG_DIR}/laravel-api_access.log combined
+  ErrorLog /var/log/apache2/laravel-api_error.log
+  CustomLog /var/log/apache2/laravel-api_access.log combined
 </VirtualHost>
 EOF
 
+a2dissite 000-default.conf 2>/dev/null || true
 a2ensite laravel-api.conf || true
 
 echo "=== PHP FPM / Apache restart ==="
