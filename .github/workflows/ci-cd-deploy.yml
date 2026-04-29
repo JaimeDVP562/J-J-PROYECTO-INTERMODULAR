@@ -134,6 +134,8 @@ jobs:
       - name: Instalar dependencias y desplegar
         run: |
           ssh -o StrictHostKeyChecking=no \
+              -o ServerAliveInterval=20 \
+              -o ServerAliveCountMax=15 \
               -o ProxyJump=${{ env.SSH_USER }}@${{ secrets.BASTION_HOST }} \
               ${{ env.SSH_USER }}@${{ secrets.API_HOST }} \
               "set -e;
@@ -200,6 +202,8 @@ jobs:
       - name: Mover archivos al directorio web
         run: |
           ssh -o StrictHostKeyChecking=no \
+              -o ServerAliveInterval=20 \
+              -o ServerAliveCountMax=15 \
               -o ProxyJump=${{ env.SSH_USER }}@${{ secrets.BASTION_HOST }} \
               ${{ env.SSH_USER }}@${{ secrets.FRONTEND_HOST }} \
               "set -e;
