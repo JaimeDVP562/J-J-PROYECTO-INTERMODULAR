@@ -49,15 +49,93 @@ jobs:
         working-directory: ${{ env.TF_DIR }}
         run: terraform init
 
-      - name: Terraform Destroy (si existe infraestructura)
-        working-directory: ${{ env.TF_DIR }}
+      - name: Limpiar infraestructura AWS existente
         run: |
-          if terraform state list 2>/dev/null | grep -q 'aws_instance'; then
-            echo "Infraestructura existente detectada — destruyendo..."
-            terraform destroy -auto-approve
+          echo "=== Terminando instancias EC2 existentes ==="
+          INSTANCE_IDS=$(aws ec2 describe-instances \
+            --filters "Name=tag:Name,Values=Bastion,Frontend,API,Database" \
+                      "Name=instance-state-name,Values=running,stopped,pending,stopping" \
+            --query 'Reservations[].Instances[].InstanceId' \
+            --output text 2>/dev/null || echo "")
+          if [ -n "$INSTANCE_IDS" ]; then
+            echo "Terminando: $INSTANCE_IDS"
+            aws ec2 terminate-instances --instance-ids $INSTANCE_IDS
+            echo "Esperando terminación completa..."
+            aws ec2 wait instance-terminated --instance-ids $INSTANCE_IDS || true
+            sleep 15
           else
-            echo "No hay infraestructura existente — saltando destroy."
+            echo "No hay instancias activas."
           fi
+
+          echo "=== Liberando EIPs ==="
+          for TAG_NAME in "Bastion-EIP" "Frontend-EIP"; do
+            ALLOC_ID=$(aws ec2 describe-addresses \
+              --filters "Name=tag:Name,Values=${TAG_NAME}" \
+              --query 'Addresses[0].AllocationId' \
+              --output text 2>/dev/null || echo "")
+            if [ -n "$ALLOC_ID" ] && [ "$ALLOC_ID" != "None" ]; then
+              aws ec2 release-address --allocation-id "$ALLOC_ID" 2>/dev/null || true
+              echo "EIP $TAG_NAME liberada."
+            fi
+          done
+
+          echo "=== Eliminando Security Groups ==="
+          VPC_ID=$(aws ec2 describe-vpcs --filters "Name=isDefault,Values=true" \
+            --query 'Vpcs[0].VpcId' --output text 2>/dev/null || echo "")
+          if [ -n "$VPC_ID" ] && [ "$VPC_ID" != "None" ]; then
+            for SG_NAME in database api frontend bastion; do
+              SG_ID=$(aws ec2 describe-security-groups \
+                --filters "Name=group-name,Values=${SG_NAME}" "Name=vpc-id,Values=${VPC_ID}" \
+                --query 'SecurityGroups[0].GroupId' --output text 2>/dev/null || echo "")
+              if [ -n "$SG_ID" ] && [ "$SG_ID" != "None" ]; then
+                RULE_IDS=$(aws ec2 describe-security-group-rules \
+                  --filters "Name=group-id,Values=${SG_ID}" \
+                  --query 'SecurityGroupRules[?IsEgress==`false`].SecurityGroupRuleId' \
+                  --output text 2>/dev/null || echo "")
+                if [ -n "$RULE_IDS" ]; then
+                  aws ec2 revoke-security-group-ingress \
+                    --group-id "$SG_ID" \
+                    --security-group-rule-ids $RULE_IDS 2>/dev/null || true
+                fi
+              fi
+            done
+            for SG_NAME in database api frontend bastion; do
+              SG_ID=$(aws ec2 describe-security-groups \
+                --filters "Name=group-name,Values=${SG_NAME}" "Name=vpc-id,Values=${VPC_ID}" \
+                --query 'SecurityGroups[0].GroupId' --output text 2>/dev/null || echo "")
+              if [ -n "$SG_ID" ] && [ "$SG_ID" != "None" ]; then
+                aws ec2 delete-security-group --group-id "$SG_ID" 2>/dev/null && \
+                  echo "SG $SG_NAME eliminado." || echo "No se pudo eliminar SG $SG_NAME"
+              fi
+            done
+          fi
+
+          echo "=== Eliminando zona Route53 privada ==="
+          ZONE_ID=$(aws route53 list-hosted-zones \
+            --query "HostedZones[?Config.PrivateZone==\`true\` && Name=='jj.internal.'].[Id]" \
+            --output text 2>/dev/null | sed 's|/hostedzone/||' || echo "")
+          if [ -n "$ZONE_ID" ] && [ "$ZONE_ID" != "None" ]; then
+            RECORDS=$(aws route53 list-resource-record-sets \
+              --hosted-zone-id "$ZONE_ID" \
+              --query "ResourceRecordSets[?Type != 'NS' && Type != 'SOA']" \
+              --output json 2>/dev/null || echo "[]")
+            if [ "$RECORDS" != "[]" ] && [ "$RECORDS" != "null" ]; then
+              CHANGE_BATCH=$(echo "$RECORDS" | python3 -c "
+import json, sys
+records = json.load(sys.stdin)
+if records:
+    changes = [{'Action': 'DELETE', 'ResourceRecordSet': r} for r in records]
+    print(json.dumps({'Changes': changes}))
+")
+              aws route53 change-resource-record-sets \
+                --hosted-zone-id "$ZONE_ID" \
+                --change-batch "$CHANGE_BATCH" 2>/dev/null || true
+              sleep 5
+            fi
+            aws route53 delete-hosted-zone --id "$ZONE_ID" 2>/dev/null && \
+              echo "Zona Route53 eliminada." || echo "No se pudo eliminar zona Route53"
+          fi
+          echo "=== Limpieza completada ==="
 
       - name: Terraform Apply
         working-directory: ${{ env.TF_DIR }}
