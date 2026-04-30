@@ -439,3 +439,132 @@ jobs:
                sudo chown -R www-data:www-data \$WEB_DIR;
                sudo chmod -R 755 \$WEB_DIR;
                sudo systemctl reload apache2"
+
+  ##############################################
+  # JOB 6 — HTTPS con Certbot + DuckDNS
+  ##############################################
+  setup-https:
+    name: HTTPS — Certbot + DuckDNS
+    runs-on: ubuntu-latest
+    needs: [infrastructure, deploy-frontend]
+
+    steps:
+      - name: Configurar clave SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "${{ needs.infrastructure.outputs.bastion_ip }}" >> ~/.ssh/known_hosts
+
+      - name: Esperar propagación DNS DuckDNS (5 min)
+        run: |
+          echo "Esperando 5 minutos para propagación DNS..."
+          sleep 300
+
+      - name: Preparar script certbot
+        env:
+          DUCKDNS_TOKEN: ${{ secrets.DUCKDNS_TOKEN }}
+        run: |
+          cat > /tmp/certbot-remote.sh << 'SCRIPTEOF'
+          #!/bin/bash
+          set -e
+          export DEBIAN_FRONTEND=noninteractive
+          TOKEN="__DUCKDNS_TOKEN__"
+          DOMAIN="j-j-proyect.duckdns.org"
+          EMAIL="jesusriosmlg@gmail.com"
+
+          echo "=== Instalando certbot y plugin DuckDNS ==="
+          sudo apt-get install -y python3-pip certbot
+          sudo pip3 install certbot-dns-duckdns --break-system-packages 2>/dev/null || \
+            sudo pip3 install certbot-dns-duckdns
+
+          echo "=== Guardando token DuckDNS ==="
+          sudo mkdir -p /etc/letsencrypt/secrets
+          printf 'dns_duckdns_token=%s\n' "${TOKEN}" | \
+            sudo tee /etc/letsencrypt/secrets/duckdns.ini > /dev/null
+          sudo chmod 600 /etc/letsencrypt/secrets/duckdns.ini
+
+          echo "=== Obteniendo certificado SSL (DNS challenge) ==="
+          sudo certbot certonly \
+            --authenticator dns-duckdns \
+            --dns-duckdns-token="${TOKEN}" \
+            --dns-duckdns-propagation-seconds=60 \
+            -d "${DOMAIN}" \
+            --non-interactive --agree-tos -m "${EMAIL}"
+
+          echo "=== Habilitando modulos Apache SSL ==="
+          sudo a2enmod ssl socache_shmcb
+
+          echo "=== VirtualHost HTTP redirect ==="
+          sudo tee /etc/apache2/sites-available/frontend.conf > /dev/null << 'APACHEEOF'
+          <VirtualHost *:80>
+              ServerName j-j-proyect.duckdns.org
+              RewriteEngine On
+              RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+          </VirtualHost>
+          APACHEEOF
+
+          echo "=== VirtualHost HTTPS ==="
+          sudo tee /etc/apache2/sites-available/frontend-ssl.conf > /dev/null << 'APACHEEOF'
+          <VirtualHost *:443>
+              ServerName j-j-proyect.duckdns.org
+              DocumentRoot /var/www/frontend
+
+              SSLEngine on
+              SSLCertificateFile /etc/letsencrypt/live/j-j-proyect.duckdns.org/fullchain.pem
+              SSLCertificateKeyFile /etc/letsencrypt/live/j-j-proyect.duckdns.org/privkey.pem
+
+              ProxyPreserveHost On
+              ProxyPass /.well-known !
+              ProxyPass /admin http://api.jj.internal/admin
+              ProxyPassReverse /admin http://api.jj.internal/admin
+              ProxyPass /api http://api.jj.internal/api
+              ProxyPassReverse /api http://api.jj.internal/api
+
+              <Directory /var/www/frontend>
+                  Options -Indexes +FollowSymLinks
+                  AllowOverride None
+                  Require all granted
+                  RewriteEngine On
+                  RewriteRule ^\.well-known - [L]
+                  RewriteRule ^admin - [L]
+                  RewriteRule ^api - [L]
+                  RewriteCond %{REQUEST_FILENAME} !-f
+                  RewriteCond %{REQUEST_FILENAME} !-d
+                  RewriteRule ^ /index.html [L]
+              </Directory>
+
+              Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+              Header always set X-Content-Type-Options "nosniff"
+              Header always set X-Frame-Options "DENY"
+              Header always set Referrer-Policy "no-referrer"
+
+              ErrorLog /var/log/apache2/frontend_ssl_error.log
+              CustomLog /var/log/apache2/frontend_ssl_access.log combined
+          </VirtualHost>
+          APACHEEOF
+
+          sudo a2ensite frontend.conf frontend-ssl.conf
+          sudo chown -R www-data:www-data /var/www/frontend
+          sudo chmod -R 755 /var/www/frontend
+          sudo systemctl restart apache2
+
+          echo "=== HTTPS configurado en https://${DOMAIN} ==="
+          SCRIPTEOF
+          sed -i "s|__DUCKDNS_TOKEN__|${DUCKDNS_TOKEN}|g" /tmp/certbot-remote.sh
+          chmod +x /tmp/certbot-remote.sh
+
+      - name: Copiar script al servidor frontend
+        run: |
+          rsync -avz \
+            -e "ssh -o StrictHostKeyChecking=no -J ${{ env.SSH_USER }}@${{ needs.infrastructure.outputs.bastion_ip }}" \
+            /tmp/certbot-remote.sh \
+            ${{ env.SSH_USER }}@${{ needs.infrastructure.outputs.frontend_private_ip }}:/tmp/
+
+      - name: Ejecutar certbot en servidor frontend
+        run: |
+          ssh -o StrictHostKeyChecking=no \
+              -o ServerAliveInterval=20 -o ServerAliveCountMax=30 \
+              -o ProxyJump=${{ env.SSH_USER }}@${{ needs.infrastructure.outputs.bastion_ip }} \
+              ${{ env.SSH_USER }}@${{ needs.infrastructure.outputs.frontend_private_ip }} \
+              "bash /tmp/certbot-remote.sh && rm /tmp/certbot-remote.sh"
