@@ -339,52 +339,39 @@ jobs:
                sudo mkdir -p /var/www/laravel-api;
                sudo rsync -a --delete --exclude=.env --exclude='storage/logs/' /tmp/laravel-deploy/ /var/www/laravel-api/"
 
-      - name: Escribir .env de producción
+      - name: Escribir .env e instalar dependencias
         run: |
           DB_PASS=$(cat /tmp/db_pass.txt)
           APP_KEY_VAL=$(cat /tmp/app_key.txt)
           DB_IP="${{ needs.infrastructure.outputs.db_ip }}"
 
-          # Generar .env localmente (sin SSH, sin posibilidad de fallo silencioso)
           printf 'APP_NAME=JJ-ERP\nAPP_ENV=production\nAPP_KEY=%s\nAPP_DEBUG=false\nAPP_URL=https://j-j-proyect.duckdns.org\n\nDB_CONNECTION=mysql\nDB_HOST=%s\nDB_PORT=3306\nDB_DATABASE=laravel_db\nDB_USERNAME=laravel_user\nDB_PASSWORD=%s\n\nSANCTUM_STATEFUL_DOMAINS=j-j-proyect.duckdns.org\nSESSION_DOMAIN=j-j-proyect.duckdns.org\n' \
             "${APP_KEY_VAL}" "${DB_IP}" "${DB_PASS}" > /tmp/laravel.env
 
-          # Verificar que DB_PASSWORD no está vacío — falla el paso si lo está
-          grep -q 'DB_PASSWORD=.' /tmp/laravel.env || { echo "ERROR: DB_PASSWORD vacío en .env"; exit 1; }
-          echo "DB_PASSWORD: OK ($(grep 'DB_PASSWORD' /tmp/laravel.env | wc -c) chars)"
+          grep -q 'DB_PASSWORD=.' /tmp/laravel.env || { echo "ERROR: DB_PASSWORD vacío en runner"; exit 1; }
+          echo "DB_PASSWORD local OK"
 
-          # Copiar via rsync (mismo mecanismo que el código backend, ya probado)
-          rsync -avz \
-            -e "ssh -o StrictHostKeyChecking=no -J ${{ env.SSH_USER }}@${{ needs.infrastructure.outputs.bastion_ip }}" \
-            /tmp/laravel.env \
-            ${{ env.SSH_USER }}@${{ needs.infrastructure.outputs.api_ip }}:/tmp/laravel.env
-
-          # Mover a ubicación final con sudo
-          ssh -o StrictHostKeyChecking=no \
-              -o ProxyJump=${{ env.SSH_USER }}@${{ needs.infrastructure.outputs.bastion_ip }} \
-              ${{ env.SSH_USER }}@${{ needs.infrastructure.outputs.api_ip }} \
-              "sudo mv /tmp/laravel.env /var/www/laravel-api/.env && echo '.env instalado correctamente'"
-
-      - name: Instalar dependencias y desplegar
-        run: |
           ssh -o StrictHostKeyChecking=no \
               -o ServerAliveInterval=20 -o ServerAliveCountMax=30 \
               -o ProxyJump=${{ env.SSH_USER }}@${{ needs.infrastructure.outputs.bastion_ip }} \
               ${{ env.SSH_USER }}@${{ needs.infrastructure.outputs.api_ip }} \
-              "set -e;
-               APP_DIR=/var/www/laravel-api;
-               sudo chown -R laravel-api:www-data \$APP_DIR;
-               sudo chmod -R 750 \$APP_DIR;
-               sudo chmod -R 775 \$APP_DIR/storage \$APP_DIR/bootstrap/cache;
-               command -v composer || (curl -sS https://getcomposer.org/installer | sudo php -- --install-dir=/usr/local/bin --filename=composer);
-               sudo -u laravel-api composer install --no-dev --optimize-autoloader --no-interaction --working-dir=\$APP_DIR;
-               sudo -u laravel-api php \$APP_DIR/artisan migrate --force;
-               sudo -u laravel-api php \$APP_DIR/artisan storage:link;
-               sudo -u laravel-api php \$APP_DIR/artisan config:cache;
-               sudo -u laravel-api php \$APP_DIR/artisan route:cache;
-               sudo -u laravel-api php \$APP_DIR/artisan view:cache;
-               sudo -u laravel-api php \$APP_DIR/artisan l5-swagger:generate;
-               sudo systemctl restart php8.3-fpm apache2"
+              "set -e
+               APP_DIR=/var/www/laravel-api
+               cat | sudo tee \$APP_DIR/.env > /dev/null
+               grep -q 'DB_PASSWORD=.' \$APP_DIR/.env || { echo 'ERROR: DB_PASSWORD vacío en API'; exit 1; }
+               echo '.env escrito en API OK'
+               sudo chown -R laravel-api:www-data \$APP_DIR
+               sudo chmod -R 750 \$APP_DIR
+               sudo chmod -R 775 \$APP_DIR/storage \$APP_DIR/bootstrap/cache
+               command -v composer || (curl -sS https://getcomposer.org/installer | sudo php -- --install-dir=/usr/local/bin --filename=composer)
+               sudo -u laravel-api composer install --no-dev --optimize-autoloader --no-interaction --working-dir=\$APP_DIR
+               sudo -u laravel-api php \$APP_DIR/artisan migrate --force
+               sudo -u laravel-api php \$APP_DIR/artisan storage:link
+               sudo -u laravel-api php \$APP_DIR/artisan config:cache
+               sudo -u laravel-api php \$APP_DIR/artisan route:cache
+               sudo -u laravel-api php \$APP_DIR/artisan view:cache
+               sudo -u laravel-api php \$APP_DIR/artisan l5-swagger:generate
+               sudo systemctl restart php8.3-fpm apache2" < /tmp/laravel.env
 
       - name: Actualizar secrets APP_KEY y DB_PASSWORD
         env:
