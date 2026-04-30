@@ -343,26 +343,27 @@ jobs:
         run: |
           DB_PASS=$(cat /tmp/db_pass.txt)
           APP_KEY_VAL=$(cat /tmp/app_key.txt)
-          {
-            echo "APP_NAME=JJ-ERP"
-            echo "APP_ENV=production"
-            echo "APP_KEY=${APP_KEY_VAL}"
-            echo "APP_DEBUG=false"
-            echo "APP_URL=https://j-j-proyect.duckdns.org"
-            echo ""
-            echo "DB_CONNECTION=mysql"
-            echo "DB_HOST=${{ needs.infrastructure.outputs.db_ip }}"
-            echo "DB_PORT=3306"
-            echo "DB_DATABASE=laravel_db"
-            echo "DB_USERNAME=laravel_user"
-            echo "DB_PASSWORD=${DB_PASS}"
-            echo ""
-            echo "SANCTUM_STATEFUL_DOMAINS=j-j-proyect.duckdns.org"
-            echo "SESSION_DOMAIN=j-j-proyect.duckdns.org"
-          } | ssh -o StrictHostKeyChecking=no \
-                  -o ProxyJump=${{ env.SSH_USER }}@${{ needs.infrastructure.outputs.bastion_ip }} \
-                  ${{ env.SSH_USER }}@${{ needs.infrastructure.outputs.api_ip }} \
-                  "sudo tee /var/www/laravel-api/.env > /dev/null"
+          DB_IP="${{ needs.infrastructure.outputs.db_ip }}"
+
+          # Generar .env localmente (sin SSH, sin posibilidad de fallo silencioso)
+          printf 'APP_NAME=JJ-ERP\nAPP_ENV=production\nAPP_KEY=%s\nAPP_DEBUG=false\nAPP_URL=https://j-j-proyect.duckdns.org\n\nDB_CONNECTION=mysql\nDB_HOST=%s\nDB_PORT=3306\nDB_DATABASE=laravel_db\nDB_USERNAME=laravel_user\nDB_PASSWORD=%s\n\nSANCTUM_STATEFUL_DOMAINS=j-j-proyect.duckdns.org\nSESSION_DOMAIN=j-j-proyect.duckdns.org\n' \
+            "${APP_KEY_VAL}" "${DB_IP}" "${DB_PASS}" > /tmp/laravel.env
+
+          # Verificar que DB_PASSWORD no está vacío — falla el paso si lo está
+          grep -q 'DB_PASSWORD=.' /tmp/laravel.env || { echo "ERROR: DB_PASSWORD vacío en .env"; exit 1; }
+          echo "DB_PASSWORD: OK ($(grep 'DB_PASSWORD' /tmp/laravel.env | wc -c) chars)"
+
+          # Copiar via rsync (mismo mecanismo que el código backend, ya probado)
+          rsync -avz \
+            -e "ssh -o StrictHostKeyChecking=no -J ${{ env.SSH_USER }}@${{ needs.infrastructure.outputs.bastion_ip }}" \
+            /tmp/laravel.env \
+            ${{ env.SSH_USER }}@${{ needs.infrastructure.outputs.api_ip }}:/tmp/laravel.env
+
+          # Mover a ubicación final con sudo
+          ssh -o StrictHostKeyChecking=no \
+              -o ProxyJump=${{ env.SSH_USER }}@${{ needs.infrastructure.outputs.bastion_ip }} \
+              ${{ env.SSH_USER }}@${{ needs.infrastructure.outputs.api_ip }} \
+              "sudo mv /tmp/laravel.env /var/www/laravel-api/.env && echo '.env instalado correctamente'"
 
       - name: Instalar dependencias y desplegar
         run: |
