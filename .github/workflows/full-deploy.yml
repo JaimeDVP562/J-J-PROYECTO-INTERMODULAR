@@ -202,36 +202,35 @@ jobs:
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
 
-      - name: Esperar y obtener DB_PASSWORD
+      - name: Esperar y configurar DB_PASSWORD
         id: db_password
         run: |
           BASTION_IP="${{ steps.outputs.outputs.bastion_ip }}"
           DB_IP="${{ steps.outputs.outputs.db_ip }}"
 
-          echo "Esperando bootstrap de la base de datos (hasta 8 min)..."
-          DB_PASS=""
-          for i in $(seq 1 48); do
-            DB_PASS=$(ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 \
-              -o ProxyCommand="ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -W %h:%p ubuntu@${BASTION_IP}" \
-              ubuntu@${DB_IP} \
-              "sudo grep 'Password:' /var/log/user-data-db.log 2>/dev/null | awk '{print \$2}'" 2>/dev/null || true)
-            if [ -n "$DB_PASS" ]; then
-              echo "Password de DB obtenido en intento $i."
+          # Generar password propio (hex, sin caracteres especiales)
+          DB_PASS=$(openssl rand -hex 20)
+
+          echo "Esperando a que MySQL esté disponible (hasta 10 min)..."
+          for i in $(seq 1 60); do
+            if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+                   -o ProxyCommand="ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -o ConnectTimeout=10 -W %h:%p ubuntu@${BASTION_IP}" \
+                   ubuntu@${DB_IP} \
+                   "sudo mysqladmin ping 2>/dev/null | grep -q alive" 2>/dev/null; then
+              echo "MySQL disponible en intento $i."
               break
             fi
-            echo "Intento $i/48 — DB aún arrancando..."
+            echo "Intento $i/60 — MySQL aún no disponible..."
             sleep 10
           done
 
-          if [ -z "$DB_PASS" ]; then
-            echo "Log no disponible — generando y reseteando password..."
-            DB_PASS=$(openssl rand -base64 24)
-            ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 \
+          echo "Configurando credenciales en MySQL..."
+          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 \
+              -o ServerAliveInterval=10 -o ServerAliveCountMax=6 \
               -o ProxyCommand="ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -W %h:%p ubuntu@${BASTION_IP}" \
               ubuntu@${DB_IP} \
-              "sudo mysql -u root -e \"ALTER USER 'laravel_user'@'%' IDENTIFIED BY '${DB_PASS}'; FLUSH PRIVILEGES;\""
-            echo "Password de DB reseteado."
-          fi
+              "sudo mysql -u root -e \"CREATE DATABASE IF NOT EXISTS laravel_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; CREATE USER IF NOT EXISTS 'laravel_user'@'%' IDENTIFIED BY '${DB_PASS}'; ALTER USER 'laravel_user'@'%' IDENTIFIED BY '${DB_PASS}'; GRANT ALL ON laravel_db.* TO 'laravel_user'@'%'; FLUSH PRIVILEGES;\""
+          echo "Credenciales MySQL configuradas."
 
           echo "::add-mask::$DB_PASS"
           echo "db_password=$DB_PASS" >> $GITHUB_OUTPUT
