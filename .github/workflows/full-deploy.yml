@@ -26,8 +26,7 @@ jobs:
       frontend_private_ip: ${{ steps.outputs.outputs.frontend_private_ip }}
       api_ip:              ${{ steps.outputs.outputs.api_ip }}
       db_ip:               ${{ steps.outputs.outputs.db_ip }}
-      app_key:             ${{ steps.app_key.outputs.app_key }}
-      db_password:         ${{ steps.db_password.outputs.db_password }}
+
 
     steps:
       - uses: actions/checkout@v4
@@ -196,53 +195,7 @@ jobs:
           RESP=$(curl -s "https://www.duckdns.org/update?domains=${{ env.DUCKDNS_DOMAIN }}&token=${{ secrets.DUCKDNS_TOKEN }}&ip=${{ steps.outputs.outputs.frontend_public_ip }}")
           echo "DuckDNS: $RESP"
 
-      - name: Configurar clave SSH
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-
-      - name: Esperar y configurar DB_PASSWORD
-        id: db_password
-        run: |
-          BASTION_IP="${{ steps.outputs.outputs.bastion_ip }}"
-          DB_IP="${{ steps.outputs.outputs.db_ip }}"
-
-          # Generar password propio (hex, sin caracteres especiales)
-          DB_PASS=$(openssl rand -hex 20)
-
-          echo "Esperando a que MySQL esté disponible (hasta 10 min)..."
-          for i in $(seq 1 60); do
-            if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
-                   -o ProxyCommand="ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -o ConnectTimeout=10 -W %h:%p ubuntu@${BASTION_IP}" \
-                   ubuntu@${DB_IP} \
-                   "sudo mysqladmin ping 2>/dev/null | grep -q alive" 2>/dev/null; then
-              echo "MySQL disponible en intento $i."
-              break
-            fi
-            echo "Intento $i/60 — MySQL aún no disponible..."
-            sleep 10
-          done
-
-          echo "Configurando credenciales en MySQL..."
-          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 \
-              -o ServerAliveInterval=10 -o ServerAliveCountMax=6 \
-              -o ProxyCommand="ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -W %h:%p ubuntu@${BASTION_IP}" \
-              ubuntu@${DB_IP} \
-              "sudo mysql -u root -e \"CREATE DATABASE IF NOT EXISTS laravel_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; CREATE USER IF NOT EXISTS 'laravel_user'@'%' IDENTIFIED BY '${DB_PASS}'; ALTER USER 'laravel_user'@'%' IDENTIFIED BY '${DB_PASS}'; GRANT ALL ON laravel_db.* TO 'laravel_user'@'%'; FLUSH PRIVILEGES;\""
-          echo "Credenciales MySQL configuradas."
-
-          echo "db_password=$DB_PASS" >> $GITHUB_OUTPUT
-          echo "::add-mask::$DB_PASS"
-
-      - name: Generar APP_KEY
-        id: app_key
-        run: |
-          APP_KEY="base64:$(openssl rand -base64 32)"
-          echo "app_key=$APP_KEY" >> $GITHUB_OUTPUT
-          echo "::add-mask::$APP_KEY"
-
-      - name: Actualizar GitHub Secrets automáticamente
+      - name: Actualizar GitHub Secrets de red
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
@@ -250,9 +203,7 @@ jobs:
           gh secret set FRONTEND_HOST --body "${{ steps.outputs.outputs.frontend_private_ip }}"   --repo "${{ env.GH_REPO }}"
           gh secret set API_HOST      --body "${{ steps.outputs.outputs.api_ip }}"                --repo "${{ env.GH_REPO }}"
           gh secret set DB_HOST       --body "${{ steps.outputs.outputs.db_ip }}"                --repo "${{ env.GH_REPO }}"
-          gh secret set DB_PASSWORD   --body "${{ steps.db_password.outputs.db_password }}"      --repo "${{ env.GH_REPO }}"
-          gh secret set APP_KEY       --body "${{ steps.app_key.outputs.app_key }}"              --repo "${{ env.GH_REPO }}"
-          echo "Todos los secrets actualizados."
+          echo "Secrets de red actualizados."
 
   ##############################################
   # JOB 2 — Tests backend
@@ -340,6 +291,37 @@ jobs:
               ${{ env.SSH_USER }}@${{ needs.infrastructure.outputs.api_ip }} \
               "echo 'Conexión OK'"
 
+      - name: Configurar MySQL y generar credenciales
+        run: |
+          BASTION_IP="${{ needs.infrastructure.outputs.bastion_ip }}"
+          DB_IP="${{ needs.infrastructure.outputs.db_ip }}"
+          DB_PASS=$(openssl rand -hex 20)
+          APP_KEY_VAL="base64:$(openssl rand -base64 32 | tr -d '\n')"
+
+          echo "Esperando a que MySQL esté disponible (hasta 10 min)..."
+          for i in $(seq 1 60); do
+            if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+                   -o ProxyJump=${{ env.SSH_USER }}@${BASTION_IP} \
+                   ${{ env.SSH_USER }}@${DB_IP} \
+                   "sudo mysqladmin ping 2>/dev/null | grep -q alive" 2>/dev/null; then
+              echo "MySQL disponible en intento $i."
+              break
+            fi
+            echo "Intento $i/60 — MySQL aún no disponible..."
+            sleep 10
+          done
+
+          echo "Configurando credenciales en MySQL..."
+          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 \
+              -o ServerAliveInterval=10 -o ServerAliveCountMax=6 \
+              -o ProxyJump=${{ env.SSH_USER }}@${BASTION_IP} \
+              ${{ env.SSH_USER }}@${DB_IP} \
+              "sudo mysql -u root -e \"CREATE DATABASE IF NOT EXISTS laravel_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; CREATE USER IF NOT EXISTS 'laravel_user'@'%' IDENTIFIED BY '${DB_PASS}'; ALTER USER 'laravel_user'@'%' IDENTIFIED BY '${DB_PASS}'; GRANT ALL ON laravel_db.* TO 'laravel_user'@'%'; FLUSH PRIVILEGES;\""
+          echo "MySQL configurado correctamente."
+
+          printf '%s' "$DB_PASS"     > /tmp/db_pass.txt
+          printf '%s' "$APP_KEY_VAL" > /tmp/app_key.txt
+
       - name: Copiar código backend
         run: |
           rsync -avz --delete \
@@ -359,11 +341,25 @@ jobs:
 
       - name: Escribir .env de producción
         run: |
-          printf 'APP_NAME=JJ-ERP\nAPP_ENV=production\nAPP_KEY=%s\nAPP_DEBUG=false\nAPP_URL=https://j-j-proyect.duckdns.org\n\nDB_CONNECTION=mysql\nDB_HOST=%s\nDB_PORT=3306\nDB_DATABASE=laravel_db\nDB_USERNAME=laravel_user\nDB_PASSWORD=%s\n\nSANCTUM_STATEFUL_DOMAINS=j-j-proyect.duckdns.org\nSESSION_DOMAIN=j-j-proyect.duckdns.org\n' \
-            '${{ needs.infrastructure.outputs.app_key }}' \
-            '${{ needs.infrastructure.outputs.db_ip }}' \
-            '${{ needs.infrastructure.outputs.db_password }}' \
-            | ssh -o StrictHostKeyChecking=no \
+          DB_PASS=$(cat /tmp/db_pass.txt)
+          APP_KEY_VAL=$(cat /tmp/app_key.txt)
+          {
+            echo "APP_NAME=JJ-ERP"
+            echo "APP_ENV=production"
+            echo "APP_KEY=${APP_KEY_VAL}"
+            echo "APP_DEBUG=false"
+            echo "APP_URL=https://j-j-proyect.duckdns.org"
+            echo ""
+            echo "DB_CONNECTION=mysql"
+            echo "DB_HOST=${{ needs.infrastructure.outputs.db_ip }}"
+            echo "DB_PORT=3306"
+            echo "DB_DATABASE=laravel_db"
+            echo "DB_USERNAME=laravel_user"
+            echo "DB_PASSWORD=${DB_PASS}"
+            echo ""
+            echo "SANCTUM_STATEFUL_DOMAINS=j-j-proyect.duckdns.org"
+            echo "SESSION_DOMAIN=j-j-proyect.duckdns.org"
+          } | ssh -o StrictHostKeyChecking=no \
                   -o ProxyJump=${{ env.SSH_USER }}@${{ needs.infrastructure.outputs.bastion_ip }} \
                   ${{ env.SSH_USER }}@${{ needs.infrastructure.outputs.api_ip }} \
                   "sudo tee /var/www/laravel-api/.env > /dev/null"
@@ -388,6 +384,15 @@ jobs:
                sudo -u laravel-api php \$APP_DIR/artisan view:cache;
                sudo -u laravel-api php \$APP_DIR/artisan l5-swagger:generate;
                sudo systemctl restart php8.3-fpm apache2"
+
+      - name: Actualizar secrets APP_KEY y DB_PASSWORD
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          gh secret set APP_KEY    --body "$(cat /tmp/app_key.txt)" --repo "${{ env.GH_REPO }}"
+          gh secret set DB_PASSWORD --body "$(cat /tmp/db_pass.txt)" --repo "${{ env.GH_REPO }}"
+          rm -f /tmp/app_key.txt /tmp/db_pass.txt
+          echo "Secrets de credenciales actualizados."
 
   ##############################################
   # JOB 5 — Deploy frontend
