@@ -339,6 +339,25 @@ jobs:
                sudo mkdir -p /var/www/laravel-api;
                sudo rsync -a --delete --exclude=.env --exclude='storage/logs/' /tmp/laravel-deploy/ /var/www/laravel-api/"
 
+      - name: Esperar bootstrap PHP en API (hasta 10 min)
+        run: |
+          echo "Esperando a que PHP esté disponible en la API..."
+          for i in $(seq 1 60); do
+            if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+                   -o ProxyJump=${{ env.SSH_USER }}@${{ needs.infrastructure.outputs.bastion_ip }} \
+                   ${{ env.SSH_USER }}@${{ needs.infrastructure.outputs.api_ip }} \
+                   "command -v php8.3 >/dev/null 2>&1" 2>/dev/null; then
+              echo "PHP disponible en intento $i."
+              break
+            fi
+            if [ "$i" -eq 60 ]; then
+              echo "ERROR: PHP no disponible tras 10 min. Revisar user-data de la instancia API."
+              exit 1
+            fi
+            echo "Intento $i/60 — PHP aún no instalado, esperando 10 s..."
+            sleep 10
+          done
+
       - name: Escribir .env e instalar dependencias
         run: |
           DB_PASS=$(cat /tmp/db_pass.txt)
