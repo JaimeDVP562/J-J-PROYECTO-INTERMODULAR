@@ -192,8 +192,8 @@ jobs:
 
       - name: Actualizar DuckDNS
         run: |
-          RESP=$(curl -s "https://www.duckdns.org/update?domains=${{ env.DUCKDNS_DOMAIN }}&token=${{ secrets.DUCKDNS_TOKEN }}&ip=${{ steps.outputs.outputs.frontend_public_ip }}")
-          echo "DuckDNS: $RESP"
+          RESP=$(curl -s --max-time 15 "https://www.duckdns.org/update?domains=${{ env.DUCKDNS_DOMAIN }}&token=${{ secrets.DUCKDNS_TOKEN }}&ip=${{ steps.outputs.outputs.frontend_public_ip }}") || true
+          echo "DuckDNS: ${RESP:-no-response}"
 
       - name: Actualizar GitHub Secrets de red
         env:
