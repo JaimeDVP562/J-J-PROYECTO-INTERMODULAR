@@ -346,7 +346,7 @@ jobs:
             if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
                    -o ProxyJump=${{ env.SSH_USER }}@${{ needs.infrastructure.outputs.bastion_ip }} \
                    ${{ env.SSH_USER }}@${{ needs.infrastructure.outputs.api_ip }} \
-                   "command -v php8.3 >/dev/null 2>&1" 2>/dev/null; then
+                   "command -v php >/dev/null 2>&1" 2>/dev/null; then
               echo "PHP disponible en intento $i."
               break
             fi
