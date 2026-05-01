@@ -81,8 +81,8 @@ Header always set Referrer-Policy "no-referrer"
 # HSTS se habilitará cuando HTTPS esté activo
 EOF
 
-a2enmod headers rewrite || true
-a2enconf security-headers || true
+a2enmod headers rewrite proxy_fcgi setenvif || true
+a2enconf security-headers php$${PHP_VERSION}-fpm || true
 
 echo "=== ModSecurity setup (detection mode) ==="
 if [ -f /etc/modsecurity/modsecurity.conf-recommended ]; then

@@ -366,6 +366,7 @@ jobs:
                command -v composer || (curl -sS https://getcomposer.org/installer | sudo php -- --install-dir=/usr/local/bin --filename=composer)
                sudo -u laravel-api composer install --no-dev --optimize-autoloader --no-interaction --working-dir=\$APP_DIR
                sudo -u laravel-api php \$APP_DIR/artisan migrate --force
+               sudo -u laravel-api php \$APP_DIR/artisan db:seed --force
                sudo -u laravel-api php \$APP_DIR/artisan storage:link
                sudo -u laravel-api php \$APP_DIR/artisan config:cache
                sudo -u laravel-api php \$APP_DIR/artisan route:cache
