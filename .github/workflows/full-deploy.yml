@@ -528,6 +528,7 @@ jobs:
               SSLCertificateKeyFile /etc/letsencrypt/live/j-j-proyect.duckdns.org/privkey.pem
 
               ProxyPreserveHost On
+              RequestHeader set X-Forwarded-Proto "https"
               ProxyPass /.well-known !
               ProxyPass /admin http://api.jj.internal/admin
               ProxyPassReverse /admin http://api.jj.internal/admin
