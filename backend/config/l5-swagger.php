@@ -11,7 +11,7 @@ return [
                 'api' => 'api/documentation',
             ],
             'paths' => [
-                'docs'                => public_path('docs'),
+                'docs'                => storage_path('api-docs'),
                 'docs_json'           => 'api-docs.json',
                 'docs_yaml'           => 'api-docs.yaml',
                 'annotations'         => [

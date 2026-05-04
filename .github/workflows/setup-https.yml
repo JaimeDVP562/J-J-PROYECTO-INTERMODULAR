@@ -79,8 +79,6 @@ jobs:
               ProxyPreserveHost On
               RequestHeader set X-Forwarded-Proto "https"
               ProxyPass /.well-known !
-              ProxyPass /docs http://api.jj.internal/docs
-              ProxyPassReverse /docs http://api.jj.internal/docs
               ProxyPass /admin http://api.jj.internal/admin
               ProxyPassReverse /admin http://api.jj.internal/admin
               ProxyPass /api http://api.jj.internal/api
@@ -92,7 +90,6 @@ jobs:
                   Require all granted
                   RewriteEngine On
                   RewriteRule ^\.well-known - [L]
-                  RewriteRule ^docs - [L]
                   RewriteRule ^admin - [L]
                   RewriteRule ^api - [L]
                   RewriteCond %{REQUEST_FILENAME} !-f
