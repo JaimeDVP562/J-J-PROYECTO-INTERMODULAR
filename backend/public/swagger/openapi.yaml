@@ -1,0 +1,1256 @@
+openapi: 3.0.3
+info:
+  title: J-J ERP API
+  description: API REST del sistema ERP J-J. Autenticada con Laravel Sanctum (Bearer Token).
+  version: 2.0.0
+
+servers:
+  - url: /api
+    description: Servidor local (http://localhost:8000/api)
+
+components:
+  securitySchemes:
+    sanctum:
+      type: http
+      scheme: bearer
+      bearerFormat: Token
+      description: "Token obtenido en POST /api/login. Usar como Authorization: Bearer {token}"
+
+  schemas:
+    MessageResponse:
+      type: object
+      properties:
+        mensaje: { type: string }
+
+    Error:
+      type: object
+      properties:
+        error:   { type: string }
+        message: { type: string }
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:    { type: string, format: email, example: admin@negocio.test }
+        password: { type: string, example: password }
+
+    LoginResponse:
+      type: object
+      properties:
+        token: { type: string, example: "1|abc123..." }
+        user:  { $ref: '#/components/schemas/User' }
+
+    User:
+      type: object
+      properties:
+        id:                 { type: integer }
+        nombre:             { type: string }
+        apellido:           { type: string, nullable: true }
+        email:              { type: string, format: email }
+        telefono:           { type: string, nullable: true }
+        rol:                { type: string, enum: [admin, gerente, vendedor] }
+        puesto:             { type: string, nullable: true }
+        salario:            { type: number, nullable: true }
+        fecha_contratacion: { type: string, format: date, nullable: true }
+        photo:              { type: string, nullable: true }
+        created_at:         { type: string, format: date-time }
+
+    Categoria:
+      type: object
+      properties:
+        id:     { type: integer }
+        nombre: { type: string }
+
+    Proveedor:
+      type: object
+      properties:
+        id:        { type: integer }
+        nombre:    { type: string }
+        telefono:  { type: string, nullable: true }
+        email:     { type: string, format: email, nullable: true }
+        direccion: { type: string, nullable: true }
+
+    Producto:
+      type: object
+      properties:
+        id:             { type: integer }
+        nombre:         { type: string }
+        sku:            { type: string, nullable: true }
+        descripcion:    { type: string, nullable: true }
+        precio:         { type: number, format: float }
+        stock_quantity: { type: integer }
+        categoria:      { $ref: '#/components/schemas/Categoria', nullable: true }
+        proveedor:      { $ref: '#/components/schemas/Proveedor', nullable: true }
+
+    Cliente:
+      type: object
+      properties:
+        id:      { type: integer }
+        nombre:  { type: string }
+        email:   { type: string, format: email }
+        phone:   { type: string, nullable: true }
+        address: { type: string, nullable: true }
+
+    Venta:
+      type: object
+      properties:
+        id:          { type: integer }
+        user_id:     { type: integer }
+        cliente_id:  { type: integer, nullable: true }
+        total:       { type: number }
+        fecha_venta: { type: string, format: date-time }
+        metodo_pago: { type: string, enum: [efectivo, tarjeta, mixto] }
+        notas:       { type: string, nullable: true }
+        tipo:        { type: string, enum: [venta, pago_proveedor] }
+        devuelta:    { type: boolean }
+
+    DetalleVenta:
+      type: object
+      properties:
+        id:              { type: integer }
+        venta_id:        { type: integer }
+        producto_id:     { type: integer }
+        cantidad:        { type: integer }
+        precio_unitario: { type: number }
+        subtotal:        { type: number }
+
+    Factura:
+      type: object
+      properties:
+        id:             { type: integer }
+        cliente_id:     { type: integer }
+        user_id:        { type: integer }
+        series:         { type: string, nullable: true }
+        number:         { type: integer, nullable: true }
+        invoice_date:   { type: string, format: date }
+        due_date:       { type: string, format: date, nullable: true }
+        total_amount:   { type: number }
+        payment_method: { type: string, nullable: true }
+        status:         { type: string, enum: [pending, paid, cancelled, draft, issued, sent, accepted, rejected] }
+
+    DetalleFactura:
+      type: object
+      properties:
+        id:              { type: integer }
+        factura_id:      { type: integer }
+        producto_id:     { type: integer, nullable: true }
+        nombre:          { type: string, nullable: true }
+        descripcion:     { type: string, nullable: true }
+        cantidad:        { type: integer }
+        precio_unitario: { type: number }
+
+    Jornada:
+      type: object
+      properties:
+        id:      { type: integer }
+        user_id: { type: integer }
+        inicio:  { type: string, format: date-time }
+        fin:     { type: string, format: date-time, nullable: true }
+
+    CierreCaja:
+      type: object
+      properties:
+        id:                { type: integer }
+        user_id:           { type: integer }
+        fecha:             { type: string, format: date }
+        efectivo_retirado: { type: number }
+        importe_datafono:  { type: number }
+        total_ventas:      { type: number }
+        diferencia:        { type: number }
+        notas:             { type: string, nullable: true }
+
+    Devolucion:
+      type: object
+      properties:
+        id:       { type: integer }
+        venta_id: { type: integer }
+        user_id:  { type: integer }
+        motivo:   { type: string, nullable: true }
+
+    Inventario:
+      type: object
+      properties:
+        id:                  { type: integer }
+        producto_id:         { type: integer }
+        cantidad_disponible: { type: integer }
+        cantidad_minima:     { type: integer }
+        ubicacion:           { type: string, nullable: true }
+
+    Empresa:
+      type: object
+      properties:
+        id:     { type: integer }
+        nombre: { type: string }
+        nif:    { type: string, nullable: true }
+        extra:  { type: object, nullable: true }
+
+paths:
+  # ── AUTH ────────────────────────────────────────────────────
+  /login:
+    post:
+      tags: [Autenticación]
+      summary: Iniciar sesión
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200':
+          description: Token Sanctum
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LoginResponse' }
+        '401': { description: Credenciales inválidas }
+        '422': { description: Datos inválidos }
+
+  /logout:
+    post:
+      tags: [Autenticación]
+      summary: Cerrar sesión (revocar token)
+      security: [{ sanctum: [] }]
+      responses:
+        '200': { description: Sesión cerrada }
+        '401': { description: No autenticado }
+
+  # ── PRODUCTOS ───────────────────────────────────────────────
+  /productos:
+    get:
+      tags: [Productos]
+      summary: Listar productos
+      security: [{ sanctum: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Producto' } }
+    post:
+      tags: [Productos]
+      summary: Crear producto
+      security: [{ sanctum: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nombre, precio, stock_quantity, proveedor_id]
+              properties:
+                nombre:         { type: string, example: Café Espresso }
+                sku:            { type: string, example: CAF-001 }
+                descripcion:    { type: string }
+                precio:         { type: number, example: 2.50 }
+                stock_quantity: { type: integer, example: 100 }
+                categoria_id:   { type: integer }
+                proveedor_id:   { type: integer }
+      responses:
+        '201': { description: Creado }
+        '422': { description: Datos inválidos }
+
+  /productos/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+    get:
+      tags: [Productos]
+      summary: Obtener producto por ID
+      security: [{ sanctum: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Producto' }
+        '404': { description: No encontrado }
+    put:
+      tags: [Productos]
+      summary: Actualizar producto
+      security: [{ sanctum: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nombre:         { type: string }
+                precio:         { type: number }
+                stock_quantity: { type: integer }
+                categoria_id:   { type: integer }
+                proveedor_id:   { type: integer }
+      responses:
+        '200': { description: Actualizado }
+        '404': { description: No encontrado }
+    delete:
+      tags: [Productos]
+      summary: Eliminar producto
+      security: [{ sanctum: [] }]
+      responses:
+        '200': { description: Eliminado }
+        '404': { description: No encontrado }
+
+  # ── PROVEEDORES ─────────────────────────────────────────────
+  /proveedores:
+    get:
+      tags: [Proveedores]
+      summary: Listar proveedores
+      security: [{ sanctum: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Proveedor' } }
+    post:
+      tags: [Proveedores]
+      summary: Crear proveedor
+      security: [{ sanctum: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nombre]
+              properties:
+                nombre:    { type: string }
+                telefono:  { type: string }
+                email:     { type: string, format: email }
+                direccion: { type: string }
+      responses:
+        '201': { description: Creado }
+        '422': { description: Datos inválidos }
+
+  /proveedores/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+    get:
+      tags: [Proveedores]
+      summary: Obtener proveedor por ID
+      security: [{ sanctum: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Proveedor' }
+        '404': { description: No encontrado }
+    put:
+      tags: [Proveedores]
+      summary: Actualizar proveedor
+      security: [{ sanctum: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nombre:    { type: string }
+                telefono:  { type: string }
+                email:     { type: string, format: email }
+                direccion: { type: string }
+      responses:
+        '200': { description: Actualizado }
+        '404': { description: No encontrado }
+    delete:
+      tags: [Proveedores]
+      summary: Eliminar proveedor
+      security: [{ sanctum: [] }]
+      responses:
+        '200': { description: Eliminado }
+        '404': { description: No encontrado }
+
+  # ── CLIENTES ────────────────────────────────────────────────
+  /clientes:
+    get:
+      tags: [Clientes]
+      summary: Listar clientes
+      security: [{ sanctum: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Cliente' } }
+    post:
+      tags: [Clientes]
+      summary: Crear cliente
+      security: [{ sanctum: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nombre, email]
+              properties:
+                nombre:  { type: string }
+                email:   { type: string, format: email }
+                phone:   { type: string }
+                address: { type: string }
+      responses:
+        '201': { description: Creado }
+        '422': { description: Datos inválidos }
+
+  /clientes/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+    get:
+      tags: [Clientes]
+      summary: Obtener cliente por ID
+      security: [{ sanctum: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Cliente' }
+        '404': { description: No encontrado }
+    put:
+      tags: [Clientes]
+      summary: Actualizar cliente
+      security: [{ sanctum: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nombre:  { type: string }
+                email:   { type: string, format: email }
+                phone:   { type: string }
+                address: { type: string }
+      responses:
+        '200': { description: Actualizado }
+        '404': { description: No encontrado }
+    delete:
+      tags: [Clientes]
+      summary: Eliminar cliente
+      security: [{ sanctum: [] }]
+      responses:
+        '200': { description: Eliminado }
+        '404': { description: No encontrado }
+
+  # ── VENTAS ──────────────────────────────────────────────────
+  /ventas/mis-hoy:
+    get:
+      tags: [Ventas]
+      summary: Ventas propias del día actual
+      security: [{ sanctum: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Venta' } }
+
+  /ventas/pago-proveedor:
+    post:
+      tags: [Ventas]
+      summary: Registrar pago a proveedor (admin/gerente)
+      security: [{ sanctum: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [importe, concepto, metodo_pago]
+              properties:
+                proveedor_id: { type: integer, nullable: true }
+                importe:      { type: number, minimum: 0.01 }
+                concepto:     { type: string }
+                metodo_pago:  { type: string, enum: [efectivo, tarjeta, mixto] }
+      responses:
+        '201': { description: Pago registrado }
+        '403': { description: No autorizado }
+
+  /ventas:
+    get:
+      tags: [Ventas]
+      summary: Listar ventas
+      security: [{ sanctum: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Venta' } }
+    post:
+      tags: [Ventas]
+      summary: Crear venta
+      security: [{ sanctum: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [metodo_pago, items]
+              properties:
+                cliente_id:  { type: integer, nullable: true }
+                metodo_pago: { type: string, enum: [efectivo, tarjeta, mixto] }
+                notas:       { type: string }
+                items:
+                  type: array
+                  items:
+                    type: object
+                    required: [producto_id, cantidad, precio_unitario]
+                    properties:
+                      producto_id:     { type: integer }
+                      cantidad:        { type: integer, minimum: 1 }
+                      precio_unitario: { type: number, minimum: 0 }
+      responses:
+        '201': { description: Venta creada }
+        '422': { description: Stock insuficiente u otros errores }
+
+  /ventas/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+    get:
+      tags: [Ventas]
+      summary: Obtener venta por ID
+      security: [{ sanctum: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Venta' }
+        '404': { description: No encontrada }
+    put:
+      tags: [Ventas]
+      summary: Actualizar venta
+      security: [{ sanctum: [] }]
+      responses:
+        '200': { description: Actualizada }
+        '404': { description: No encontrada }
+
+  # ── DETALLE VENTAS ──────────────────────────────────────────
+  /detalle-ventas:
+    get:
+      tags: [Detalle Ventas]
+      summary: Listar detalles de ventas
+      security: [{ sanctum: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/DetalleVenta' } }
+    post:
+      tags: [Detalle Ventas]
+      summary: Crear detalle de venta
+      security: [{ sanctum: [] }]
+      responses:
+        '201': { description: Creado }
+
+  /detalle-ventas/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+    get:
+      tags: [Detalle Ventas]
+      summary: Obtener detalle
+      security: [{ sanctum: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DetalleVenta' }
+    put:
+      tags: [Detalle Ventas]
+      summary: Actualizar detalle
+      security: [{ sanctum: [] }]
+      responses:
+        '200': { description: Actualizado }
+    delete:
+      tags: [Detalle Ventas]
+      summary: Eliminar detalle
+      security: [{ sanctum: [] }]
+      responses:
+        '200': { description: Eliminado }
+
+  # ── FACTURAS ────────────────────────────────────────────────
+  /facturas/next-number:
+    get:
+      tags: [Facturas]
+      summary: Siguiente número disponible de factura
+      security: [{ sanctum: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  next_number: { type: integer }
+                  series:      { type: string }
+
+  /facturas:
+    get:
+      tags: [Facturas]
+      summary: Listar facturas
+      security: [{ sanctum: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Factura' } }
+    post:
+      tags: [Facturas]
+      summary: Crear factura
+      security: [{ sanctum: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [cliente_id, user_id, invoice_date, total_amount]
+              properties:
+                cliente_id:     { type: integer }
+                user_id:        { type: integer }
+                series:         { type: string }
+                number:         { type: integer }
+                invoice_date:   { type: string, format: date }
+                due_date:       { type: string, format: date }
+                total_amount:   { type: number }
+                payment_method: { type: string }
+                status:         { type: string, enum: [pending, paid, cancelled, draft, issued] }
+                detalles:
+                  type: array
+                  items:
+                    type: object
+                    required: [cantidad, precio_unitario]
+                    properties:
+                      producto_id:     { type: integer, nullable: true }
+                      cantidad:        { type: integer }
+                      precio_unitario: { type: number }
+                      descripcion:     { type: string }
+                      nombre:          { type: string }
+      responses:
+        '201': { description: Factura creada }
+        '422': { description: Datos inválidos }
+
+  /facturas/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+    get:
+      tags: [Facturas]
+      summary: Obtener factura por ID
+      security: [{ sanctum: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Factura' }
+        '404': { description: No encontrada }
+    put:
+      tags: [Facturas]
+      summary: Actualizar factura
+      security: [{ sanctum: [] }]
+      responses:
+        '200': { description: Actualizada }
+        '404': { description: No encontrada }
+    delete:
+      tags: [Facturas]
+      summary: Eliminar factura
+      security: [{ sanctum: [] }]
+      responses:
+        '200': { description: Eliminada }
+        '404': { description: No encontrada }
+
+  /facturas/{id}/resend-verifactu:
+    post:
+      tags: [Facturas]
+      summary: Reenviar a Verifactu
+      security: [{ sanctum: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: Reenviada }
+        '404': { description: No encontrada }
+
+  # ── DETALLE FACTURAS ────────────────────────────────────────
+  /detalle-facturas:
+    get:
+      tags: [Detalle Facturas]
+      summary: Listar detalles de facturas
+      security: [{ sanctum: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/DetalleFactura' } }
+    post:
+      tags: [Detalle Facturas]
+      summary: Crear detalle de factura
+      security: [{ sanctum: [] }]
+      responses:
+        '201': { description: Creado }
+
+  /detalle-facturas/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+    get:
+      tags: [Detalle Facturas]
+      summary: Obtener detalle
+      security: [{ sanctum: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DetalleFactura' }
+    put:
+      tags: [Detalle Facturas]
+      summary: Actualizar detalle
+      security: [{ sanctum: [] }]
+      responses:
+        '200': { description: Actualizado }
+    delete:
+      tags: [Detalle Facturas]
+      summary: Eliminar detalle
+      security: [{ sanctum: [] }]
+      responses:
+        '200': { description: Eliminado }
+
+  # ── EMPLEADOS ───────────────────────────────────────────────
+  /empleados:
+    get:
+      tags: [Empleados]
+      summary: Listar empleados
+      security: [{ sanctum: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/User' } }
+    post:
+      tags: [Empleados]
+      summary: Crear empleado
+      security: [{ sanctum: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nombre, email, password]
+              properties:
+                nombre:             { type: string }
+                apellido:           { type: string }
+                email:              { type: string, format: email }
+                telefono:           { type: string }
+                password:           { type: string, minLength: 8 }
+                rol:                { type: string, enum: [gerente, vendedor] }
+                puesto:             { type: string }
+                salario:            { type: number }
+                fecha_contratacion: { type: string, format: date }
+      responses:
+        '201': { description: Creado }
+        '422': { description: Datos inválidos }
+
+  /empleados/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+    get:
+      tags: [Empleados]
+      summary: Obtener empleado por ID
+      security: [{ sanctum: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '404': { description: No encontrado }
+    put:
+      tags: [Empleados]
+      summary: Actualizar empleado
+      security: [{ sanctum: [] }]
+      responses:
+        '200': { description: Actualizado }
+        '404': { description: No encontrado }
+    delete:
+      tags: [Empleados]
+      summary: Eliminar empleado
+      security: [{ sanctum: [] }]
+      responses:
+        '200': { description: Eliminado }
+        '404': { description: No encontrado }
+
+  # ── JORNADAS ────────────────────────────────────────────────
+  /jornadas/activa:
+    get:
+      tags: [Jornadas]
+      summary: Jornada activa del usuario autenticado
+      security: [{ sanctum: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Jornada' }
+
+  /jornadas/resumen-hoy:
+    get:
+      tags: [Jornadas]
+      summary: Resumen de jornadas del día (admin/gerente)
+      security: [{ sanctum: [] }]
+      responses:
+        '200': { description: Resumen del día }
+        '403': { description: No autorizado }
+
+  /jornadas/resumen-mensual:
+    get:
+      tags: [Jornadas]
+      summary: Resumen mensual de jornadas (admin/gerente)
+      security: [{ sanctum: [] }]
+      responses:
+        '200': { description: Resumen mensual }
+
+  /jornadas/usuario/{userId}:
+    get:
+      tags: [Jornadas]
+      summary: Jornadas de un usuario concreto (admin/gerente)
+      security: [{ sanctum: [] }]
+      parameters:
+        - { name: userId, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Jornada' } }
+
+  /jornadas/admin:
+    post:
+      tags: [Jornadas]
+      summary: Crear jornada para otro usuario (admin/gerente)
+      security: [{ sanctum: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id, inicio]
+              properties:
+                user_id: { type: integer }
+                inicio:  { type: string, format: date-time }
+                fin:     { type: string, format: date-time }
+      responses:
+        '201': { description: Jornada creada }
+
+  /jornadas:
+    get:
+      tags: [Jornadas]
+      summary: Listar jornadas
+      security: [{ sanctum: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Jornada' } }
+    post:
+      tags: [Jornadas]
+      summary: Iniciar jornada propia
+      security: [{ sanctum: [] }]
+      responses:
+        '201': { description: Jornada iniciada }
+        '422': { description: Ya tienes una jornada abierta }
+
+  /jornadas/{id}/fin:
+    patch:
+      tags: [Jornadas]
+      summary: Marcar fin de jornada
+      security: [{ sanctum: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: Jornada cerrada }
+        '404': { description: No encontrada o ya cerrada }
+
+  /jornadas/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+    put:
+      tags: [Jornadas]
+      summary: Editar jornada (admin/gerente)
+      security: [{ sanctum: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                inicio: { type: string, format: date-time }
+                fin:    { type: string, format: date-time }
+      responses:
+        '200': { description: Actualizada }
+    delete:
+      tags: [Jornadas]
+      summary: Eliminar jornada (admin/gerente)
+      security: [{ sanctum: [] }]
+      responses:
+        '200': { description: Eliminada }
+
+  # ── USUARIOS ────────────────────────────────────────────────
+  /usuarios:
+    get:
+      tags: [Usuarios]
+      summary: Listar usuarios (solo admin)
+      security: [{ sanctum: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/User' } }
+        '403': { description: No autorizado }
+    post:
+      tags: [Usuarios]
+      summary: Crear usuario (solo admin)
+      security: [{ sanctum: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nombre, email, password, rol]
+              properties:
+                nombre:   { type: string }
+                email:    { type: string, format: email }
+                password: { type: string, minLength: 6 }
+                rol:      { type: string, enum: [admin, gerente, vendedor] }
+      responses:
+        '201': { description: Creado }
+        '403': { description: No autorizado }
+
+  /usuarios/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+    put:
+      tags: [Usuarios]
+      summary: Actualizar usuario (solo admin)
+      security: [{ sanctum: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nombre:   { type: string }
+                email:    { type: string, format: email }
+                password: { type: string, minLength: 6 }
+                rol:      { type: string, enum: [admin, gerente, vendedor] }
+      responses:
+        '200': { description: Actualizado }
+        '404': { description: No encontrado }
+    delete:
+      tags: [Usuarios]
+      summary: Eliminar usuario (solo admin)
+      security: [{ sanctum: [] }]
+      responses:
+        '200': { description: Eliminado }
+        '404': { description: No encontrado }
+
+  # ── CATEGORÍAS ──────────────────────────────────────────────
+  /categorias:
+    get:
+      tags: [Categorías]
+      summary: Listar categorías
+      security: [{ sanctum: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Categoria' } }
+    post:
+      tags: [Categorías]
+      summary: Crear categoría
+      security: [{ sanctum: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nombre]
+              properties:
+                nombre: { type: string }
+      responses:
+        '201': { description: Creada }
+
+  /categorias/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+    get:
+      tags: [Categorías]
+      summary: Obtener categoría por ID
+      security: [{ sanctum: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Categoria' }
+    put:
+      tags: [Categorías]
+      summary: Actualizar categoría
+      security: [{ sanctum: [] }]
+      responses:
+        '200': { description: Actualizada }
+    delete:
+      tags: [Categorías]
+      summary: Eliminar categoría
+      security: [{ sanctum: [] }]
+      responses:
+        '200': { description: Eliminada }
+
+  # ── INVENTARIOS ─────────────────────────────────────────────
+  /inventarios:
+    get:
+      tags: [Inventarios]
+      summary: Listar inventarios
+      security: [{ sanctum: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Inventario' } }
+    post:
+      tags: [Inventarios]
+      summary: Crear registro de inventario
+      security: [{ sanctum: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [producto_id, cantidad_disponible, cantidad_minima]
+              properties:
+                producto_id:         { type: integer }
+                cantidad_disponible: { type: integer, minimum: 0 }
+                cantidad_minima:     { type: integer, minimum: 0 }
+                ubicacion:           { type: string }
+      responses:
+        '201': { description: Creado }
+
+  /inventarios/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+    get:
+      tags: [Inventarios]
+      summary: Obtener inventario por ID
+      security: [{ sanctum: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Inventario' }
+    put:
+      tags: [Inventarios]
+      summary: Actualizar inventario
+      security: [{ sanctum: [] }]
+      responses:
+        '200': { description: Actualizado }
+    delete:
+      tags: [Inventarios]
+      summary: Eliminar inventario
+      security: [{ sanctum: [] }]
+      responses:
+        '200': { description: Eliminado }
+
+  # ── CIERRE DE CAJA ──────────────────────────────────────────
+  /cierre-cajas/total-hoy:
+    get:
+      tags: [Cierre de Caja]
+      summary: Total de ventas del día actual
+      security: [{ sanctum: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_ventas_hoy: { type: number }
+                  fecha:            { type: string, format: date }
+
+  /cierre-cajas:
+    get:
+      tags: [Cierre de Caja]
+      summary: Listar cierres de caja
+      security: [{ sanctum: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/CierreCaja' } }
+    post:
+      tags: [Cierre de Caja]
+      summary: Registrar cierre de caja
+      security: [{ sanctum: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fecha, efectivo_retirado, importe_datafono]
+              properties:
+                fecha:             { type: string, format: date }
+                efectivo_retirado: { type: number, minimum: 0 }
+                importe_datafono:  { type: number, minimum: 0 }
+                notas:             { type: string }
+      responses:
+        '201': { description: Cierre registrado }
+
+  /cierre-cajas/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+    get:
+      tags: [Cierre de Caja]
+      summary: Obtener cierre por ID
+      security: [{ sanctum: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CierreCaja' }
+        '404': { description: No encontrado }
+
+  # ── DEVOLUCIONES ────────────────────────────────────────────
+  /devoluciones/mis-hoy:
+    get:
+      tags: [Devoluciones]
+      summary: Devoluciones propias del día
+      security: [{ sanctum: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Devolucion' } }
+
+  /devoluciones:
+    get:
+      tags: [Devoluciones]
+      summary: Listar devoluciones
+      security: [{ sanctum: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Devolucion' } }
+    post:
+      tags: [Devoluciones]
+      summary: Registrar devolución (requiere contraseña del usuario)
+      security: [{ sanctum: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [venta_id, password]
+              properties:
+                venta_id: { type: integer }
+                motivo:   { type: string }
+                password: { type: string, description: Contraseña del usuario autenticado }
+      responses:
+        '201': { description: Devolución registrada }
+        '422': { description: Contraseña incorrecta o venta ya devuelta }
+
+  # ── EMPRESA ─────────────────────────────────────────────────
+  /empresa:
+    get:
+      tags: [Empresa]
+      summary: Datos de la empresa emisora
+      security: [{ sanctum: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Empresa' }
+        '404': { description: Empresa no configurada }
+
+  # ── PERFIL ──────────────────────────────────────────────────
+  /perfil:
+    get:
+      tags: [Perfil]
+      summary: Perfil del usuario autenticado
+      security: [{ sanctum: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+    post:
+      tags: [Perfil]
+      summary: Actualizar perfil propio
+      security: [{ sanctum: [] }]
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                nombre:   { type: string }
+                email:    { type: string, format: email }
+                password: { type: string, minLength: 6 }
+                photo:    { type: string, format: binary }
+      responses:
+        '200': { description: Actualizado }
+
+  /perfil/{id}:
+    get:
+      tags: [Perfil]
+      summary: Perfil de otro usuario (admin/gerente)
+      security: [{ sanctum: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '403': { description: No autorizado }
+
+  # ── ESTADÍSTICAS ────────────────────────────────────────────
+  /estadisticas:
+    get:
+      tags: [Estadísticas]
+      summary: Estadísticas del negocio (admin/gerente)
+      security: [{ sanctum: [] }]
+      responses:
+        '200': { description: Datos estadísticos }
+        '403': { description: No autorizado }
+
+  # ── AYUDA ───────────────────────────────────────────────────
+  /ayuda:
+    post:
+      tags: [Ayuda]
+      summary: Enviar mensaje de ayuda/incidencia
+      security: [{ sanctum: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [empresa, descripcion]
+              properties:
+                empresa:     { type: string }
+                descripcion: { type: string }
+      responses:
+        '200': { description: Mensaje enviado }
+        '500': { description: Error al enviar }
+
+tags:
+  - { name: Autenticación,    description: Login y logout }
+  - { name: Productos,        description: CRUD de productos }
+  - { name: Proveedores,      description: CRUD de proveedores }
+  - { name: Clientes,         description: CRUD de clientes }
+  - { name: Ventas,           description: Punto de venta }
+  - { name: Detalle Ventas,   description: Líneas de venta }
+  - { name: Facturas,         description: Facturación y Verifactu }
+  - { name: Detalle Facturas, description: Líneas de factura }
+  - { name: Empleados,        description: Gestión de empleados }
+  - { name: Jornadas,         description: Control de jornada laboral }
+  - { name: Usuarios,         description: Gestión de usuarios del sistema }
+  - { name: Categorías,       description: Categorías de productos }
+  - { name: Inventarios,      description: Control de inventario }
+  - { name: Cierre de Caja,   description: Cierres de caja diarios }
+  - { name: Devoluciones,     description: Devoluciones de ventas }
+  - { name: Empresa,          description: Datos de la empresa emisora }
+  - { name: Perfil,           description: Perfil del usuario }
+  - { name: Estadísticas,     description: Estadísticas del negocio }
+  - { name: Ayuda,            description: Envío de incidencias }
