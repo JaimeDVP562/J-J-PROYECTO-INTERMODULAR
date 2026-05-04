@@ -150,7 +150,6 @@ jobs:
                sudo -u laravel-api php \$APP_DIR/artisan config:cache;
                sudo -u laravel-api php \$APP_DIR/artisan route:cache;
                sudo -u laravel-api php \$APP_DIR/artisan view:cache;
-               sudo -u laravel-api php \$APP_DIR/artisan l5-swagger:generate;
                sudo systemctl restart php8.3-fpm apache2"
 
   ##############################################
