@@ -326,6 +326,9 @@ jobs:
         run: |
           rsync -avz --delete \
             --exclude='.git' --exclude='vendor' --exclude='.env' --exclude='storage/logs/*' \
+            --exclude='public/swagger' --exclude='tests' --exclude='phpunit.xml' \
+            --exclude='Dockerfile' --exclude='package.json' --exclude='vite.config.js' \
+            --exclude='README.md' --exclude='.editorconfig' --exclude='.gitattributes' --exclude='.gitignore' \
             -e "ssh -o StrictHostKeyChecking=no -J ${{ env.SSH_USER }}@${{ needs.infrastructure.outputs.bastion_ip }}" \
             backend/ \
             ${{ env.SSH_USER }}@${{ needs.infrastructure.outputs.api_ip }}:/tmp/laravel-deploy/
