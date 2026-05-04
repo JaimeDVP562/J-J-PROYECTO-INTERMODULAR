@@ -13,6 +13,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->trustProxies(at: '*');
+        $middleware->redirectGuestsTo(fn () => route('admin.login'));
 
         $middleware->api(prepend: [
             \Illuminate\Http\Middleware\HandleCors::class,
@@ -25,9 +26,5 @@ return Application::configure(basePath: dirname(__DIR__))
 
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        $exceptions->render(function (\Illuminate\Auth\AuthenticationException $e, \Illuminate\Http\Request $request) {
-            if (! $request->expectsJson()) {
-                return redirect()->route('admin.login');
-            }
-        });
+        //
     })->create();
