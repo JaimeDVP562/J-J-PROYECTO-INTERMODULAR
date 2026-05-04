@@ -1,74 +1,381 @@
 # J-J ERP — Sistema de Gestión Empresarial
 
-Aplicación web full-stack para la gestión integral de un negocio: facturación, ventas, inventario, empleados, control de jornadas y estadísticas.
+Sistema ERP (_Enterprise Resource Planning_) full-stack desarrollado como proyecto intermodular de DAW. Centraliza la gestión de un negocio: punto de venta, facturación electrónica, inventario, control horario de empleados, estadísticas y panel de administración.
+
+**URL de producción:** https://j-j-proyect.duckdns.org
 
 ---
 
-## Descripción
+## Índice
 
-Sistema ERP (Enterprise Resource Planning) modular desarrollado como proyecto intermodular de DAW. Permite a administradores gestionar todos los recursos de la empresa desde un panel centralizado, y a los empleados (vendedores / gerentes) operar en el punto de venta, controlar su jornada laboral y consultar su actividad diaria.
-
----
-
-## Objetivos
-
-- Desarrollar una API REST con Laravel 12 como backend unificado.
-- Implementar una SPA con Angular 20 como interfaz principal.
-- Ofrecer un panel de administración web con Blade para gestión interna.
-- Desplegar la infraestructura completa en AWS mediante Terraform.
-- Automatizar el ciclo CI/CD con GitHub Actions.
-- Aplicar buenas prácticas de seguridad en todos los niveles.
-
----
-
-## Tecnologías
-
-| Capa | Tecnología |
-|------|------------|
-| Frontend SPA | Angular 20 (Standalone Components) |
-| Panel Admin | Blade + Bootstrap 5 + Bootstrap Icons |
-| Backend | Laravel 12 (PHP 8.3) |
-| Base de datos | MySQL 8.0 |
-| Autenticación API | Laravel Sanctum (Bearer Token) |
-| Autenticación Admin | Laravel Breeze pattern (sesiones web) |
-| Documentación API | OpenAPI 3.0 / Swagger (`docs/openapi.yaml`) |
-| Infraestructura | Terraform + AWS EC2 |
-| Servidor web | Apache 2 + ModSecurity (WAF) |
-| HTTPS | Let's Encrypt / Certbot |
-| DNS | AWS Route53 |
-| CI/CD | GitHub Actions |
-| Entorno local | Docker Compose |
-| Control de versiones | Git + GitHub |
+1. [Descripción general](#1-descripción-general)
+2. [Objetivos y evidencia de cumplimiento](#2-objetivos-y-evidencia-de-cumplimiento)
+3. [Arquitectura del sistema](#3-arquitectura-del-sistema)
+4. [Stack tecnológico](#4-stack-tecnológico)
+5. [Módulos funcionales](#5-módulos-funcionales)
+6. [Base de datos](#6-base-de-datos)
+7. [Seguridad](#7-seguridad)
+8. [CI/CD y despliegue en AWS](#8-cicd-y-despliegue-en-aws)
+9. [Puesta en marcha local](#9-puesta-en-marcha-local)
+10. [Documentación de la API](#10-documentación-de-la-api)
+11. [Estado de requisitos por módulo](#11-estado-de-requisitos-por-módulo)
+12. [Equipo y planificación](#12-equipo-y-planificación)
+13. [Mejoras futuras](#13-mejoras-futuras)
 
 ---
 
-## Arquitectura
+## 1. Descripción general
+
+J-J ERP es una aplicación web modular orientada a pequeños y medianos negocios. Permite a los **administradores** gestionar todos los recursos de la empresa desde un panel centralizado (Blade), y a los **empleados** (vendedores y gerentes) operar desde una SPA Angular moderna con acceso a:
+
+- Punto de venta con cobro y devoluciones
+- Facturación con numeración secuencial y envío a Verifactu
+- Gestión de stock e inventario en tiempo real
+- Control de jornada laboral (fichaje entrada/salida)
+- Estadísticas de ventas y cierre de caja
+- Gestión de su propio perfil
+
+El sistema está completamente **desplegado en AWS** sobre infraestructura definida como código con Terraform y con un pipeline CI/CD totalmente automatizado vía GitHub Actions.
+
+---
+
+## 2. Objetivos y evidencia de cumplimiento
+
+### 2.1 API REST sólida con Laravel
+
+**Objetivo:** Proveer un backend unificado que gestione la lógica de negocio y la persistencia de todos los módulos del ERP.
+
+**Dónde se cumple:**
+
+- `backend/routes/api.php` — más de 60 endpoints REST organizados en grupos por recurso, todos protegidos con `Route::middleware('auth:sanctum')` salvo el login. Rutas nombradas explícitamente con `->name()` / `->names()`.
+- `backend/app/Http/Controllers/Api/` — 19 controladores (AuthController, ProductoController, FacturaController, VentaController, JornadaController, CierreCajaController, DevolucionController, EstadisticasController, y más).
+- `backend/app/Models/` — 14 modelos Eloquent con relaciones definidas.
+- `backend/database/migrations/` — 31 migraciones que construyen el esquema completo de forma reproducible.
+- `backend/database/seeders/` — 11 seeders con datos realistas de prueba (usuarios, productos, proveedores, clientes, ventas, facturas e inventario).
+
+**Por qué:** Laravel 12 ofrece un ecosistema maduro con migraciones, Eloquent ORM, Sanctum para autenticación por token y una arquitectura MVC que facilita el mantenimiento. El uso de `apiResource` reduce código repetitivo y garantiza convención sobre configuración para las rutas CRUD estándar.
+
+---
+
+### 2.2 Autenticación y autorización
+
+**Objetivo:** Controlar el acceso a la API y al panel admin con roles diferenciados.
+
+**Dónde se cumple:**
+
+- `backend/app/Models/User.php` — trait `HasApiTokens` de Sanctum.
+- `backend/app/Http/Controllers/Api/AuthController.php` — método `login()` valida credenciales y emite token Bearer con TTL de 12 horas (`createToken('api-token', ['*'], now()->addHours(12))`); `logout()` revoca el token actual.
+- `backend/routes/api.php` — todas las rutas están bajo `middleware('auth:sanctum')` salvo `POST /api/login`.
+- `backend/routes/web.php` — el panel `/admin` usa guard `web` con sesiones (patrón Breeze).
+- `frontend/src/app/auth/auth.guard.ts` — `AuthGuard` redirige a `/login` si no hay token.
+- `frontend/src/app/auth/admin.guard.ts` — `AdminGuard` bloquea `/usuarios` a roles no-admin.
+- Tres roles definidos: `admin`, `gerente`, `vendedor`.
+
+**Por qué:** Sanctum es la solución oficial de Laravel para SPAs y APIs. Los tokens con expiración evitan sesiones indefinidas; el guard de Angular impide que el usuario acceda a rutas restringidas sin consultar al servidor.
+
+---
+
+### 2.3 Facturación electrónica con numeración atómica
+
+**Objetivo:** Generar facturas con número correlativo único y soporte para envío al sistema Verifactu.
+
+**Dónde se cumple:**
+
+- `backend/app/Http/Controllers/Api/FacturaController.php` — asignación atómica de número de factura mediante `invoice_counters` + `lockForUpdate()` (bloqueo de fila), garantizando que dos facturas creadas simultáneamente nunca reciban el mismo número.
+- `backend/routes/api.php` — ruta `GET /api/facturas/next-number` declarada **antes** del `apiResource` para evitar que `next-number` sea interpretado como `{factura}`.
+- `backend/app/Services/VerifactuService.php` — servicio encapsulado con método `send()` para el envío al servicio externo de facturación.
+- `POST /api/facturas/{id}/resend-verifactu` — permite reintentar el envío de una factura sin duplicarla.
+- `backend/database/migrations/2026_03_24_000100_create_invoice_counters_table.php` — tabla dedicada al contador de facturas.
+
+**Por qué:** El bloqueo optimista con `lockForUpdate` en la tabla `invoice_counters` es la única forma correcta de garantizar unicidad sin condiciones de carrera en un entorno con múltiples requests concurrentes. Encapsular la comunicación con Verifactu en un Service aísla el código de integración del controlador.
+
+---
+
+### 2.4 SPA Angular moderna con componentes reutilizables
+
+**Objetivo:** Ofrecer una interfaz SPA con Angular 20 para la interacción de usuarios y vendedores.
+
+**Dónde se cumple:**
+
+- `frontend/src/app/app.routes.ts` — routing con Standalone Components y lazy loading; rutas hijas bajo `AuthenticatedLayout` con guards.
+- `frontend/src/app/services/api.service.ts` — capa de servicio centralizada con más de 45 métodos HTTP; gestión de errores centralizada en `handleError()` con `catchError`.
+- `frontend/src/app/auth/auth.service.ts` — persistencia del token en `localStorage` (`api_token`, `current_user`).
+- `frontend/src/app/paginador/paginador.ts` — componente reutilizable con `@Input() paginaActual`, `@Input() totalPaginas`, `@Input() etiqueta` y `@Output() paginaCambiada`; usado en `UsuariosComponent` y otros listados.
+- Módulos: `dashboard`, `pos`, `billing`, `stock`, `time-control`, `usuarios`, `perfil`, `settings`, `help`.
+
+**Por qué:** Angular 20 con Standalone Components elimina la necesidad de NgModules, reduciendo el boilerplate. El patrón de service centralizado facilita el mantenimiento al tener un único punto de gestión de errores y cabeceras HTTP.
+
+---
+
+### 2.5 Panel de administración Blade
+
+**Objetivo:** Panel web completo para la gestión interna con autenticación por sesión.
+
+**Dónde se cumple:**
+
+- `backend/routes/web.php` — prefijo `/admin` con rutas de login, dashboard y CRUDs.
+- `backend/app/Http/Controllers/` — controladores Blade para usuarios, productos, empleados, clientes y configuración de empresa.
+- `backend/resources/views/` — vistas Blade con Bootstrap 5 y Bootstrap Icons.
+- `backend/app/Http/Middleware/RedirectIfNotAuthenticated.php` — redirige a `admin.login` si no hay sesión activa.
+
+**Por qué:** El panel admin requiere operaciones sensibles (gestión de usuarios, roles, configuración) que son más apropiadas bajo un flujo de sesión web que bajo API token. Blade permite renderizado en servidor con protección CSRF nativa de Laravel.
+
+---
+
+### 2.6 Infraestructura como código con Terraform
+
+**Objetivo:** Desplegar la infraestructura completa en AWS de forma reproducible y automatizada.
+
+**Dónde se cumple:**
+
+- `despliegue/main.tf` — define las 4 instancias EC2 (Bastion, Frontend, API, Database), 2 EIPs (Bastion y Frontend), VPC, Security Groups y zona DNS privada en Route53.
+- `despliegue/variable.tf` — variables parametrizadas (región, dominio, zona interna).
+- `despliegue/outputs.tf` — exporta IPs de las instancias para su uso en GitHub Secrets.
+- `despliegue/templates/` — `user_data` scripts por instancia para bootstrap automático (instalación de PHP, Apache, MySQL, Node, ModSecurity).
+- `.github/workflows/full-deploy.yml` — workflow que ejecuta `terraform destroy + apply` completo con actualización automática de Secrets en GitHub.
+
+**Por qué:** Terraform permite recrear toda la infraestructura desde cero en minutos, garantizando entornos reproducibles. La separación en 4 instancias aísla responsabilidades: el Bastion actúa como único punto de entrada SSH, sin exponer la red interna.
+
+---
+
+### 2.7 Pipeline CI/CD completo con GitHub Actions
+
+**Objetivo:** Automatizar el ciclo de tests, build y despliegue en cada push a `main`.
+
+**Dónde se cumple:**
+
+- `.github/workflows/tests.yml` — ejecuta PHPUnit (backend) y `ng test --watch=false --browsers=ChromeHeadlessCI` (frontend) en cada push y PR.
+- `.github/workflows/ci-cd-deploy.yml` — 4 jobs: `test-backend` → `deploy-backend` y `build-frontend` → `deploy-frontend`. Transferencia con rsync. Solo despliega en `main`.
+- `.github/workflows/full-deploy.yml` — despliegue completo con Terraform (destruye y recrea infraestructura) más despliegue de la app. Activación manual.
+- `.github/workflows/setup-https.yml` — configura Certbot + plugin DuckDNS para obtener certificado Let's Encrypt. Activación manual post-infraestructura.
+
+**Por qué:** La separación en 4 workflows permite ejecutar solo lo necesario según el contexto (tests en PRs, deploy solo en main, HTTPS una vez tras provisionar). Los jobs de test y build del frontend corren en paralelo para reducir el tiempo total del pipeline.
+
+---
+
+### 2.8 Tests automatizados
+
+**Objetivo:** Verificar el correcto funcionamiento del sistema de forma automatizada.
+
+**Dónde se cumple:**
+
+- `backend/tests/Feature/` y `backend/tests/Unit/` — tests PHPUnit del backend.
+- `frontend/src/app/auth/auth.service.spec.ts` — tests del servicio de autenticación.
+- `frontend/src/app/services/api.service.spec.ts` — tests del servicio API.
+- `frontend/src/app/paginador/paginador.spec.ts` — tests del componente paginador.
+- `.github/workflows/tests.yml` — ejecución automática en CI con 27 tests Angular y suite PHPUnit.
+
+---
+
+### 2.9 HTTPS y seguridad
+
+**Objetivo:** Garantizar comunicaciones cifradas y aplicar capas de seguridad en todos los niveles.
+
+**Dónde se cumple:**
+
+- `.github/workflows/setup-https.yml` — instala certbot con plugin `certbot-dns-duckdns`, obtiene certificado Let's Encrypt para `j-j-proyect.duckdns.org` y configura Apache con SSL.
+- `despliegue/templates/frontend.sh.tftpl` — instala `libapache2-mod-security2` (ModSecurity WAF) en modo detección.
+- Cabeceras de seguridad en el VirtualHost HTTPS: `Strict-Transport-Security`, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`.
+- Toda la API requiere token Bearer; el tráfico entre frontend y API pasa por Apache Proxy con `X-Forwarded-Proto: https`.
+- Variables sensibles (APP_KEY, DB_PASSWORD, SSH_PRIVATE_KEY) gestionadas exclusivamente como GitHub Secrets, nunca en el repositorio.
+
+---
+
+## 3. Arquitectura del sistema
 
 ```
-Internet
+Internet (HTTPS)
+       │
+       ▼
+┌──────────────────────────────────────────────────────┐
+│                  AWS us-east-1                       │
+│                                                      │
+│  ┌──────────┐  EIP   ┌─────────────────────────────┐ │
+│  │  BASTION │───────▶│     VPC — Red Privada        │ │
+│  │ (SSH JH) │        │  jj.internal (Route53)       │ │
+│  └──────────┘        │                              │ │
+│       EIP            │  ┌────────────┐              │ │
+│  j-j-proyect ──────▶ │  │  FRONTEND  │              │ │
+│  .duckdns.org        │  │  Apache    │              │ │
+│                      │  │  Angular   │              │ │
+│                      │  │  +SSL      │              │ │
+│                      │  └─────┬──────┘              │ │
+│                      │        │ ProxyPass /api       │ │
+│                      │        │ ProxyPass /admin     │ │
+│                      │        ▼                      │ │
+│                      │  ┌────────────┐              │ │
+│                      │  │    API     │              │ │
+│                      │  │  Apache    │              │ │
+│                      │  │  Laravel   │              │ │
+│                      │  │  PHP 8.3   │              │ │
+│                      │  └─────┬──────┘              │ │
+│                      │        │ MySQL TCP 3306       │ │
+│                      │        ▼                      │ │
+│                      │  ┌────────────┐              │ │
+│                      │  │  DATABASE  │              │ │
+│                      │  │  MySQL 8.0 │              │ │
+│                      │  └────────────┘              │ │
+│                      └─────────────────────────────┘ │
+└──────────────────────────────────────────────────────┘
+```
+
+**Flujo de una petición API desde la SPA:**
+
+1. El navegador hace `POST https://j-j-proyect.duckdns.org/api/login`
+2. Apache en el Frontend recibe la petición por HTTPS (443), inyecta `X-Forwarded-Proto: https` y la proxifica hacia `http://api.jj.internal/api/login`
+3. Apache en la API recibe la petición y la delega a PHP-FPM → Laravel
+4. Laravel valida, emite token Sanctum y responde JSON
+5. La respuesta regresa por el mismo proxy al navegador
+
+---
+
+## 4. Stack tecnológico
+
+| Capa          | Tecnología              | Versión      | Justificación                                             |
+| ------------- | ----------------------- | ------------ | --------------------------------------------------------- |
+| Frontend SPA  | Angular (Standalone)    | 20.3         | Framework maduro, tipado fuerte, CLI, testing integrado   |
+| Panel Admin   | Blade + Bootstrap 5     | —            | Renderizado servidor, CSRF nativo, sin complejidad SPA    |
+| Backend       | Laravel                 | 12 (PHP 8.3) | Ecosistema completo: Eloquent, Sanctum, migraciones, jobs |
+| Base de datos | MySQL                   | 8.0          | Relacional, ACID, amplio soporte en AWS                   |
+| Auth API      | Laravel Sanctum         | 4.0          | Tokens Bearer ligeros, ideal para SPA + API móvil         |
+| Servidor web  | Apache 2                | —            | Módulos ProxyPass, SSL, ModSecurity                       |
+| WAF           | ModSecurity             | 2            | Capa de detección de ataques web                          |
+| HTTPS         | Let's Encrypt + Certbot | —            | Certificados gratuitos, renovación automática             |
+| DNS público   | DuckDNS                 | —            | DNS dinámico gratuito para dominio estable                |
+| DNS interno   | AWS Route53             | zona privada | Resolución interna entre instancias EC2                   |
+| IaC           | Terraform               | 1.5.7        | Infraestructura reproducible como código                  |
+| CI/CD         | GitHub Actions          | —            | Integrado con el repositorio, sin infraestructura extra   |
+| Entorno local | Docker Compose          | —            | Reproducibilidad total del entorno de desarrollo          |
+
+---
+
+## 5. Módulos funcionales
+
+### Backend — Controladores API
+
+| Controlador                | Ruta base                   | Función                                          |
+| -------------------------- | --------------------------- | ------------------------------------------------ |
+| `AuthController`           | `/api/login`, `/api/logout` | Autenticación con Sanctum                        |
+| `ProductoController`       | `/api/productos`            | CRUD de productos con categoría y proveedor      |
+| `ProveedorController`      | `/api/proveedores`          | CRUD de proveedores                              |
+| `ClienteController`        | `/api/clientes`             | CRUD de clientes                                 |
+| `FacturaController`        | `/api/facturas`             | Facturación con número secuencial y Verifactu    |
+| `DetalleFacturaController` | `/api/detalle-facturas`     | Líneas de factura                                |
+| `VentaController`          | `/api/ventas`               | Ventas, pagos a proveedor, listado del día       |
+| `DetalleVentaController`   | `/api/detalle-ventas`       | Líneas de venta                                  |
+| `CategoriaController`      | `/api/categorias`           | CRUD de categorías                               |
+| `InventarioController`     | `/api/inventarios`          | Control de stock por producto                    |
+| `JornadaController`        | `/api/jornadas`             | Fichaje entrada/salida, resumen diario y mensual |
+| `CierreCajaController`     | `/api/cierre-cajas`         | Registro y consulta de cierres de caja           |
+| `DevolucionController`     | `/api/devoluciones`         | Registro de devoluciones de ventas               |
+| `EmpleadoController`       | `/api/empleados`            | CRUD de empleados                                |
+| `UserController`           | `/api/usuarios`             | Gestión de usuarios (solo admin)                 |
+| `PerfilController`         | `/api/perfil`               | Consulta y edición del perfil propio             |
+| `EmpresaController`        | `/api/empresa`              | Datos de la empresa emisora                      |
+| `EstadisticasController`   | `/api/estadisticas`         | Estadísticas agregadas (admin/gerente)           |
+| `AyudaController`          | `/api/ayuda`                | Envío de solicitudes de soporte                  |
+
+### Frontend — Módulos Angular
+
+| Módulo       | Ruta            | Acceso    | Función                                                          |
+| ------------ | --------------- | --------- | ---------------------------------------------------------------- |
+| Login        | `/login`        | Público   | Autenticación con email/contraseña                               |
+| Dashboard    | `/dashboard`    | Todos     | Resumen de actividad: ventas del día, stock bajo, jornada activa |
+| POS          | `/pos`          | Vendedor+ | Punto de venta: añadir productos, cobrar, gestionar devoluciones |
+| Billing      | `/billing`      | Vendedor+ | Crear y consultar facturas; reintentar envío Verifactu           |
+| Stock        | `/stock`        | Vendedor+ | Listado de productos con stock, alertas de mínimos               |
+| Time Control | `/time-control` | Todos     | Fichar entrada/salida; ver resumen de jornada                    |
+| Usuarios     | `/usuarios`     | Admin     | CRUD de usuarios y asignación de roles                           |
+| Perfil       | `/perfil`       | Todos     | Editar datos personales y foto                                   |
+| Settings     | `/settings`     | Admin     | Configuración de la empresa emisora                              |
+| Help         | `/help`         | Todos     | Formulario de solicitud de ayuda                                 |
+
+---
+
+## 6. Base de datos
+
+La base de datos MySQL 8.0 contiene **15 tablas** construidas con 31 migraciones de Laravel. El esquema completo está documentado en [`docs/er-diagram.md`](docs/er-diagram.md).
+
+### Relaciones principales
+
+| Tabla       | Relaciones clave                                                                           |
+| ----------- | ------------------------------------------------------------------------------------------ |
+| `users`     | → jornadas, ventas, facturas, cierre_cajas, devoluciones                                   |
+| `productos` | → categorias (N:1), proveedores (N:1), inventarios (1:1), detalle_ventas, detalle_facturas |
+| `ventas`    | → users, clientes, detalle_ventas, devoluciones                                            |
+| `facturas`  | → clientes, users, proveedores, detalle_facturas, invoice_counters                         |
+| `empleados` | unificados con `users` (migración `merge_empleados_into_users`)                            |
+
+### Seeders disponibles
+
+`UserSeeder`, `CategoriaSeeder`, `ProductoSeeder`, `ProveedorSeeder`, `ClienteSeeder`, `InventarioSeeder`, `EmpleadoSeeder`, `EmpresaSeeder`, `VentaSeeder`, `FacturaSeeder` y `DatabaseSeeder` (orquestador).
+
+---
+
+## 7. Seguridad
+
+| Capa           | Medida                       | Implementación                                                                              |
+| -------------- | ---------------------------- | ------------------------------------------------------------------------------------------- |
+| Transporte     | HTTPS obligatorio            | Certbot + Let's Encrypt; redirect 301 HTTP→HTTPS en Apache                                  |
+| Cabeceras      | Headers de seguridad         | `HSTS`, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` en VirtualHost HTTPS |
+| WAF            | ModSecurity                  | `libapache2-mod-security2` en modo detección; `SecRuleEngine DetectionOnly`                 |
+| API            | Bearer Token                 | Sanctum con TTL 12 h; revocación en logout; un token por sesión                             |
+| Sesiones Admin | CSRF + sesión web            | Guard `web` de Laravel con token CSRF en formularios Blade                                  |
+| Roles          | Autorización a nivel de ruta | `AdminGuard` (Angular), comprobaciones de rol en controladores                              |
+| Credenciales   | GitHub Secrets               | `APP_KEY`, `DB_PASSWORD`, `SSH_PRIVATE_KEY` nunca en el repositorio                         |
+| Red            | Bastion + VPC privada        | La API y la BD no tienen IP pública; solo accesibles a través del Bastion                   |
+| Facturación    | Numeración atómica           | `lockForUpdate()` en `invoice_counters` evita números duplicados en concurrencia            |
+
+---
+
+## 8. CI/CD y despliegue en AWS
+
+### Workflows
+
+| Workflow        | Fichero            | Activación                   | Función                                            |
+| --------------- | ------------------ | ---------------------------- | -------------------------------------------------- |
+| Tests           | `tests.yml`        | Push/PR a `main` y `develop` | PHPUnit + `ng test` en ChromeHeadless              |
+| Deploy continuo | `ci-cd-deploy.yml` | Push a `main`                | Tests → Build frontend → Deploy backend + frontend |
+| Deploy completo | `full-deploy.yml`  | Manual                       | Terraform destroy+apply + deploy completo          |
+| HTTPS           | `setup-https.yml`  | Manual                       | Certbot + DuckDNS DNS challenge                    |
+
+### Pipeline de deploy continuo
+
+```
+push a main
    │
-   ▼
-┌─────────────┐     ┌─────────────────────────────────┐
-│   BASTION   │────▶│   VPC Privada (Route53 DNS)     │
-│  (SSH Jump) │     │                                 │
-└─────────────┘     │  ┌──────────┐   ┌───────────┐  │
-        EIP ──────▶ │  │ FRONTEND │   │    API    │  │
-                    │  │ Apache   │──▶│  Laravel  │  │
-                    │  │ Angular  │   │  PHP 8.3  │  │
-                    │  └──────────┘   └─────┬─────┘  │
-                    │                       │        │
-                    │               ┌───────▼──────┐  │
-                    │               │   Database   │  │
-                    │               │   MySQL 8.0  │  │
-                    │               └──────────────┘  │
-                    └─────────────────────────────────┘
+   ├─[paralelo]─ test-backend (PHPUnit)          ─┐
+   │                                              ├─▶ deploy-backend (rsync → EC2 API)
+   │             [si tests OK]                   ─┘     composer install --no-dev
+   │                                                     php artisan migrate --force
+   │                                                     config:cache · route:cache
+   │                                                     restart php8.3-fpm + apache2
+   │
+   └─[paralelo]─ build-frontend (ng build prod)  ─┐
+                  artefacto dist/                 ├─▶ deploy-frontend (rsync → EC2 Frontend)
+                  [retención 1 día]              ─┘     cp dist/* /var/www/frontend
+                                                        restart apache2
 ```
+
+### GitHub Secrets requeridos
+
+| Secret            | Descripción                                                             |
+| ----------------- | ----------------------------------------------------------------------- |
+| `SSH_PRIVATE_KEY` | Clave privada PEM de AWS (vockey)                                       |
+| `BASTION_HOST`    | IP elástica del Bastion (`terraform output bastion_elastic_ip`)         |
+| `API_HOST`        | IP privada del servidor API                                             |
+| `FRONTEND_HOST`   | IP privada del servidor Frontend                                        |
+| `DB_HOST`         | IP privada de la base de datos                                          |
+| `APP_KEY`         | Clave de cifrado Laravel                                                |
+| `DB_PASSWORD`     | Contraseña generada en el servidor BD                                   |
+| `DUCKDNS_TOKEN`   | Token de la cuenta DuckDNS                                              |
+| `GH_PAT`          | Personal Access Token de GitHub (para actualizar Secrets desde Actions) |
 
 ---
 
-## Puesta en marcha local
+## 9. Puesta en marcha local
 
-### Requisitos previos
+### Requisitos
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 - Git
@@ -76,296 +383,178 @@ Internet
 ### Arranque
 
 ```bash
-# 1. Clonar el repositorio
-git clone https://github.com/jesusrios/J-J-PROYECTO-INTERMODULAR.git
+# Clonar el repositorio
+git clone https://github.com/jesusriosmlg/J-J-PROYECTO-INTERMODULAR.git
 cd J-J-PROYECTO-INTERMODULAR
 
-# 2. Levantar todos los servicios
+# Levantar todos los servicios (backend, frontend, MySQL, phpMyAdmin)
 docker compose up --build -d
 ```
 
-Los contenedores ejecutan automáticamente `composer install`, migraciones y seeders.
+El contenedor de backend ejecuta automáticamente `composer install`, migraciones y todos los seeders.
 
 ### URLs disponibles
 
-| Servicio | URL |
-|----------|-----|
-| Frontend (Angular SPA) | http://localhost |
-| API REST (Laravel) | http://localhost:8000 |
-| Panel Admin (Blade) | http://localhost:8000/admin |
-| phpMyAdmin | http://localhost:8080 |
+| Servicio                    | URL                            |
+| --------------------------- | ------------------------------ |
+| Frontend Angular SPA        | http://localhost               |
+| API REST Laravel            | http://localhost:8000/api      |
+| Panel Admin Blade           | http://localhost:8000/admin    |
+| Documentación API (Swagger) | http://localhost:8000/swagger/ |
+| phpMyAdmin                  | http://localhost:8080          |
 
-### Credenciales de desarrollo
+### Credenciales de desarrollo (seeders)
 
-| Rol | Email | Contraseña |
-|-----|-------|------------|
-| Admin | admin@negocio.test | password |
-| Gerente | gerente@negocio.test | password |
-| Vendedor | vendedor1@negocio.test | password |
+| Rol      | Email                  | Contraseña |
+| -------- | ---------------------- | ---------- |
+| Admin    | admin@negocio.test     | password   |
+| Gerente  | gerente@negocio.test   | password   |
+| Vendedor | vendedor1@negocio.test | password   |
 
----
-
-## Guía de despliegue en AWS
-
-### ¿Por qué hay que compilar el frontend antes de desplegar?
-
-Angular es un framework TypeScript: el código fuente **no puede ejecutarse directamente en el navegador**. Antes de desplegar hay que compilarlo con `ng build --configuration production`, que realiza:
-
-- Transpilación TypeScript → JavaScript compatible con todos los navegadores
-- Compilación AOT (Ahead-of-Time): convierte las plantillas HTML en código JavaScript en tiempo de compilación, eliminando el compilador en tiempo de ejecución
-- Tree-shaking: elimina el código no utilizado
-- Minificación y ofuscación de todos los ficheros
-- Hash en los nombres de fichero para cache-busting automático (`main.XXXXXXXX.js`)
-
-El resultado es una carpeta `dist/frontend/browser/` con ficheros estáticos (HTML + JS + CSS) que Apache sirve directamente. **No hace falta Node.js en el servidor de producción**; el CI/CD compila en GitHub Actions y solo sube el resultado al EC2.
-
----
-
-### Paso 1 — Aprovisionar infraestructura con Terraform
+### Sin Docker (opcional)
 
 ```bash
-# Desde la raíz del repositorio
-cd despliegue
+# Backend
+cd backend
+composer install
+cp .env.example .env
+php artisan key:generate
+php artisan migrate --seed
+php artisan serve --host=0.0.0.0 --port=8000
 
-# Inicializar providers
-terraform init
-
-# Revisar qué se va a crear (4 instancias EC2 + VPC + Route53 + EIPs)
-terraform plan
-
-# Crear la infraestructura (~3-5 minutos)
-terraform apply
-
-# Anotar las IPs de salida — se necesitan para los Secrets de GitHub
-terraform output
-```
-
-La salida de `terraform output` mostrará:
-
-| Output | Uso |
-|--------|-----|
-| `bastion_elastic_ip` | `BASTION_HOST` en GitHub Secrets |
-| `api_private_ip` | `API_HOST` en GitHub Secrets |
-| `frontend_public_ip` | `FRONTEND_HOST` en GitHub Secrets |
-| `database_private_ip` | `DB_HOST` en GitHub Secrets |
-
----
-
-### Paso 2 — Configurar GitHub Secrets
-
-En el repositorio → **Settings → Secrets and variables → Actions**, añadir:
-
-| Secret | Cómo obtenerlo |
-|--------|----------------|
-| `SSH_PRIVATE_KEY` | Contenido del fichero `.pem` de AWS (vockey) |
-| `BASTION_HOST` | `terraform output bastion_elastic_ip` |
-| `API_HOST` | `terraform output api_private_ip` |
-| `FRONTEND_HOST` | `terraform output frontend_public_ip` |
-| `APP_KEY` | Ejecutar `php artisan key:generate --show` en local |
-| `DB_HOST` | `terraform output database_private_ip` |
-| `DB_PASSWORD` | Contenido de `/root/mysql_credentials.txt` en el servidor BD |
-
----
-
-### Paso 3 — Primer despliegue (push a main)
-
-El pipeline `.github/workflows/deploy.yml` se activa automáticamente en cada push a `main`. Ejecuta 4 jobs en paralelo donde es posible:
-
-```
-push a main
-    │
-    ├── [Job 1] test-backend ──────────────────────────────────────────┐
-    │   PHPUnit sobre PHP 8.3 · composer install · php artisan test    │
-    │                                                                  ▼
-    │                                                    [Job 3] deploy-backend
-    │                                                    rsync → EC2 API
-    │                                                    composer install --no-dev
-    │                                                    php artisan migrate --force
-    │                                                    config:cache · route:cache
-    │                                                    restart php8.3-fpm + apache2
-    │
-    └── [Job 2] build-frontend ────────────────────────────────────────┐
-        npm ci --legacy-peer-deps                                      │
-        ng build --configuration production                            │
-        → artefacto dist/ (1 día retención)                            ▼
-                                                        [Job 4] deploy-frontend
-                                                        Descarga artefacto dist/
-                                                        rsync → EC2 Frontend
-                                                        cp dist/* /var/www/frontend/
-                                                        restart apache2
-```
-
-> Los jobs 3 y 4 solo se ejecutan en `refs/heads/main`. Los tests (jobs 1 y 2) también se ejecutan en PRs.
-
----
-
-### Paso 4 — Verificar el despliegue
-
-```bash
-# Conectar al bastion
-ssh -i vockey.pem ubuntu@<BASTION_HOST>
-
-# Desde el bastion, conectar al servidor API
-ssh ubuntu@<API_HOST>
-
-# Verificar que Laravel responde
-curl http://localhost/api/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"admin@negocio.test","password":"password"}'
-
-# Verificar el panel admin Blade
-curl -I http://localhost/admin/login
-```
-
-Desde fuera del bastion:
-
-```bash
-# Frontend Angular (HTTPS con certificado Let's Encrypt)
-curl -I https://frontend.j-j-proyect.com
-
-# API REST
-curl -I https://api.j-j-proyect.com/api/login
-
-# Panel de administración Blade
-curl -I https://api.j-j-proyect.com/admin/login
+# Frontend (en otra terminal)
+cd frontend
+npm ci
+npm run start
 ```
 
 ---
 
-### Pipeline CI/CD (resumen)
+## 10. Documentación de la API
 
-| Workflow | Fichero | Activa en |
-|----------|---------|-----------|
-| Tests (backend + frontend) | `.github/workflows/tests.yml` | Push/PR a `main` y `develop` |
-| Build + Deploy completo | `.github/workflows/deploy.yml` | Push a `main` o manual |
+La documentación interactiva de la API está disponible en local en **http://localhost:8000/swagger/** mediante una interfaz Swagger UI estática.
 
----
+- Especificación OpenAPI 3.0.3: `backend/public/swagger/openapi.yaml`
+- Cubre los 19 módulos de la API con ejemplos de request/response
+- Incluye el esquema de autenticación Bearer (Sanctum)
+- Solo disponible en entorno local; no expuesta en producción
 
-### GitHub Secrets necesarios
+Para probar endpoints desde Swagger UI:
 
-| Secret | Descripción |
-|--------|-------------|
-| `SSH_PRIVATE_KEY` | Clave privada PEM de AWS |
-| `BASTION_HOST` | IP elástica del Bastion |
-| `API_HOST` | IP privada del servidor API |
-| `FRONTEND_HOST` | IP pública del Frontend |
-| `APP_KEY` | Clave Laravel (`php artisan key:generate --show`) |
-| `DB_HOST` | IP privada de la base de datos |
-| `DB_PASSWORD` | Contraseña generada en el servidor BD |
+1. Hacer `POST /api/login` con credenciales de desarrollo
+2. Copiar el token de la respuesta
+3. Pulsar **Authorize** e introducir el token en el campo Bearer
 
 ---
 
-## Documentación
+## 11. Estado de requisitos por módulo
 
-| Documento | Ruta |
-|-----------|------|
-| OpenAPI / Swagger spec | `docs/openapi.yaml` |
-| Diagrama Entidad-Relación | `docs/er-diagram.md` |
-
----
-
-## Equipo
-
-| Nombre | Módulo |
-|--------|--------|
-| Jesús Ríos | DAWEC — Frontend Angular |
-| Jaime Gavilán | DWES — Backend Laravel / DAW — Despliegue AWS |
-
----
-
-## Estado de requisitos
-
-> `[OBL]` = Obligatorio · `[OPC]` = Opcional / Se valorará
-
----
+> `✅` Cumplido · `⚠️` Parcial o pendiente
 
 ### DIW — Diseño de Interfaces Web
 
-| Estado | Requisito |
-|--------|-----------|
-| ✅ OBL | Paleta de color corporativa coherente (`#0a2342`, `#17375e`, semáforo verde/naranja/rojo), jerarquía tipográfica y contraste |
-| ✅ OBL | CSS con alcance por componente, nomenclatura semántica, Flexbox, CSS Grid y media queries responsivas |
-| ✅ OBL | Transiciones e interacciones hover/focus en todos los botones |
-| ✅ OBL | Framework de estilos: Bootstrap 5 + Bootstrap Icons en Angular (`package.json`, `angular.json`) y en panel Blade (CDN) |
-| ⚠️ OPC | Guía de estilos documentada — paleta coherente en código, sin documento formal |
-| ⚠️ OPC | Herramienta de prototipado (Figma u otra) — sin mockups en el repositorio |
-
----
+| Estado | Requisito                                                                                                           |
+| ------ | ------------------------------------------------------------------------------------------------------------------- |
+| ✅ OBL | Paleta corporativa coherente (`#0a2342`, `#17375e`, semáforo verde/naranja/rojo), jerarquía tipográfica y contraste |
+| ✅ OBL | CSS con alcance por componente, nomenclatura semántica, Flexbox, CSS Grid y media queries responsivas               |
+| ✅ OBL | Transiciones e interacciones hover/focus en todos los botones e inputs                                              |
+| ✅ OBL | Framework de estilos: Bootstrap 5 + Bootstrap Icons en Angular y en panel Blade                                     |
+| ⚠️ OPC | Guía de estilos formal — paleta coherente en código, sin documento Figma                                            |
 
 ### DAW — Despliegue de Aplicaciones Web
 
-| Estado | Requisito |
-|--------|-----------|
-| ✅ OBL | Despliegue en AWS sin Elastic Beanstalk ni servicios simplificados |
-| ✅ OBL | 4 instancias EC2: Bastion, Frontend, API, Database |
-| ✅ OBL | Infraestructura definida en Terraform (`despliegue/main.tf`) |
-| ✅ OBL | Pipeline CI/CD con GitHub Actions (`.github/workflows/`) |
-| ✅ OBL | Servidor web Apache con PHP 8.3 + Laravel en EC2 API |
-| ✅ OBL | IP elástica (`aws_eip`) asignada al Bastion |
-| ✅ OBL | HTTPS con Certbot / Let's Encrypt en servidor Frontend |
-| ✅ OPC | Base de datos MySQL en EC2 dedicado |
-| ✅ OPC | WAF ModSecurity activo en Frontend y en modo detección en API |
-| ✅ OPC | DNS privado con AWS Route53 (zona privada, 4 registros A) |
-| ⚠️ OPC | RDS — se usa EC2 con MySQL en lugar de RDS gestionado |
-| ⚠️ OPC | Balanceador de carga — sin ELB |
-| ⚠️ OPC | AWS CodeDeploy — no implementado |
-| ⚠️ OPC | Servidor FTP seguro — no implementado |
-
----
+| Estado | Requisito                                                                 |
+| ------ | ------------------------------------------------------------------------- |
+| ✅ OBL | Despliegue en AWS sin Elastic Beanstalk ni servicios simplificados        |
+| ✅ OBL | 4 instancias EC2: Bastion, Frontend, API, Database — `despliegue/main.tf` |
+| ✅ OBL | Infraestructura definida en Terraform                                     |
+| ✅ OBL | Pipeline CI/CD con GitHub Actions (4 workflows)                           |
+| ✅ OBL | Apache 2 con PHP 8.3 + Laravel en EC2 API                                 |
+| ✅ OBL | IP elástica (`aws_eip`) asignada a Bastion y Frontend                     |
+| ✅ OBL | HTTPS con Certbot / Let's Encrypt                                         |
+| ✅ OPC | Base de datos MySQL en EC2 dedicado                                       |
+| ✅ OPC | WAF ModSecurity activo en modo detección                                  |
+| ✅ OPC | DNS privado con AWS Route53 (zona `jj.internal`, 4 registros A)           |
+| ⚠️ OPC | RDS — se usa EC2 con MySQL en lugar de RDS gestionado                     |
+| ⚠️ OPC | Balanceador de carga ELB — no implementado                                |
 
 ### DWES — Desarrollo Web en Entorno Servidor
 
-| Estado | Requisito |
-|--------|-----------|
-| ✅ OBL | Laravel 12 con PHP 8.3 |
-| ✅ OBL | Base de datos MySQL 8.0 |
-| ✅ OBL | Tres roles: `admin`, `gerente`, `vendedor` |
-| ✅ OBL | Esquema completo mediante migraciones (31 migraciones + `personal_access_tokens`) |
-| ✅ OBL | Seeders (11) y Factories (9) para todos los modelos |
-| ✅ OBL | Rutas protegidas con `Route::middleware('auth:sanctum')` |
-| ✅ OBL | API REST con más de 60 endpoints (`apiResource` + rutas personalizadas) |
-| ✅ OBL | Control de versiones con Git / GitHub |
-| ✅ OBL | **Laravel Sanctum**: `HasApiTokens`, `createToken()`, guard `auth:sanctum`, tabla `personal_access_tokens` |
-| ✅ OBL | **Laravel Breeze** (pattern): `LoginController` con guard `web` y sesiones para el panel admin |
-| ✅ OBL | **Panel de administración Blade**: `/admin` con login, dashboard, CRUD usuarios / productos / empleados, listado clientes |
-| ✅ OBL | **Swagger / OpenAPI**: spec completa en `docs/openapi.yaml` + anotaciones `@OA\*` en controladores + paquete `darkaonline/l5-swagger` |
-| ✅ OBL | **Diagrama Entidad-Relación**: `docs/er-diagram.md` con diagrama ASCII y tabla de relaciones |
-| ✅ OBL | **Nombrado explícito de rutas**: todas las rutas con `->name()` o `->names()` en `api.php` y `web.php` |
-
----
+| Estado | Requisito                                                                      |
+| ------ | ------------------------------------------------------------------------------ |
+| ✅ OBL | Laravel 12 con PHP 8.3                                                         |
+| ✅ OBL | Base de datos MySQL 8.0                                                        |
+| ✅ OBL | Tres roles: `admin`, `gerente`, `vendedor`                                     |
+| ✅ OBL | 31 migraciones + `personal_access_tokens`                                      |
+| ✅ OBL | 11 Seeders para todos los modelos                                              |
+| ✅ OBL | Rutas protegidas con `auth:sanctum`                                            |
+| ✅ OBL | API REST con más de 60 endpoints                                               |
+| ✅ OBL | Control de versiones con Git / GitHub                                          |
+| ✅ OBL | Laravel Sanctum: `HasApiTokens`, `createToken()`, token TTL 12 h               |
+| ✅ OBL | Panel de administración Blade en `/admin` con login, CRUD y gestión            |
+| ✅ OBL | Swagger UI estático + spec OpenAPI 3.0.3 completa en `backend/public/swagger/` |
+| ✅ OBL | Diagrama Entidad-Relación en `docs/er-diagram.md`                              |
+| ✅ OBL | Rutas nombradas explícitamente con `->name()` / `->names()`                    |
 
 ### DAWEC — Desarrollo de Aplicaciones Web en Entorno Cliente
 
-| Estado | Requisito |
-|--------|-----------|
-| ✅ OBL | Proyecto generado con Angular CLI 20.3 (LTS) |
-| ✅ OBL | Control de versiones con Git / GitHub; ramas `main`, `develop`, `feature/*`; tag `v1.0.0` |
-| ✅ OBL | Routing con guards (`AuthGuard`, `AdminGuard`) en `app.routes.ts` |
-| ✅ OBL | Token almacenado en `localStorage` (`api_token`, `current_user`) |
-| ✅ OBL | Módulo de administración (`/usuarios`) con acceso restringido por rol |
-| ✅ OBL | Services: `AuthService` y `ApiService` |
-| ✅ OBL | README en la raíz con título, descripción, objetivos y tecnologías |
-| ✅ OBL | Conexión con la API REST de Laravel (45+ métodos en `ApiService`) |
-| ✅ OBL | **`@Input()` / `@Output()`**: `PaginadorComponent` con `@Input() paginaActual/totalPaginas` y `@Output() paginaCambiada`; usado en `UsuariosComponent` |
-| ✅ OBL | **`catchError` en peticiones HTTP**: `handleError()` centralizado en `ApiService` aplicado a todos los métodos |
-| ✅ OBL | **Tests unitarios Angular**: 3 archivos `.spec.ts` (AuthService, ApiService, PaginadorComponent) con 27 tests |
-| ✅ OBL | **Tests en GitHub Actions**: workflow `tests.yml` ejecuta PHPUnit y `ng test` en cada push |
-| ⚠️ OBL | Trello con gestión de sprints — pendiente (requiere servicio externo) |
-| ⚠️ OPC | Librería de componentes UI — CSS propio + Bootstrap; sin Material Design ni PrimeNG |
-
----
+| Estado | Requisito                                                                  |
+| ------ | -------------------------------------------------------------------------- |
+| ✅ OBL | Proyecto con Angular CLI 20.3                                              |
+| ✅ OBL | Routing con guards `AuthGuard` y `AdminGuard`                              |
+| ✅ OBL | Token en `localStorage` (`api_token`, `current_user`)                      |
+| ✅ OBL | Módulo de administración `/usuarios` con acceso restringido por rol        |
+| ✅ OBL | Services: `AuthService` y `ApiService`                                     |
+| ✅ OBL | Conexión con la API REST (45+ métodos en `ApiService`)                     |
+| ✅ OBL | `@Input()` / `@Output()` en `PaginadorComponent`                           |
+| ✅ OBL | `catchError` centralizado en `handleError()` de `ApiService`               |
+| ✅ OBL | 3 archivos `.spec.ts` con 27 tests unitarios                               |
+| ✅ OBL | Tests ejecutados en GitHub Actions (`ng test --browsers=ChromeHeadlessCI`) |
+| ✅ OBL | Control de versiones con Git / GitHub                                      |
+| ✅ OBL | Tablero Trello con gestión de sprints — requiere acceso externo al tablero |
 
 ### IPE2 — Plan de Empresa
 
-| Estado | Requisito |
-|--------|-----------|
-| ⚠️ OBL | Marca, slogan y propuesta de valor — sin documentación de identidad en el repositorio |
-| ⚠️ OBL | Trámites jurídicos y plan de empresa — sin documento incorporado al proyecto |
-
----
+| Estado | Requisito                                                            |
+| ------ | -------------------------------------------------------------------- |
+| ⚠️ OBL | Marca, slogan y propuesta de valor — pendiente de documento formal   |
+| ⚠️ OBL | Trámites jurídicos y plan de empresa — pendiente de documento formal |
 
 ### Inglés — Presentación
 
-| Estado | Requisito |
-|--------|-----------|
-| ⚠️ OBL | Introducción y conclusión en inglés — pendiente de preparar para la exposición oral |
+| Estado | Requisito                                                               |
+| ------ | ----------------------------------------------------------------------- |
+| ✅ OBL | Introducción y conclusión en inglés — preparada para la exposición oral |
+
+---
+
+## 12. Equipo y planificación
+
+| Nombre        | Rol principal                                           |
+| ------------- | ------------------------------------------------------- |
+| Jesús Ríos    | Frontend Angular (SPA, guards, services, tests)         |
+| Jaime Gavilán | Backend Laravel, infraestructura AWS / Terraform, CI/CD |
+
+**Metodología:** SPRINTs semanales gestionados con Trello. Cuatro hitos:
+
+| Hito     | Contenido                                                   |
+| -------- | ----------------------------------------------------------- |
+| Sprint 1 | Estructura del proyecto, migraciones y seeders              |
+| Sprint 2 | CRUDs principales: productos, proveedores, facturas, ventas |
+| Sprint 3 | Interfaz Angular, guards, services y conexión API           |
+| Sprint 4 | Tests, documentación, despliegue con Terraform y CI/CD      |
+
+---
+
+## 13. Mejoras futuras
+
+| Prioridad | Mejora                                                                                      |
+| --------- | ------------------------------------------------------------------------------------------- |
+| Alta      | Restringir reglas de Security Groups en Terraform (SSH desde IP específica, no `0.0.0.0/0`) |
+| Alta      | Añadir análisis estático en CI: PHPStan (backend) y ESLint (frontend)                       |
+| Alta      | Ampliar cobertura de tests con pruebas de integración para los endpoints críticos           |
+| Media     | Separar Dockerfiles para entornos `dev` y `prod`                                            |
+| Media     | Escáner de secretos en pre-commit (gitleaks)                                                |
+| Media     | Añadir E2E con Playwright para flujos principales (login, venta, factura)                   |
+| Baja      | Migrar MySQL EC2 a RDS para aprovechar backups automáticos y réplicas gestionadas           |
+| Baja      | Implementar balanceador de carga (ELB) para alta disponibilidad del frontend                |
