@@ -367,7 +367,7 @@ jobs:
           APP_KEY_VAL=$(cat /tmp/app_key.txt)
           DB_IP="${{ needs.infrastructure.outputs.db_ip }}"
 
-          printf 'APP_NAME=JJ-ERP\nAPP_ENV=production\nAPP_KEY=%s\nAPP_DEBUG=false\nAPP_URL=https://j-j-proyect.duckdns.org\n\nDB_CONNECTION=mysql\nDB_HOST=%s\nDB_PORT=3306\nDB_DATABASE=laravel_db\nDB_USERNAME=laravel_user\nDB_PASSWORD=%s\n' \
+          printf 'APP_NAME=JJ-ERP\nAPP_ENV=production\nAPP_KEY=%s\nAPP_DEBUG=false\nAPP_URL=https://j-j-proyect.duckdns.org\n\nDB_CONNECTION=mysql\nDB_HOST=%s\nDB_PORT=3306\nDB_DATABASE=laravel_db\nDB_USERNAME=laravel_user\nDB_PASSWORD=%s\n\nSESSION_DOMAIN=j-j-proyect.duckdns.org\n' \
             "${APP_KEY_VAL}" "${DB_IP}" "${DB_PASS}" > /tmp/laravel.env
 
           grep -q 'DB_PASSWORD=.' /tmp/laravel.env || { echo "ERROR: DB_PASSWORD vacío en runner"; exit 1; }
