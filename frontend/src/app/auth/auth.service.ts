@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, tap } from 'rxjs';
+import { Observable, tap, finalize } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { User } from '../models/models';
 
@@ -24,7 +24,7 @@ export class AuthService {
 
   logout(): Observable<any> {
     return this.http.post(`${this.baseUrl}/logout`, {}).pipe(
-      tap(() => {
+      finalize(() => {
         localStorage.removeItem('api_token');
         localStorage.removeItem('current_user');
       }),
