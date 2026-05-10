@@ -1,0 +1,539 @@
+digraph "G" {
+style="filled"
+bgcolor="#F7F7F7"
+fontsize="12"
+labelloc="t"
+concentrate="1"
+splines="polyline"
+overlap=""
+nodesep="1"
+rankdir="LR"
+pad="0.5"
+ranksep="2"
+esep="1"
+fontname="Helvetica Neue"
+appmodelscategoria:id -> appmodelsproducto:categoria_id [
+label=" "
+xlabel="HasMany
+productos"
+color="#FCBF49"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="crow"
+arrowtail="none"
+]
+appmodelscierrecaja:user_id -> appmodelsuser:id [
+label=" "
+xlabel="BelongsTo
+user"
+color="#F77F00"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="tee"
+arrowtail="crow"
+]
+appmodelscliente:id -> appmodelsfactura:cliente_id [
+label=" "
+xlabel="HasMany
+facturas"
+color="#FCBF49"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="crow"
+arrowtail="none"
+]
+appmodelsdetallefactura:factura_id -> appmodelsfactura:id [
+label=" "
+xlabel="BelongsTo
+factura"
+color="#F77F00"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="tee"
+arrowtail="crow"
+]
+appmodelsdetallefactura:producto_id -> appmodelsproducto:id [
+label=" "
+xlabel="BelongsTo
+producto"
+color="#F77F00"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="tee"
+arrowtail="crow"
+]
+appmodelsdetallefactura:producto_random_id -> appmodelsproductorandom:id [
+label=" "
+xlabel="BelongsTo
+producto_random"
+color="#F77F00"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="tee"
+arrowtail="crow"
+]
+appmodelsdetalleventa:venta_id -> appmodelsventa:id [
+label=" "
+xlabel="BelongsTo
+venta"
+color="#F77F00"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="tee"
+arrowtail="crow"
+]
+appmodelsdetalleventa:producto_id -> appmodelsproducto:id [
+label=" "
+xlabel="BelongsTo
+producto"
+color="#F77F00"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="tee"
+arrowtail="crow"
+]
+appmodelsdevolucion:venta_id -> appmodelsventa:id [
+label=" "
+xlabel="BelongsTo
+venta"
+color="#F77F00"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="tee"
+arrowtail="crow"
+]
+appmodelsdevolucion:user_id -> appmodelsuser:id [
+label=" "
+xlabel="BelongsTo
+user"
+color="#F77F00"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="tee"
+arrowtail="crow"
+]
+appmodelsfactura:cliente_id -> appmodelscliente:id [
+label=" "
+xlabel="BelongsTo
+cliente"
+color="#F77F00"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="tee"
+arrowtail="crow"
+]
+appmodelsfactura:proveedor_id -> appmodelsproveedor:id [
+label=" "
+xlabel="BelongsTo
+proveedor"
+color="#F77F00"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="tee"
+arrowtail="crow"
+]
+appmodelsfactura:user_id -> appmodelsuser:id [
+label=" "
+xlabel="BelongsTo
+user"
+color="#F77F00"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="tee"
+arrowtail="crow"
+]
+appmodelsfactura:id -> appmodelsdetallefactura:factura_id [
+label=" "
+xlabel="HasMany
+detalles"
+color="#FCBF49"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="crow"
+arrowtail="none"
+]
+appmodelsinventario:producto_id -> appmodelsproducto:id [
+label=" "
+xlabel="BelongsTo
+producto"
+color="#F77F00"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="tee"
+arrowtail="crow"
+]
+appmodelsjornada:user_id -> appmodelsuser:id [
+label=" "
+xlabel="BelongsTo
+user"
+color="#F77F00"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="tee"
+arrowtail="crow"
+]
+appmodelsproducto:proveedor_id -> appmodelsproveedor:id [
+label=" "
+xlabel="BelongsTo
+proveedor"
+color="#F77F00"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="tee"
+arrowtail="crow"
+]
+appmodelsproducto:categoria_id -> appmodelscategoria:id [
+label=" "
+xlabel="BelongsTo
+categoria"
+color="#F77F00"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="tee"
+arrowtail="crow"
+]
+appmodelsproveedor:id -> appmodelsproducto:proveedor_id [
+label=" "
+xlabel="HasMany
+productos"
+color="#FCBF49"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="crow"
+arrowtail="none"
+]
+appmodelsventa:user_id -> appmodelsuser:id [
+label=" "
+xlabel="BelongsTo
+user"
+color="#F77F00"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="tee"
+arrowtail="crow"
+]
+appmodelsventa:cliente_id -> appmodelscliente:id [
+label=" "
+xlabel="BelongsTo
+cliente"
+color="#F77F00"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="tee"
+arrowtail="crow"
+]
+appmodelsventa:id -> appmodelsdetalleventa:venta_id [
+label=" "
+xlabel="HasMany
+detalles"
+color="#FCBF49"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="crow"
+arrowtail="none"
+]
+appmodelsventa:id -> appmodelsdevolucion:venta_id [
+label=" "
+xlabel="HasOne
+devolucion"
+color="#D62828"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="tee"
+arrowtail="none"
+]
+"appmodelscategoria" [
+label=<<table width="100%" height="100%" border="0" margin="0" cellborder="1" cellspacing="0" cellpadding="10">
+<tr width="100%"><td width="100%" bgcolor="#d3d3d3"><font color="#333333">Categoria</font></td></tr>
+<tr width="100%"><td port="id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >id (bigint unsigned)</font></td></tr>
+<tr width="100%"><td port="nombre" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >nombre (varchar(255))</font></td></tr>
+<tr width="100%"><td port="descripcion" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >descripcion (text)</font></td></tr>
+<tr width="100%"><td port="created_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >created_at (timestamp)</font></td></tr>
+<tr width="100%"><td port="updated_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >updated_at (timestamp)</font></td></tr>
+</table>>
+margin="0"
+shape="rectangle"
+fontname="Helvetica Neue"
+]
+"appmodelscierrecaja" [
+label=<<table width="100%" height="100%" border="0" margin="0" cellborder="1" cellspacing="0" cellpadding="10">
+<tr width="100%"><td width="100%" bgcolor="#d3d3d3"><font color="#333333">CierreCaja</font></td></tr>
+<tr width="100%"><td port="id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >id (bigint unsigned)</font></td></tr>
+<tr width="100%"><td port="user_id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >user_id (bigint unsigned)</font></td></tr>
+<tr width="100%"><td port="fecha" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >fecha (date)</font></td></tr>
+<tr width="100%"><td port="efectivo_retirado" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >efectivo_retirado (decimal(10,2))</font></td></tr>
+<tr width="100%"><td port="importe_datafono" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >importe_datafono (decimal(10,2))</font></td></tr>
+<tr width="100%"><td port="total_ventas" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >total_ventas (decimal(10,2))</font></td></tr>
+<tr width="100%"><td port="diferencia" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >diferencia (decimal(10,2))</font></td></tr>
+<tr width="100%"><td port="notas" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >notas (text)</font></td></tr>
+<tr width="100%"><td port="created_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >created_at (timestamp)</font></td></tr>
+<tr width="100%"><td port="updated_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >updated_at (timestamp)</font></td></tr>
+</table>>
+margin="0"
+shape="rectangle"
+fontname="Helvetica Neue"
+]
+"appmodelscliente" [
+label=<<table width="100%" height="100%" border="0" margin="0" cellborder="1" cellspacing="0" cellpadding="10">
+<tr width="100%"><td width="100%" bgcolor="#d3d3d3"><font color="#333333">Cliente</font></td></tr>
+<tr width="100%"><td port="id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >id (bigint unsigned)</font></td></tr>
+<tr width="100%"><td port="nombre" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >nombre (varchar(255))</font></td></tr>
+<tr width="100%"><td port="email" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >email (varchar(255))</font></td></tr>
+<tr width="100%"><td port="phone" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >phone (varchar(255))</font></td></tr>
+<tr width="100%"><td port="address" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >address (text)</font></td></tr>
+<tr width="100%"><td port="created_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >created_at (timestamp)</font></td></tr>
+<tr width="100%"><td port="updated_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >updated_at (timestamp)</font></td></tr>
+</table>>
+margin="0"
+shape="rectangle"
+fontname="Helvetica Neue"
+]
+"appmodelsdetallefactura" [
+label=<<table width="100%" height="100%" border="0" margin="0" cellborder="1" cellspacing="0" cellpadding="10">
+<tr width="100%"><td width="100%" bgcolor="#d3d3d3"><font color="#333333">DetalleFactura</font></td></tr>
+<tr width="100%"><td port="id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >id (bigint unsigned)</font></td></tr>
+<tr width="100%"><td port="factura_id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >factura_id (bigint unsigned)</font></td></tr>
+<tr width="100%"><td port="producto_id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >producto_id (bigint unsigned)</font></td></tr>
+<tr width="100%"><td port="producto_random_id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >producto_random_id (bigint unsigned)</font></td></tr>
+<tr width="100%"><td port="cantidad" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >cantidad (int)</font></td></tr>
+<tr width="100%"><td port="precio_unitario" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >precio_unitario (decimal(10,2))</font></td></tr>
+<tr width="100%"><td port="subtotal" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >subtotal (decimal(10,2))</font></td></tr>
+<tr width="100%"><td port="created_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >created_at (timestamp)</font></td></tr>
+<tr width="100%"><td port="updated_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >updated_at (timestamp)</font></td></tr>
+</table>>
+margin="0"
+shape="rectangle"
+fontname="Helvetica Neue"
+]
+"appmodelsdetalleventa" [
+label=<<table width="100%" height="100%" border="0" margin="0" cellborder="1" cellspacing="0" cellpadding="10">
+<tr width="100%"><td width="100%" bgcolor="#d3d3d3"><font color="#333333">DetalleVenta</font></td></tr>
+<tr width="100%"><td port="id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >id (bigint unsigned)</font></td></tr>
+<tr width="100%"><td port="venta_id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >venta_id (bigint unsigned)</font></td></tr>
+<tr width="100%"><td port="producto_id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >producto_id (bigint unsigned)</font></td></tr>
+<tr width="100%"><td port="cantidad" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >cantidad (int)</font></td></tr>
+<tr width="100%"><td port="precio_unitario" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >precio_unitario (decimal(10,2))</font></td></tr>
+<tr width="100%"><td port="subtotal" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >subtotal (decimal(10,2))</font></td></tr>
+<tr width="100%"><td port="created_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >created_at (timestamp)</font></td></tr>
+<tr width="100%"><td port="updated_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >updated_at (timestamp)</font></td></tr>
+</table>>
+margin="0"
+shape="rectangle"
+fontname="Helvetica Neue"
+]
+"appmodelsdevolucion" [
+label=<<table width="100%" height="100%" border="0" margin="0" cellborder="1" cellspacing="0" cellpadding="10">
+<tr width="100%"><td width="100%" bgcolor="#d3d3d3"><font color="#333333">Devolucion</font></td></tr>
+<tr width="100%"><td port="id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >id (bigint unsigned)</font></td></tr>
+<tr width="100%"><td port="venta_id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >venta_id (bigint unsigned)</font></td></tr>
+<tr width="100%"><td port="user_id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >user_id (bigint unsigned)</font></td></tr>
+<tr width="100%"><td port="motivo" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >motivo (text)</font></td></tr>
+<tr width="100%"><td port="importe" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >importe (decimal(10,2))</font></td></tr>
+<tr width="100%"><td port="fecha" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >fecha (timestamp)</font></td></tr>
+<tr width="100%"><td port="created_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >created_at (timestamp)</font></td></tr>
+<tr width="100%"><td port="updated_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >updated_at (timestamp)</font></td></tr>
+</table>>
+margin="0"
+shape="rectangle"
+fontname="Helvetica Neue"
+]
+"appmodelsempresa" [
+label=<<table width="100%" height="100%" border="0" margin="0" cellborder="1" cellspacing="0" cellpadding="10">
+<tr width="100%"><td width="100%" bgcolor="#d3d3d3"><font color="#333333">Empresa</font></td></tr>
+<tr width="100%"><td port="id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >id (bigint unsigned)</font></td></tr>
+<tr width="100%"><td port="nif" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >nif (varchar(255))</font></td></tr>
+<tr width="100%"><td port="nombre_fiscal" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >nombre_fiscal (varchar(255))</font></td></tr>
+<tr width="100%"><td port="nombre_comercial" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >nombre_comercial (varchar(255))</font></td></tr>
+<tr width="100%"><td port="direccion" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >direccion (text)</font></td></tr>
+<tr width="100%"><td port="ciudad" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >ciudad (varchar(255))</font></td></tr>
+<tr width="100%"><td port="codigo_postal" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >codigo_postal (varchar(255))</font></td></tr>
+<tr width="100%"><td port="pais" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >pais (varchar(255))</font></td></tr>
+<tr width="100%"><td port="telefono" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >telefono (varchar(255))</font></td></tr>
+<tr width="100%"><td port="email" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >email (varchar(255))</font></td></tr>
+<tr width="100%"><td port="iban" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >iban (varchar(255))</font></td></tr>
+<tr width="100%"><td port="iva_regimen" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >iva_regimen (varchar(255))</font></td></tr>
+<tr width="100%"><td port="extra" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >extra (json)</font></td></tr>
+<tr width="100%"><td port="created_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >created_at (timestamp)</font></td></tr>
+<tr width="100%"><td port="updated_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >updated_at (timestamp)</font></td></tr>
+</table>>
+margin="0"
+shape="rectangle"
+fontname="Helvetica Neue"
+]
+"appmodelsfactura" [
+label=<<table width="100%" height="100%" border="0" margin="0" cellborder="1" cellspacing="0" cellpadding="10">
+<tr width="100%"><td width="100%" bgcolor="#d3d3d3"><font color="#333333">Factura</font></td></tr>
+<tr width="100%"><td port="id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >id (bigint unsigned)</font></td></tr>
+<tr width="100%"><td port="series" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >series (varchar(255))</font></td></tr>
+<tr width="100%"><td port="number" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >number (int)</font></td></tr>
+<tr width="100%"><td port="invoice_id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >invoice_id (varchar(255))</font></td></tr>
+<tr width="100%"><td port="cliente_id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >cliente_id (bigint unsigned)</font></td></tr>
+<tr width="100%"><td port="user_id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >user_id (bigint unsigned)</font></td></tr>
+<tr width="100%"><td port="total_amount" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >total_amount (decimal(10,2))</font></td></tr>
+<tr width="100%"><td port="status" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >status (varchar(255))</font></td></tr>
+<tr width="100%"><td port="invoice_date" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >invoice_date (date)</font></td></tr>
+<tr width="100%"><td port="issue_date" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >issue_date (date)</font></td></tr>
+<tr width="100%"><td port="operation_date" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >operation_date (date)</font></td></tr>
+<tr width="100%"><td port="invoice_type" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >invoice_type (varchar(255))</font></td></tr>
+<tr width="100%"><td port="rectified_invoice" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >rectified_invoice (varchar(255))</font></td></tr>
+<tr width="100%"><td port="gross_amount" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >gross_amount (decimal(15,2))</font></td></tr>
+<tr width="100%"><td port="tax_amount" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >tax_amount (decimal(15,2))</font></td></tr>
+<tr width="100%"><td port="tax_breakdown" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >tax_breakdown (json)</font></td></tr>
+<tr width="100%"><td port="due_date" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >due_date (date)</font></td></tr>
+<tr width="100%"><td port="payment_method" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >payment_method (varchar(255))</font></td></tr>
+<tr width="100%"><td port="payment_due_date" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >payment_due_date (date)</font></td></tr>
+<tr width="100%"><td port="iban" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >iban (varchar(255))</font></td></tr>
+<tr width="100%"><td port="verifactu" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >verifactu (json)</font></td></tr>
+<tr width="100%"><td port="created_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >created_at (timestamp)</font></td></tr>
+<tr width="100%"><td port="updated_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >updated_at (timestamp)</font></td></tr>
+<tr width="100%"><td port="proveedor_id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >proveedor_id (bigint unsigned)</font></td></tr>
+</table>>
+margin="0"
+shape="rectangle"
+fontname="Helvetica Neue"
+]
+"appmodelsinventario" [
+label=<<table width="100%" height="100%" border="0" margin="0" cellborder="1" cellspacing="0" cellpadding="10">
+<tr width="100%"><td width="100%" bgcolor="#d3d3d3"><font color="#333333">Inventario</font></td></tr>
+<tr width="100%"><td port="id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >id (bigint unsigned)</font></td></tr>
+<tr width="100%"><td port="producto_id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >producto_id (bigint unsigned)</font></td></tr>
+<tr width="100%"><td port="cantidad_disponible" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >cantidad_disponible (int)</font></td></tr>
+<tr width="100%"><td port="cantidad_minima" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >cantidad_minima (int)</font></td></tr>
+<tr width="100%"><td port="ubicacion" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >ubicacion (varchar(255))</font></td></tr>
+<tr width="100%"><td port="created_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >created_at (timestamp)</font></td></tr>
+<tr width="100%"><td port="updated_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >updated_at (timestamp)</font></td></tr>
+</table>>
+margin="0"
+shape="rectangle"
+fontname="Helvetica Neue"
+]
+"appmodelsjornada" [
+label=<<table width="100%" height="100%" border="0" margin="0" cellborder="1" cellspacing="0" cellpadding="10">
+<tr width="100%"><td width="100%" bgcolor="#d3d3d3"><font color="#333333">Jornada</font></td></tr>
+<tr width="100%"><td port="id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >id (bigint unsigned)</font></td></tr>
+<tr width="100%"><td port="user_id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >user_id (bigint unsigned)</font></td></tr>
+<tr width="100%"><td port="inicio" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >inicio (datetime)</font></td></tr>
+<tr width="100%"><td port="fin" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >fin (datetime)</font></td></tr>
+<tr width="100%"><td port="created_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >created_at (timestamp)</font></td></tr>
+<tr width="100%"><td port="updated_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >updated_at (timestamp)</font></td></tr>
+</table>>
+margin="0"
+shape="rectangle"
+fontname="Helvetica Neue"
+]
+"appmodelsproducto" [
+label=<<table width="100%" height="100%" border="0" margin="0" cellborder="1" cellspacing="0" cellpadding="10">
+<tr width="100%"><td width="100%" bgcolor="#d3d3d3"><font color="#333333">Producto</font></td></tr>
+<tr width="100%"><td port="id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >id (bigint unsigned)</font></td></tr>
+<tr width="100%"><td port="nombre" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >nombre (varchar(255))</font></td></tr>
+<tr width="100%"><td port="sku" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >sku (varchar(255))</font></td></tr>
+<tr width="100%"><td port="descripcion" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >descripcion (text)</font></td></tr>
+<tr width="100%"><td port="precio" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >precio (decimal(10,2))</font></td></tr>
+<tr width="100%"><td port="stock_quantity" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >stock_quantity (int)</font></td></tr>
+<tr width="100%"><td port="categoria_id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >categoria_id (bigint unsigned)</font></td></tr>
+<tr width="100%"><td port="proveedor_id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >proveedor_id (bigint unsigned)</font></td></tr>
+<tr width="100%"><td port="created_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >created_at (timestamp)</font></td></tr>
+<tr width="100%"><td port="updated_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >updated_at (timestamp)</font></td></tr>
+</table>>
+margin="0"
+shape="rectangle"
+fontname="Helvetica Neue"
+]
+"appmodelsproductorandom" [
+label=<<table width="100%" height="100%" border="0" margin="0" cellborder="1" cellspacing="0" cellpadding="10">
+<tr width="100%"><td width="100%" bgcolor="#d3d3d3"><font color="#333333">ProductoRandom</font></td></tr>
+<tr width="100%"><td port="id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >id (bigint unsigned)</font></td></tr>
+<tr width="100%"><td port="nombre" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >nombre (varchar(255))</font></td></tr>
+<tr width="100%"><td port="descripcion" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >descripcion (text)</font></td></tr>
+<tr width="100%"><td port="precio" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >precio (decimal(12,2))</font></td></tr>
+<tr width="100%"><td port="created_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >created_at (timestamp)</font></td></tr>
+<tr width="100%"><td port="updated_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >updated_at (timestamp)</font></td></tr>
+</table>>
+margin="0"
+shape="rectangle"
+fontname="Helvetica Neue"
+]
+"appmodelsproveedor" [
+label=<<table width="100%" height="100%" border="0" margin="0" cellborder="1" cellspacing="0" cellpadding="10">
+<tr width="100%"><td width="100%" bgcolor="#d3d3d3"><font color="#333333">Proveedor</font></td></tr>
+<tr width="100%"><td port="id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >id (bigint unsigned)</font></td></tr>
+<tr width="100%"><td port="nombre" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >nombre (varchar(255))</font></td></tr>
+<tr width="100%"><td port="contact_email" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >contact_email (varchar(255))</font></td></tr>
+<tr width="100%"><td port="phone" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >phone (varchar(255))</font></td></tr>
+<tr width="100%"><td port="address" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >address (text)</font></td></tr>
+<tr width="100%"><td port="created_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >created_at (timestamp)</font></td></tr>
+<tr width="100%"><td port="updated_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >updated_at (timestamp)</font></td></tr>
+</table>>
+margin="0"
+shape="rectangle"
+fontname="Helvetica Neue"
+]
+"appmodelsuser" [
+label=<<table width="100%" height="100%" border="0" margin="0" cellborder="1" cellspacing="0" cellpadding="10">
+<tr width="100%"><td width="100%" bgcolor="#d3d3d3"><font color="#333333">User</font></td></tr>
+<tr width="100%"><td port="id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >id (bigint unsigned)</font></td></tr>
+<tr width="100%"><td port="nombre" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >nombre (varchar(255))</font></td></tr>
+<tr width="100%"><td port="apellido" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >apellido (varchar(255))</font></td></tr>
+<tr width="100%"><td port="email" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >email (varchar(255))</font></td></tr>
+<tr width="100%"><td port="telefono" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >telefono (varchar(20))</font></td></tr>
+<tr width="100%"><td port="puesto" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >puesto (varchar(100))</font></td></tr>
+<tr width="100%"><td port="salario" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >salario (decimal(10,2))</font></td></tr>
+<tr width="100%"><td port="fecha_contratacion" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >fecha_contratacion (date)</font></td></tr>
+<tr width="100%"><td port="email_verified_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >email_verified_at (timestamp)</font></td></tr>
+<tr width="100%"><td port="password" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >password (varchar(255))</font></td></tr>
+<tr width="100%"><td port="rol" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >rol (varchar(255))</font></td></tr>
+<tr width="100%"><td port="photo" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >photo (varchar(255))</font></td></tr>
+<tr width="100%"><td port="remember_token" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >remember_token (varchar(100))</font></td></tr>
+<tr width="100%"><td port="api_token" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >api_token (varchar(80))</font></td></tr>
+<tr width="100%"><td port="api_token_expires_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >api_token_expires_at (timestamp)</font></td></tr>
+<tr width="100%"><td port="created_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >created_at (timestamp)</font></td></tr>
+<tr width="100%"><td port="updated_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >updated_at (timestamp)</font></td></tr>
+</table>>
+margin="0"
+shape="rectangle"
+fontname="Helvetica Neue"
+]
+"appmodelsventa" [
+label=<<table width="100%" height="100%" border="0" margin="0" cellborder="1" cellspacing="0" cellpadding="10">
+<tr width="100%"><td width="100%" bgcolor="#d3d3d3"><font color="#333333">Venta</font></td></tr>
+<tr width="100%"><td port="id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >id (bigint unsigned)</font></td></tr>
+<tr width="100%"><td port="user_id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >user_id (bigint unsigned)</font></td></tr>
+<tr width="100%"><td port="cliente_id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >cliente_id (bigint unsigned)</font></td></tr>
+<tr width="100%"><td port="total" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >total (decimal(10,2))</font></td></tr>
+<tr width="100%"><td port="fecha_venta" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >fecha_venta (datetime)</font></td></tr>
+<tr width="100%"><td port="metodo_pago" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >metodo_pago (varchar(255))</font></td></tr>
+<tr width="100%"><td port="notas" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >notas (varchar(255))</font></td></tr>
+<tr width="100%"><td port="devuelta" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >devuelta (tinyint(1))</font></td></tr>
+<tr width="100%"><td port="tipo" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >tipo (varchar(255))</font></td></tr>
+<tr width="100%"><td port="concepto" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >concepto (varchar(255))</font></td></tr>
+<tr width="100%"><td port="created_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >created_at (timestamp)</font></td></tr>
+<tr width="100%"><td port="updated_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >updated_at (timestamp)</font></td></tr>
+</table>>
+margin="0"
+shape="rectangle"
+fontname="Helvetica Neue"
+]
+}
