@@ -2,7 +2,13 @@
 
 Sistema ERP (_Enterprise Resource Planning_) full-stack desarrollado como proyecto intermodular de DAW. Centraliza la gestión de un negocio: punto de venta, facturación electrónica, inventario, control horario de empleados, estadísticas y panel de administración.
 
-**URL de producción:** https://j-j-proyect.duckdns.org
+### Acceso en producción
+
+| Interfaz                    | URL pública                                           |
+| --------------------------- | ----------------------------------------------------- |
+| Frontend Angular SPA        | https://j-j-proyect.duckdns.org                       |
+| Panel Admin Blade           | https://j-j-proyect.duckdns.org/admin                 |
+| API REST (base)             | https://j-j-proyect.duckdns.org/api                   |
 
 ---
 
@@ -176,7 +182,10 @@ El sistema está completamente **desplegado en AWS** sobre infraestructura defin
 - `.github/workflows/setup-https.yml` — instala certbot con plugin `certbot-dns-duckdns`, obtiene certificado Let's Encrypt para `j-j-proyect.duckdns.org` y configura Apache con SSL.
 - `despliegue/templates/frontend.sh.tftpl` — instala `libapache2-mod-security2` (ModSecurity WAF) en modo detección.
 - Cabeceras de seguridad en el VirtualHost HTTPS: `Strict-Transport-Security`, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`.
-- Toda la API requiere token Bearer; el tráfico entre frontend y API pasa por Apache Proxy con `X-Forwarded-Proto: https`.
+- Toda la API requiere token Bearer en la cabecera `Authorization: Bearer <token>`; los tokens de cabecera son inmunes a ataques CSRF por diseño (el navegador nunca los envía automáticamente). El middleware `EnsureFrontendRequestsAreStateful` de Sanctum ha sido eliminado del grupo middleware API en `bootstrap/app.php`, eliminando cualquier dependencia de cookies de sesión o dominios estáticos en las rutas API.
+- El panel `/admin` (Blade) sigue protegido con sesión web + token CSRF nativo de Laravel, sin afección alguna por el cambio anterior.
+- El servicio `AuthService` de Angular usa `finalize()` (en lugar de `tap`) en el método `logout()` para garantizar que el `localStorage` se limpia incluso si la petición de logout falla por error de red.
+- El tráfico entre frontend y API pasa por Apache Proxy con `X-Forwarded-Proto: https` y `ProxyPreserveHost On`.
 - Variables sensibles (APP_KEY, DB_PASSWORD, SSH_PRIVATE_KEY) gestionadas exclusivamente como GitHub Secrets, nunca en el repositorio.
 
 ---
@@ -296,6 +305,10 @@ Internet (HTTPS)
 
 La base de datos MySQL 8.0 contiene **15 tablas** construidas con 31 migraciones de Laravel. El esquema completo está documentado en [`docs/er-diagram.md`](docs/er-diagram.md).
 
+### Diagrama Entidad-Relación
+
+![Diagrama Entidad-Relación](backend/erd.png)
+
 ### Relaciones principales
 
 | Tabla       | Relaciones clave                                                                           |
@@ -319,8 +332,8 @@ La base de datos MySQL 8.0 contiene **15 tablas** construidas con 31 migraciones
 | Transporte     | HTTPS obligatorio            | Certbot + Let's Encrypt; redirect 301 HTTP→HTTPS en Apache                                  |
 | Cabeceras      | Headers de seguridad         | `HSTS`, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` en VirtualHost HTTPS |
 | WAF            | ModSecurity                  | `libapache2-mod-security2` en modo detección; `SecRuleEngine DetectionOnly`                 |
-| API            | Bearer Token                 | Sanctum con TTL 12 h; revocación en logout; un token por sesión                             |
-| Sesiones Admin | CSRF + sesión web            | Guard `web` de Laravel con token CSRF en formularios Blade                                  |
+| API Angular    | Bearer Token (CSRF-immune)   | Sanctum con TTL 12 h; cabecera `Authorization: Bearer`; CSRF no aplica a cabeceras HTTP     |
+| Sesiones Admin | CSRF + sesión web            | Guard `web` de Laravel con token CSRF en formularios Blade; `EnsureFrontendRequestsAreStateful` aplica solo a rutas web, no a `/api/*` |
 | Roles          | Autorización a nivel de ruta | `AdminGuard` (Angular), comprobaciones de rol en controladores                              |
 | Credenciales   | GitHub Secrets               | `APP_KEY`, `DB_PASSWORD`, `SSH_PRIVATE_KEY` nunca en el repositorio                         |
 | Red            | Bastion + VPC privada        | La API y la BD no tienen IP pública; solo accesibles a través del Bastion                   |
@@ -359,17 +372,22 @@ push a main
 
 ### GitHub Secrets requeridos
 
-| Secret            | Descripción                                                             |
-| ----------------- | ----------------------------------------------------------------------- |
-| `SSH_PRIVATE_KEY` | Clave privada PEM de AWS (vockey)                                       |
-| `BASTION_HOST`    | IP elástica del Bastion (`terraform output bastion_elastic_ip`)         |
-| `API_HOST`        | IP privada del servidor API                                             |
-| `FRONTEND_HOST`   | IP privada del servidor Frontend                                        |
-| `DB_HOST`         | IP privada de la base de datos                                          |
-| `APP_KEY`         | Clave de cifrado Laravel                                                |
-| `DB_PASSWORD`     | Contraseña generada en el servidor BD                                   |
-| `DUCKDNS_TOKEN`   | Token de la cuenta DuckDNS                                              |
-| `GH_PAT`          | Personal Access Token de GitHub (para actualizar Secrets desde Actions) |
+| Secret                  | Descripción                                                                       |
+| ----------------------- | --------------------------------------------------------------------------------- |
+| `SSH_PRIVATE_KEY`       | Clave privada PEM de AWS Academy (vockey)                                         |
+| `BASTION_HOST`          | IP elástica (EIP) del Bastion — no cambia entre sesiones de laboratorio           |
+| `API_HOST`              | IP privada del servidor API — se actualiza en cada sesión de laboratorio          |
+| `FRONTEND_HOST`         | IP privada del servidor Frontend (usada en el túnel SSH a través del Bastion)     |
+| `DB_HOST`               | IP privada de la base de datos                                                    |
+| `APP_KEY`               | Clave de cifrado Laravel (`base64:...`)                                           |
+| `DB_PASSWORD`           | Contraseña del usuario MySQL `laravel_user`                                       |
+| `DUCKDNS_TOKEN`         | Token de la cuenta DuckDNS para actualizar DNS y obtener certificados             |
+| `GH_PAT`                | Personal Access Token de GitHub (para actualizar Secrets desde `full-deploy.yml`) |
+| `AWS_ACCESS_KEY_ID`     | Credencial AWS Academy — solo requerida en `full-deploy.yml` (Terraform)          |
+| `AWS_SECRET_ACCESS_KEY` | Credencial AWS Academy — solo requerida en `full-deploy.yml` (Terraform)          |
+| `AWS_SESSION_TOKEN`     | Token de sesión AWS Academy — se regenera en cada laboratorio                     |
+
+> **Nota:** `SESSION_DOMAIN` se escribe directamente en el `.env` de producción por el propio workflow; no es un Secret de GitHub.
 
 ---
 
@@ -530,19 +548,21 @@ Para probar endpoints desde Swagger UI:
 
 ## 12. Equipo y planificación
 
-| Nombre        | Rol principal                                           |
-| ------------- | ------------------------------------------------------- |
-| Jesús Ríos    | Frontend Angular (SPA, guards, services, tests)         |
-| Jaime Gavilán | Backend Laravel, infraestructura AWS / Terraform, CI/CD |
+| Nombre        | Rol principal                                                              |
+| ------------- | -------------------------------------------------------------------------- |
+| Jesús Ríos    | Frontend Angular (SPA, guards, services, tests), despliegue AWS / Terraform |
+| Jaime Gavilán | Frontend Angular, Backend Laravel (API REST, modelos, seeders, migraciones) |
 
-**Metodología:** SPRINTs semanales gestionados con Trello. Cuatro hitos:
+**Metodología:** SPRINTs semanales gestionados con Trello. Seis sprints:
 
-| Hito     | Contenido                                                   |
-| -------- | ----------------------------------------------------------- |
-| Sprint 1 | Estructura del proyecto, migraciones y seeders              |
-| Sprint 2 | CRUDs principales: productos, proveedores, facturas, ventas |
-| Sprint 3 | Interfaz Angular, guards, services y conexión API           |
-| Sprint 4 | Tests, documentación, despliegue con Terraform y CI/CD      |
+| Hito     | Contenido                                                         |
+| -------- | ----------------------------------------------------------------- |
+| Sprint 1 | Estructura del proyecto, migraciones y seeders                    |
+| Sprint 2 | CRUDs principales: productos, proveedores, facturas, ventas       |
+| Sprint 3 | Interfaz Angular, guards, services y conexión API                 |
+| Sprint 4 | Módulos avanzados: jornada, cierre de caja, devoluciones, estadísticas |
+| Sprint 5 | Tests automatizados, Swagger UI y documentación                   |
+| Sprint 6 | Despliegue con Terraform, pipeline CI/CD y hardening de seguridad |
 
 ---
 
